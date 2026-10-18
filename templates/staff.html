@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>スタッフ設定 | 看護師勤務表</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header><div class="container"><p class="brand">看護師勤務表</p><span>スタッフ設定</span></div></header>
+<main class="container">
+  <h1>スタッフ設定</h1>
+  <p>勤務表に載せるスタッフを登録します。名前や勤務区分は後から変更できます。</p>
+  {% if saved %}<p class="success" role="status">保存しました。</p>{% endif %}
+  <section class="panel" aria-labelledby="list-title">
+    <h2 id="list-title">登録済みスタッフ <span class="count">{{ staff|length }}人</span></h2>
+    {% if staff %}
+    <div class="table-wrap"><table>
+      <thead><tr><th>名前</th><th>職種</th><th>勤務区分</th><th>担当可能な配置</th><th>ベテラン看護師</th><th>変更</th></tr></thead>
+      <tbody>{% for person in staff %}<tr>
+        <td>{{ person.name }}</td>
+        <td>{{ '看護師' if person.role == 'nurse' else '検査技師' }}</td>
+        <td>{{ ('常勤' if person.employment == 'full' else '非常勤') if person.role == 'nurse' else '—' }}</td>
+        <td>{{ '受付・診察室・検査室' if person.role == 'nurse' else '検査室のみ' }}</td>
+        <td>{{ ('はい' if person.veteran else 'いいえ') if person.role == 'nurse' else '対象外' }}</td>
+        <td><a href="{{ url_for('staff_settings', edit=person.id) }}#staff-form" aria-label="{{ person.name }}を編集">編集</a></td>
+      </tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="empty">まだ登録されていません。下の欄からスタッフを追加してください。</p>{% endif %}
+  </section>
+  <section class="panel" id="staff-form" aria-labelledby="form-title">
+    <h2 id="form-title">{{ 'スタッフを編集' if edit_id else 'スタッフを追加' }}</h2>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="{{ url_for('staff_settings') }}">
+      <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+      <input type="hidden" name="id" value="{{ edit_id if edit_id is not none else '' }}">
+      <label for="name">名前 <span class="required">必須</span></label>
+      <input id="name" name="name" value="{{ values.name }}" maxlength="50" required placeholder="例：看護 花子">
+      <label for="role">職種</label>
+      <select id="role" name="role">
+        <option value="nurse" {% if values.role == 'nurse' %}selected{% endif %}>看護師</option>
+        <option value="technician" {% if values.role == 'technician' %}selected{% endif %}>検査技師</option>
+      </select>
+      <div id="nurse-fields">
+        <label for="employment">勤務区分（看護師）</label>
+        <select id="employment" name="employment">
+          <option value="full" {% if values.employment == 'full' %}selected{% endif %}>常勤</option>
+          <option value="part" {% if values.employment == 'part' %}selected{% endif %}>非常勤</option>
+        </select>
+        <label class="checkbox"><input type="checkbox" name="veteran" value="1" {% if values.veteran %}checked{% endif %}> ベテラン看護師として数える</label>
+      </div>
+      <p class="hint">検査技師は検査室のみ担当し、診療側のベテラン人数には数えません。</p>
+      <div class="actions"><button type="submit">{{ '変更を保存' if edit_id else '登録する' }}</button>
+      {% if edit_id %}<a href="{{ url_for('staff_settings') }}">編集をやめる</a>{% endif %}</div>
+    </form>
+  </section>
+  <p class="hint">現在はスタッフ設定が利用できます。月別入力・勤務表の自動作成は今後追加します。</p>
+</main>
+<script src="{{ url_for('static', filename='staff.js') }}"></script>
+</body>
+</html>
