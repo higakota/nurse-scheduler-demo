@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>月別入力 | 看護師勤務表</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header><nav class="container"><p class="brand">看護師勤務表</p><a href="{{ url_for('staff_settings') }}">スタッフ設定</a><span aria-current="page">月別入力</span></nav></header>
+<main class="container">
+<h1>月別入力：{{ month }}</h1>
+<form method="get" class="month-picker">
+<label for="month">対象月</label><input id="month" type="month" name="month" value="{{ month }}" required min="1900-01" max="9998-12">
+<button>この月の入力を開く</button>
+</form>
+<p>休日日数・希望休・休診日を保存してから、会議を登録してください。月を切り替える前に保存してください。</p>
+{% if saved %}<p class="success" role="status">保存しました。</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% for warning in warnings %}<p class="error" role="alert">{{ warning }}</p>{% endfor %}
+<form method="post" class="monthly-form">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="settings">
+<section class="panel">
+<h2>スタッフ別の休日日数</h2>
+<p class="hint">空欄は未設定です。有給はこの日数に含めません。</p>
+{% if not staff %}<p><a href="{{ url_for('staff_settings') }}">先にスタッフを登録してください。</a></p>{% endif %}
+{% for person in staff %}
+<label for="target_{{ person.id }}">{{ person.name }}（日）</label>
+<input id="target_{{ person.id }}" type="number" name="target_{{ person.id }}" value="{{ data.targets.get(person.id|string, '') }}" min="0" max="{{ days|length }}" step="0.5">
+{% endfor %}
+</section>
+<section class="panel">
+<h2>休診日</h2>
+<p class="hint">日曜は全員休み、金曜午後は診療なしです。祝日は現在、自動設定されないため指定してください。年末年始は対象月ごとに該当日を指定します。</p>
+<div class="table-wrap"><table><thead><tr><th>日付</th><th>休診の指定</th><th>固定の診療休み</th></tr></thead><tbody>
+{% for day in days %}<tr><td>{{ day.day }}日（{{ weekdays[day.weekday()] }}）</td><td>
+<label class="sr-only" for="closure_{{ day }}">休診 {{ day }}</label>
+<select id="closure_{{ day }}" name="closure_{{ day }}">
+{% for value, label in [('', '追加指定なし'), ('holiday', '祝日（全日休み）'), ('year_end', '年末年始（全日休み）')] %}
+<option value="{{ value }}" {% if data.closures.get(day.isoformat(), '') == value %}selected{% endif %}>{{ label }}</option>
+{% endfor %}</select></td><td>{{ '全日休み' if day.weekday() == 6 else ('午後診療なし（会議可）' if day.weekday() == 4 else '—') }}</td></tr>{% endfor %}
+</tbody></table></div>
+</section>
+<section class="panel">
+<h2>希望休</h2><p class="hint">選ぶと文字と色が変わります。選択後は「入力内容を保存」を押してください。指定なしは出勤確定を意味しません。表は横にスクロールできます。</p>
+<div class="table-wrap"><table class="wishes-table"><thead><tr><th>スタッフ</th>{% for day in days %}<th>{{ day.day }}日<br>{{ weekdays[day.weekday()] }}</th>{% endfor %}</tr></thead><tbody>
+{% for person in staff %}<tr><th>{{ person.name }}</th>{% for day in days %}
+{% set key = (person.id|string) ~ '_' ~ day.isoformat() %}
+<td><label class="sr-only" for="wish_{{ key }}">{{ person.name }} {{ day }}の希望休</label>
+<select class="wish-select" data-wish="{{ data.wishes.get(key, '') }}" id="wish_{{ key }}" name="wish_{{ key }}">
+{% for value, label in [('', '指定なし'), ('full', '全日休'), ('am', '午前休'), ('pm', '午後休')] %}
+<option value="{{ value }}" {% if data.wishes.get(key, '') == value %}selected{% endif %}>{{ label }}</option>
+{% endfor %}</select></td>{% endfor %}</tr>{% endfor %}
+</tbody></table></div>
+</section>
+<div class="save-bar"><p id="settings-status" role="status">休日日数・休診日・希望休をまとめて保存します。</p><button>入力内容を保存</button></div>
+</form>
+<section class="panel">
+<h2>午後の会議</h2>
+<p class="hint">参加者は午後全体を診療に配置できません。全員参加の場合は全員にチェックを入れてください。</p>
+{% for meeting in data.meetings %}<article class="meeting">
+<h3>{{ meeting.date }} 午後：{{ meeting.title }}</h3>
+<p>参加者：{% for id in meeting.participants %}{{ names.get(id, '未登録スタッフ') }}{{ '、' if not loop.last }}{% endfor %}</p>
+<form method="post"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="meeting_delete"><input type="hidden" name="meeting_id" value="{{ meeting.id }}"><button>この会議を削除</button></form>
+</article>{% else %}<p>会議は未登録です。</p>{% endfor %}
+<h3>会議を追加</h3>
+<form method="post">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="meeting_add">
+<label for="meeting_date">日付</label><input type="date" id="meeting_date" name="meeting_date" min="{{ days[0] }}" max="{{ days[-1] }}" value="{{ request.form.get('meeting_date', '') }}" required>
+<label for="title">会議名</label><input id="title" name="title" maxlength="80" value="{{ request.form.get('title', '') }}" required>
+<fieldset><legend>参加者</legend>{% for person in staff %}<label class="checkbox"><input type="checkbox" name="participants" value="{{ person.id }}" {% if person.id|string in request.form.getlist('participants') %}checked{% endif %}>{{ person.name }}</label>{% endfor %}</fieldset>
+<button>会議を追加</button>
+</form>
+</section>
+<p class="hint">入力の保存用画面です。勤務表の自動作成・医師予定のExcel取込・印刷は今後追加します。</p>
+</main><script src="{{ url_for('static', filename='monthly.js') }}"></script></body></html>

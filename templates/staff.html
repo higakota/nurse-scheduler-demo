@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<header><div class="container"><p class="brand">看護師勤務表</p><span>スタッフ設定</span></div></header>
+<header><div class="container"><p class="brand">看護師勤務表</p><span>スタッフ設定</span><a href="{{ url_for('monthly_settings') }}">月別入力</a></div></header>
 <main class="container">
   <h1>スタッフ設定</h1>
   <p>勤務表に載せるスタッフを登録します。名前や勤務区分は後から変更できます。</p>
@@ -54,7 +54,7 @@
       {% if edit_id %}<a href="{{ url_for('staff_settings') }}">編集をやめる</a>{% endif %}</div>
     </form>
   </section>
-  <p class="hint">現在はスタッフ設定が利用できます。月別入力・勤務表の自動作成は今後追加します。</p>
+  <p class="hint">現在はスタッフ設定が利用できます。月別入力から希望休や会議を設定できます。勤務表の自動作成は今後追加します。</p>
 </main>
 <script src="{{ url_for('static', filename='staff.js') }}"></script>
 </body>

@@ -22,3 +22,19 @@ button:hover { background: #0c4d47; } a { color: #12665f; text-underline-offset:
 .error { padding: 12px 18px; background: #fff0ed; color: #a03232; }
 :focus-visible { outline: 3px solid #cf9100; outline-offset: 3px; }
 @media (max-width: 600px) { .container { padding: 0 14px; } .panel { padding: 18px; } header .container { gap: 16px; } }
+
+header nav { display: flex; align-items: center; gap: 24px; padding-top: 14px !important; padding-bottom: 14px !important; flex-wrap: wrap; }
+.monthly-form { max-width: none; } .monthly-form input[type=number] { max-width: 200px; }
+.month-picker { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; max-width: 600px; } .month-picker input { max-width: 220px; } .month-picker label { margin: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.meeting { border-bottom: 1px solid #dce5e7; padding: 10px 0 20px; } fieldset { border: 1px solid #dce5e7; margin: 20px 0; }
+
+.wishes-table { width: max-content; min-width: 100%; }
+.wishes-table th, .wishes-table td { padding: 10px 8px; }
+.wishes-table tr > th:first-child { position: sticky; left: 0; z-index: 1; min-width: 140px; border-right: 1px solid #dce5e7; }
+.wishes-table .wish-select { width: 112px; min-width: 112px; padding: 10px 8px; color: #25383e; }
+.wish-select[data-wish="full"] { background: #fce1df; border-color: #af5550; }
+.wish-select[data-wish="am"] { background: #fff0cd; border-color: #9a762a; }
+.wish-select[data-wish="pm"] { background: #dfeefd; border-color: #4b79a4; }
+.save-bar { position: sticky; bottom: 0; z-index: 2; background: #fff; border: 1px solid #dce5e7; padding: 14px; border-radius: 8px; margin-top: 16px; }
+.save-bar p { margin: 0 0 8px; }
