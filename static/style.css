@@ -69,3 +69,24 @@ header nav { display: flex; align-items: center; gap: 24px; padding-top: 14px !i
 .doctor-overview label { margin-top: 0; }
 .doctor-overview .doctor-review { grid-column: 2; margin: 2px 0; padding: 6px 0 0; font-size: 14px; }
 @media(max-width: 650px) { .doctor-overview .doctor-day { grid-template-columns: minmax(0,1fr); } .doctor-overview .doctor-review { grid-column: 1; } }
+
+.coverage-days { display: grid; gap: 16px; }
+.coverage-day { background: #fff; border: 1px solid #dce5e7; border-radius: 10px; padding: 18px; min-width: 0; overflow-wrap: anywhere; }
+.coverage-day h2 { margin: 0 0 12px; font-size: 18px; }
+.coverage-halves { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; }
+.coverage-half { min-width: 0; } .coverage-half h3 { margin: 0; font-size: 16px; } .coverage-half .hint { margin: 6px 0; }
+.coverage-counts { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+.coverage-counts label { margin: 0; font-size: 14px; } .coverage-counts select { min-width: 130px; }
+button:disabled { background: #87969a; cursor: not-allowed; }
+@media(max-width:600px) { .coverage-halves { grid-template-columns: minmax(0,1fr); gap: 18px; } }
+
+.coverage-bulk { margin: 20px 0; padding: 18px; background: #eaf3f1; border-radius: 10px; }
+.c-choice { margin: 0; padding: 0; border: 0; min-width: 0; }
+.c-choice legend { font-size: 14px; font-weight: bold; }
+.c-options { display: flex; gap: 8px; }
+.c-option { margin: 0; position: relative; cursor: pointer; }
+.c-option input[type=radio] { position: absolute; opacity: 0; width: 1px; height: 1px; padding: 0; }
+.c-option span { display: inline-block; padding: 8px 22px; border: 1px solid #81979f; border-radius: 6px; background: #fff; }
+.c-option input:checked + span { background: #14645c; color: #fff; border-color: #14645c; font-weight: bold; }
+.c-option input:focus-visible + span { outline: 3px solid #cf9100; outline-offset: 3px; }
+.c-choice:disabled .c-option { cursor: not-allowed; opacity: .6; }
