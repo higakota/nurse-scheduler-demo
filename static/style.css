@@ -90,3 +90,51 @@ button:disabled { background: #87969a; cursor: not-allowed; }
 .c-option input:checked + span { background: #14645c; color: #fff; border-color: #14645c; font-weight: bold; }
 .c-option input:focus-visible + span { outline: 3px solid #cf9100; outline-offset: 3px; }
 .c-choice:disabled .c-option { cursor: not-allowed; opacity: .6; }
+
+.leave-item { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid #dce5e7; overflow-wrap: anywhere; }
+.leave-item p { margin: 4px 0; } .leave-item .actions { margin: 0; }
+.leave-totals { display: flex; flex-wrap: wrap; gap: 12px 24px; }
+.leave-period input[type=radio] { width: 20px; height: 20px; padding: 0; }
+.history-form { max-width: none; }
+.history-person { margin: 22px 0; padding: 14px; border: 1px solid #dce5e7; border-radius: 8px; }
+.history-days { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 12px; }
+.history-days > div { min-width: 0; } .history-days label { font-size: 14px; }
+.secondary { background: #fff; color: #14645c; border: 1px solid #14645c; }
+
+.leave-calendar-form { max-width: none; }
+.leave-calendar-form #staff { max-width: 400px; margin-bottom: 18px; }
+.leave-calendar { table-layout: fixed; width: 100%; white-space: normal; }
+.leave-calendar th { text-align: center; padding: 8px 2px; }
+.leave-calendar td { padding: 4px; vertical-align: top; border: 1px solid #e1e8e8; }
+.leave-calendar th:first-child { color: #b03d3d; } .leave-calendar th:last-child { color: #315d9b; }
+.calendar-day { display: flex; flex-direction: column; gap: 6px; min-height: 86px; padding: 9px; border-radius: 7px; color: #25383e; text-decoration: none; border: 2px solid transparent; }
+.calendar-day:hover { background: #edf4f2; }
+.calendar-date { font-weight: bold; font-size: 18px; }
+.calendar-badge { font-size: 13px; overflow-wrap: anywhere; min-height: 20px; }
+.calendar-day.has-leave { background: #e1f2eb; }
+.calendar-day.is-selected { border-color: #14645c; box-shadow: inset 0 0 0 1px #14645c; }
+.calendar-empty { background: #f6f8f8; }
+.leave-editor { margin-top: 18px; padding: 20px; background: #f0f6f4; border-radius: 8px; }
+.leave-editor h3 { margin-top: 0; }
+.leave-editor .leave-period { display: flex; flex-wrap: wrap; gap: 10px; border: 0; margin: 12px 0; padding: 0; }
+.leave-chip { position: relative; margin: 0; cursor: pointer; }
+.leave-chip input[type=radio] { position: absolute; opacity: 0; width: 1px; height: 1px; padding: 0; }
+.leave-chip span { display: inline-block; padding: 10px 16px; border: 1px solid #81979f; background: white; border-radius: 6px; }
+.leave-chip input:checked + span { background: #14645c; color: white; font-weight: bold; border-color: #14645c; }
+.leave-chip input:focus-visible + span { outline: 3px solid #cf9100; outline-offset: 3px; }
+#calendar-delete { margin-top: 12px; }
+.leave-summary { margin-top: 22px; } .leave-summary summary { cursor: pointer; }
+@media(max-width:600px) { .leave-calendar td { padding: 2px; } .calendar-day { padding: 5px 2px; min-height: 68px; gap: 3px; } .calendar-date { font-size: 16px; } .calendar-badge { font-size: 10px; } .leave-editor { padding: 14px; } }
+
+.calendar-picker { position: relative; border: 2px solid transparent; border-radius: 6px; }
+.calendar-picker > summary { display: flex; flex-direction: column; gap: 5px; min-height: 92px; padding: 8px; cursor: pointer; list-style: none; }
+.calendar-picker > summary::-webkit-details-marker { display: none; }
+.calendar-picker > summary:hover { background: #eef5f2; }
+.calendar-picker.has-leave { background: #e1f2eb; }
+.calendar-picker.is-dirty { border-color: #b17c13; background: #fff4d6; }
+.calendar-pending { font-size: 11px; color: #805b14; min-height: 15px; }
+.calendar-options { position: absolute; top: 100%; left: 0; z-index: 10; width: 150px; padding: 6px; background: #fff; border: 1px solid #81979f; border-radius: 8px; box-shadow: 0 4px 16px #25383e26; }
+.leave-calendar td:nth-child(n+5) .calendar-options { left: auto; right: 0; }
+.calendar-options button { display: block; width: 100%; padding: 9px; text-align: left; background: #fff; color: #25383e; font-size: 14px; }
+.calendar-options button:hover, .calendar-options button[aria-pressed=true] { background: #14645c; color: #fff; }
+@media(max-width:600px) { .calendar-picker > summary { min-height: 76px; padding: 4px 1px; gap: 2px; } .calendar-options { width: 130px; } }

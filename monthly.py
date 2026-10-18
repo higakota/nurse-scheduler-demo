@@ -1,5 +1,6 @@
 """月別の入力と保存。勤務表の自動作成は行わない。"""
 import calendar
+from leave_and_history import absence_warnings
 import json
 import re
 from datetime import date
@@ -97,6 +98,10 @@ def register_monthly(app, connect_db):
                 for person_id in meeting["participants"]:
                     if data["wishes"].get(person_id + "_" + meeting["date"]) in ("full", "pm"):
                         warnings.append(meeting["date"] + " " + names.get(person_id, "未登録スタッフ") + "：希望休と会議が重なっています。希望休を維持しています。入力の見直しが必要です。")
+            if db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='leave_history'").fetchone():
+                leave_row = db.execute("SELECT data FROM leave_history WHERE month=?", (month,)).fetchone()
+                if leave_row:
+                    warnings.extend(absence_warnings(json.loads(leave_row["data"])["leaves"], data, names))
             if len({meeting["date"] for meeting in data["meetings"]}) < len(data["meetings"]):
                 warnings.append("同日に複数の会議があります。重複の扱いは未確認のため、自動で参加可否を判定していません。")
         finally:

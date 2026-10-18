@@ -1,0 +1,42 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>有給・前月末勤務</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head><body>
+<header><nav class="container"><p class="brand">看護師勤務表</p><a href="{{ url_for('monthly_settings', month=month) }}">月別入力</a></nav></header>
+<main class="container"><h1>有給・前月末勤務</h1>
+<form method="get" class="month-picker"><label for="month">対象月</label><input type="month" id="month" name="month" value="{{ month }}" min="1900-01" max="9998-12" required><button>この月を開く</button></form>
+{% if saved %}<p class="success" role="status">保存しました。</p>{% endif %}{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% for warning in warnings %}<p class="error" role="alert">{{ warning }}</p>{% endfor %}
+<section class="panel" id="leave"><h2>{{ month }} の有給カレンダー</h2>
+<p>有給を取る日だけ、日付のマスで全日・午前・午後を選んでください。最後にまとめて保存します。</p>
+<p class="hint">スタッフを切り替えても、保存前の選択は保持します。有給は指定休日日数に含めません。</p>
+{% if staff %}<form method="post" class="leave-entry leave-calendar-form">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="action" value="leave_bulk_save">
+<input type="hidden" name="leave_changes" id="leave-changes" value="">
+<label for="staff">スタッフ</label><select id="staff" name="staff" required>{% for person in staff %}<option value="{{ person.id }}" {% if values.staff == person.id|string %}selected{% endif %}>{{ person.name }}</option>{% endfor %}</select>
+<table class="leave-calendar"><caption class="sr-only">{{ month }} の有給カレンダー</caption>
+<thead><tr>{% for label in ['日','月','火','水','木','金','土'] %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead><tbody>
+{% for week in calendar_weeks %}<tr>{% for cell in week %}{% if cell %}{% set key = values.staff ~ '_' ~ cell.isoformat() %}{% set period = data.leaves.get(key, '') %}
+<td><details class="calendar-picker {% if period %}has-leave{% endif %}" data-day="{{ cell.isoformat() }}">
+<summary aria-label="{{ cell.isoformat()|date_with_weekday }} 有給を選択"><span class="calendar-date">{{ cell.day }}</span><span class="calendar-badge">{{ periods.get(period, '') }}</span><span class="calendar-pending"></span></summary>
+<div class="calendar-options" role="group" aria-label="{{ cell.isoformat() }}の有給">{% for value, label in [('full', '全日有給'), ('am', '午前有給'), ('pm', '午後有給')] %}<button type="button" data-period="{{ value }}" aria-pressed="{{ 'true' if period == value else 'false' }}">{{ label }}</button>{% endfor %}<button type="button" data-period="" class="clear-leave" {% if not period %}hidden{% endif %}>選択を取り消す</button></div>
+</details></td>{% else %}<td class="calendar-empty"></td>{% endif %}{% endfor %}</tr>{% endfor %}
+</tbody></table>
+<div class="save-bar"><p id="calendar-save-status" role="status">変更はまだありません。</p><button id="save-all-leaves" disabled>選んだ有給をまとめて保存</button></div>
+<noscript><p class="error">カレンダーでのまとめ入力にはJavaScriptを有効にしてください。</p></noscript>
+</form>
+<script type="application/json" id="calendar-leaves">{{ data.leaves|tojson }}</script>
+{% else %}<p><a href="{{ url_for('staff_settings') }}">先にスタッフを登録してください。</a></p>{% endif %}
+<details class="leave-summary"><summary>保存済みの有給一覧・日数を見る</summary>
+{% for item in leaves %}<article class="leave-item"><div><strong>{{ item.day|date_with_weekday }}　{{ item.name }}</strong><p>{{ periods[item.period] }}</p></div></article>{% else %}<p>有給は未登録です。</p>{% endfor %}
+<div class="leave-totals">{% for id, total in totals.items() %}<span>{{ names[id] }}：{{ total }}日</span>{% endfor %}</div><p class="hint">有給の量です。指定休日日数への算入や勤務表全体の集計ではありません。</p></details>
+</section>
+<section class="panel"><h2>前月末の勤務（初回手入力）</h2>
+<p>対象月の直前5日分です。「全日勤務」には午前診療・午後会議も含みます。半日勤務・全日有給・半日有給と半日勤務の組合せは連勤をリセットします。</p>
+<p class="hint">未入力のまま保存できます。連勤数が分からない場合は未確定のままです。日曜と登録済みの休診日は全日休みで固定します。前月の祝日・年末年始は前月の月別入力で設定してください。</p>
+<p class="hint">この画面は初回導入用です。翌月以降の確定表からの自動引継ぎは、勤務表の作成・確定機能と合わせて追加します。</p>
+<form method="post" class="history-form"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="action" value="history_save">
+{% for row in history_rows %}<section class="history-person"><h3>{{ row.person.name }}</h3><div class="history-days">{% for slot in row.slots %}<div>
+<label for="history_{{ slot.key }}">{{ slot.day|date_with_weekday }}</label>
+{% if slot.fixed %}<p>全日休み（休診）</p><input type="hidden" name="history_{{ slot.key }}" value="rest">
+{% else %}<select id="history_{{ slot.key }}" name="history_{{ slot.key }}">{% for value, label in history_options.items() %}{% if row.person.role != 'technician' or value not in ['pm', 'am_paid'] %}<option value="{{ value }}" {% if slot.value == value %}selected{% endif %}>{{ label }}</option>{% endif %}{% endfor %}</select>{% endif %}
+</div>{% endfor %}</div><p class="hint">前月末から続く全日勤務：{% if row.tail is none %}未確定（必要な勤務情報が未入力）{% else %}{{ row.tail }}日{% endif %}</p></section>{% endfor %}
+{% if staff %}<button>前月末の勤務を保存</button>{% endif %}</form></section>
+</main><script src="{{ url_for('static', filename='leave_history.js') }}"></script></body></html>

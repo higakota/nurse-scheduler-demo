@@ -105,6 +105,10 @@ from coverage import register_coverage
 
 register_coverage(app, connect_db)
 
+from leave_and_history import register_leave_and_history
+
+register_leave_and_history(app, connect_db)
+
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", debug=False)
