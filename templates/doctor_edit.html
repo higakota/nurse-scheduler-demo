@@ -1,0 +1,13 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>医師予定の編集</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<body><main class="container"><p><a href="{{ url_for('doctor_import', month=month) }}#saved-plans">医師予定に戻る</a></p><h1>{{ day|date_with_weekday }} の編集</h1>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<section class="panel"><h2>保存済み</h2><p>午前：{{ current.am|join('/') or '担当医なし' }}（{{ current.am|length }}人）</p><p>午後：{{ current.pm|join('/') or '担当医なし' }}（{{ current.pm|length }}人）</p></section>
+<section class="panel"><h2>変更する内容</h2><form method="post">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="preview">
+<label for="am">午前</label><input id="am" name="am" value="{{ values.am }}" {% if sunday %}readonly placeholder="日曜は全日休診"{% endif %}>
+<label for="pm">午後</label><input id="pm" name="pm" value="{{ values.pm }}" {% if friday or sunday %}readonly placeholder="診療なし"{% endif %}>
+<p class="hint">医師は「/」区切りで入力します。空欄は担当医なしです。</p><button>変更前後を確認する</button></form></section>
+{% if proposed is not none %}<section class="panel"><h2>変更前 → 変更後</h2>
+{% for half, label in [('am','午前'), ('pm','午後')] %}<h3>{{ label }}</h3><p>{{ current[half]|join('/') or '担当医なし' }}（{{ current[half]|length }}人） → {{ proposed[half]|join('/') or '担当医なし' }}（{{ proposed[half]|length }}人）</p>{% endfor %}
+<form method="post"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="confirm"><input type="hidden" name="edit_token" value="{{ edit_token }}"><label class="checkbox"><input type="checkbox" name="confirmed" value="yes" required>変更後の担当医・人数を確認しました</label><button>この日の変更を保存</button></form></section>{% endif %}
+</main></body></html>

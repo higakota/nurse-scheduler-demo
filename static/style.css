@@ -38,3 +38,34 @@ header nav { display: flex; align-items: center; gap: 24px; padding-top: 14px !i
 .wish-select[data-wish="pm"] { background: #dfeefd; border-color: #4b79a4; }
 .save-bar { position: sticky; bottom: 0; z-index: 2; background: #fff; border: 1px solid #dce5e7; padding: 14px; border-radius: 8px; margin-top: 16px; }
 .save-bar p { margin: 0 0 8px; }
+
+.doctor-table { min-width: 1100px; } .doctor-table input { min-width: 180px; } .doctor-table .source-text { white-space: normal; min-width: 220px; max-width: 340px; overflow-wrap: anywhere; } .review-row { background: #fff8e5; } textarea { width: 100%; font: inherit; padding: 10px; }
+
+.doctor-days { display: grid; gap: 18px; min-width: 0; }
+.doctor-day { border: 1px solid #dce5e7; border-radius: 10px; padding: 20px; min-width: 0; background: #fff; overflow-wrap: anywhere; }
+.doctor-day.needs-review { border-left: 4px solid #b38a24; background: #fffcf2; }
+.doctor-day-heading { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
+.doctor-day-heading h3 { margin: 0; font-size: 19px; }
+.doctor-editors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.doctor-half { min-width: 0; }
+.doctor-half input { min-width: 0; max-width: 100%; }
+.doctor-half small { display: block; margin-top: 5px; color: #526971; }
+.doctor-half p { margin: 6px 0; }
+.doctor-note { font-size: 14px; color: #705614; margin: 12px 0; }
+.doctor-source { font-size: 14px; }
+.doctor-source summary { cursor: pointer; color: #12665f; }
+.doctor-source p { white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid #e3dfd4; padding: 12px; }
+.doctor-review { padding-top: 12px; border-top: 1px solid #e7e2d4; font-size: 15px; align-items: flex-start; }
+.doctor-review input { flex: 0 0 20px; }
+@media (max-width: 600px) { .doctor-editors { grid-template-columns: minmax(0, 1fr); gap: 4px; } .doctor-day { padding: 14px; } }
+
+[hidden] { display: none !important; }
+.doctor-overview { gap: 8px; }
+.doctor-overview .doctor-day { padding: 12px 16px; display: grid; grid-template-columns: 160px minmax(0,1fr); gap: 4px 16px; }
+.doctor-overview .doctor-day-heading { display: block; }
+.doctor-overview .doctor-day-heading h3 { font-size: 16px; }
+.doctor-overview .review-status { display: block; font-size: 13px; color: #705614; }
+.doctor-overview .doctor-editors { gap: 14px; }
+.doctor-overview label { margin-top: 0; }
+.doctor-overview .doctor-review { grid-column: 2; margin: 2px 0; padding: 6px 0 0; font-size: 14px; }
+@media(max-width: 650px) { .doctor-overview .doctor-day { grid-template-columns: minmax(0,1fr); } .doctor-overview .doctor-review { grid-column: 1; } }

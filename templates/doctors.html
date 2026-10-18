@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>医師予定のExcel取込</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<body><header><nav class="container"><p class="brand">看護師勤務表</p><a href="{{ url_for('monthly_settings', month=month) }}">月別入力へ</a></nav></header>
+<main class="container"><h1>医師予定のExcel取込</h1>
+<form method="get" class="month-picker"><label for="month">対象月</label><input type="month" name="month" id="month" value="{{ month }}" required><button>この月を開く</button></form>
+<p>対象月：{{ month }}。Excel選択 → シート選択 → 内容の確認・修正 → 保存の順に進みます。</p>
+<p class="hint">見本と同じ、4行目が日付・6行目が医師のxlsxに対応します。医師欄は左が午前、右が午後です。ファイルはPC内だけで処理します。</p>
+{% if needs_recheck %}<p class="error" role="alert">以前の読取方式で保存された医師予定は、午前・午後が逆の可能性や金曜・日曜の割当の誤りがあります。旧データは削除していませんが、そのまま使用せず、Excelから読み取り直し、月間一覧で再確認してください。判別不能・変更のある日だけ個別確認が必要です。</p>{% endif %}{% if saved %}<p class="success" role="status">医師予定を保存しました。</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<section class="panel"><h2>1. Excelを選ぶ</h2>{% if loaded_filename %}<p class="success" role="status"><strong>読込済み：{{ loaded_filename }}</strong><br>次は下の「2. 対象シートを選ぶ」へ進んでください。ファイルを選び直す必要はありません。</p><details><summary>別のExcelに変更する</summary>{% endif %}
+<form method="post" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="upload">
+<label for="workbook">Excelファイル（xlsx・5MB以下）</label><input type="file" name="workbook" id="workbook" accept=".xlsx" required><button>このExcelを読み込む</button></form>{% if loaded_filename %}</details>{% endif %}</section>
+{% if sheets %}<section class="panel"><h2>2. 対象シートを選ぶ（取込先：{{ month }}）</h2><p class="hint">日付が対象月と一致するシートを初期選択します。違う月の予定を取り込む場合は、先にページ上部で対象月を変更してください。</p>
+<form method="post"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="read">
+<label for="sheet">シート</label><select id="sheet" name="sheet" required><option value="" {% if not selected_sheet %}selected{% endif %} disabled>対象月と同じ月のシートを選択</option>{% for sheet in sheets %}<option value="{{ sheet }}" {% if sheet == selected_sheet %}selected{% endif %}>{{ sheet }}</option>{% endfor %}</select><button>医師予定を読み取る</button></form></section>{% endif %}
+{% if preview %}<section class="panel"><h2>3. 確認・修正して保存</h2>
+<p>表示は未確認の候補です。元のExcelの左列＝午前・右列＝午後と照合してください。判別できないセルは両欄を空欄にしています。担当医は「/」で区切ってください。空欄は未確認です。保存時に確認すると「担当医なし（0人）」になります。必要なら元表記を見て修正してください。</p>
+
+<form method="post" class="monthly-form">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="save">
+<p>個別確認：{{ preview.rows|selectattr("individual")|list|length }}日。その他は一覧を見て最後のチェックでまとめて確認できます。</p><p>最新の内容か、Excelと照合して必ず確認してください。<strong>「個別確認」が付いた日だけチェックが必要です。</strong></p>
+<div class="doctor-days doctor-overview">
+{% for row in preview.rows %}
+<article class="doctor-day {% if row.individual %}needs-review{% endif %}" data-required="{{ 'yes' if row.individual else 'no' }}">
+  <div class="doctor-day-heading"><h3>{{ row.date|date_with_weekday }}</h3>
+    <span class="review-status">{{ '日曜・全日休診' if row.sunday and not row.individual else ('変更あり・個別確認' if row.changed else ('要入力・個別確認' if row.individual else ('変更なし' if current else 'まとめて確認'))) }}</span>
+  </div>
+  <div class="doctor-editors">
+    <div class="doctor-half"><label for="am_{{ row.date }}">午前（左）</label><input id="am_{{ row.date }}" name="am_{{ row.date }}" value="{{ row.am }}" {% if row.sunday %}readonly placeholder="日曜は休診"{% endif %}>
+    {% if row.changed %}<p class="hint">変更前：{{ current.get(row.date, {}).get('am', [])|join('/') or '担当医なし' }}</p>{% endif %}</div>
+    <div class="doctor-half"><label for="pm_{{ row.date }}">午後（右）</label><input id="pm_{{ row.date }}" name="pm_{{ row.date }}" value="{{ row.pm }}" {% if row.friday or row.sunday %}readonly placeholder="診療なし"{% endif %}>
+    {% if row.changed %}<p class="hint">変更前：{{ current.get(row.date, {}).get('pm', [])|join('/') or '担当医なし' }}</p>{% endif %}</div>
+  </div>
+  <label class="checkbox doctor-review" {% if not row.individual %}hidden{% endif %}><input type="checkbox" name="review_{{ row.date }}" value="yes" {% if row.individual %}required{% endif %}>この日の担当医・人数を確認しました</label>
+</article>{% endfor %}
+</div>
+<label for="aliases">略称の登録・変更（任意）</label>
+<p class="hint">1行に「略称=表示名」。登録した対応は今回と次回以降の取込に使います。例：看A=医師 花子</p>
+<textarea id="aliases" name="aliases" rows="4">{{ request.form.get('aliases', '') }}</textarea>
+{% if aliases %}<details><summary>登録済みの略称</summary>{% for alias, name in aliases.items() %}<p>{{ alias }} → {{ name }}</p>{% endfor %}</details>{% endif %}
+{% if current %}<label class="checkbox"><input type="checkbox" name="replace" value="yes" required> 保存済みのこの月の医師予定を、上の内容で置き換えます。</label>{% endif %}
+<label class="checkbox"><input type="checkbox" name="confirmed" value="yes" required> 全日付の午前・午後と変更内容を確認し、空欄は担当医なしでよいことを確認しました。</label>
+<button>確認した医師予定を保存</button>
+</form></section>{% endif %}
+<section class="panel" id="saved-plans"><h2>保存済みの医師予定</h2>
+{% if current %}<div class="table-wrap"><table><thead><tr><th>日付</th><th>午前</th><th>人数</th><th>午後</th><th>人数</th><th>編集</th></tr></thead><tbody>
+{% for day, plan in current.items() %}<tr><th>{{ day|date_with_weekday }}</th><td>{{ plan.am|join('/') or '担当医なし' }}</td><td>{{ plan.am|length }}人</td><td>{{ plan.pm|join('/') or '担当医なし' }}</td><td>{{ plan.pm|length }}人</td><td><a href="{{ url_for('doctor_edit', month=month, day=day) }}">編集</a></td></tr>{% endfor %}
+</tbody></table></div>{% else %}<p>まだ保存されていません。</p>{% endif %}
+</section><p class="hint">医師予定のみの取込です。希望休・会議・休日日数は変更しません。検査室の1人／2人の指定と勤務表の自動作成は今後追加します。</p></main><script src="{{ url_for('static', filename='doctors.js') }}"></script></body></html>

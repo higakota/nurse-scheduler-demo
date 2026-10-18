@@ -8,7 +8,7 @@
 <body>
 <header><nav class="container"><p class="brand">看護師勤務表</p><a href="{{ url_for('staff_settings') }}">スタッフ設定</a><span aria-current="page">月別入力</span></nav></header>
 <main class="container">
-<h1>月別入力：{{ month }}</h1>
+<h1>月別入力：{{ month }}</h1><p><a href="{{ url_for('doctor_import', month=month) }}">医師予定をExcelから取り込む・確認する</a></p>
 <form method="get" class="month-picker">
 <label for="month">対象月</label><input id="month" type="month" name="month" value="{{ month }}" required min="1900-01" max="9998-12">
 <button>この月の入力を開く</button>
@@ -71,5 +71,5 @@
 <button>会議を追加</button>
 </form>
 </section>
-<p class="hint">入力の保存用画面です。勤務表の自動作成・医師予定のExcel取込・印刷は今後追加します。</p>
+<p class="hint">入力の保存用画面です。医師予定はページ上部のリンクから取り込めます。勤務表の自動作成・印刷は今後追加します。</p>
 </main><script src="{{ url_for('static', filename='monthly.js') }}"></script></body></html>

@@ -9,7 +9,7 @@ app.config.update(
     SECRET_KEY=secrets.token_hex(32),
     DATABASE=str(Path(app.instance_path) / "staff.sqlite3"),
     SESSION_COOKIE_SAMESITE="Strict",
-    MAX_CONTENT_LENGTH=64 * 1024,
+    MAX_CONTENT_LENGTH=6 * 1024 * 1024,
 )
 
 
@@ -96,6 +96,10 @@ def staff_settings():
 from monthly import register_monthly
 
 register_monthly(app, connect_db)
+
+from doctor_import import register_doctor_import
+
+register_doctor_import(app, connect_db)
 
 
 if __name__ == "__main__":
