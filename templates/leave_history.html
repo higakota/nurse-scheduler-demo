@@ -1,7 +1,7 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>有給・前月末勤務</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head><body>
-<header><nav class="container"><p class="brand">看護師勤務表</p><a href="{{ url_for('monthly_settings', month=month) }}">月別入力</a></nav></header>
-<main class="container"><h1>有給・前月末勤務</h1>
-<form method="get" class="month-picker"><label for="month">対象月</label><input type="month" id="month" name="month" value="{{ month }}" min="1900-01" max="9998-12" required><button>この月を開く</button></form>
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>有給・前月末勤務</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"></head><body class="app-layout">{% include "_shell.html" %}
+
+<main class="container app-main" id="main-content">{% include "_page_intro.html" %}<h1>有給・前月末勤務</h1><p class="page-description">{{ ui_description }}</p>
+
 {% if saved %}<p class="success" role="status">保存しました。</p>{% endif %}{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 {% for warning in warnings %}<p class="error" role="alert">{{ warning }}</p>{% endfor %}
 <section class="panel" id="leave"><h2>{{ month }} の有給カレンダー</h2>
@@ -28,7 +28,7 @@
 {% for item in leaves %}<article class="leave-item"><div><strong>{{ item.day|date_with_weekday }}　{{ item.name }}</strong><p>{{ periods[item.period] }}</p></div></article>{% else %}<p>有給は未登録です。</p>{% endfor %}
 <div class="leave-totals">{% for id, total in totals.items() %}<span>{{ names[id] }}：{{ total }}日</span>{% endfor %}</div><p class="hint">有給の量です。指定休日日数への算入や勤務表全体の集計ではありません。</p></details>
 </section>
-<section class="panel"><h2>前月末の勤務（初回手入力）</h2>
+<details class="panel history-disclosure" {% if request.form.get("action") == "history_save" %}open{% endif %}><summary>前月末の勤務<small>初回の連勤判定に使います。入力するときに開いてください。</small></summary>
 <p>対象月の直前5日分です。「全日勤務」には午前診療・午後会議も含みます。半日勤務・全日有給・半日有給と半日勤務の組合せは連勤をリセットします。</p>
 <p class="hint">未入力のまま保存できます。連勤数が分からない場合は未確定のままです。日曜と登録済みの休診日は全日休みで固定します。前月の祝日・年末年始は前月の月別入力で設定してください。</p>
 <p class="hint">この画面は初回導入用です。翌月以降の確定表からの自動引継ぎは、勤務表の作成・確定機能と合わせて追加します。</p>
@@ -38,5 +38,5 @@
 {% if slot.fixed %}<p>全日休み（休診）</p><input type="hidden" name="history_{{ slot.key }}" value="rest">
 {% else %}<select id="history_{{ slot.key }}" name="history_{{ slot.key }}">{% for value, label in history_options.items() %}{% if row.person.role != 'technician' or value not in ['pm', 'am_paid'] %}<option value="{{ value }}" {% if slot.value == value %}selected{% endif %}>{{ label }}</option>{% endif %}{% endfor %}</select>{% endif %}
 </div>{% endfor %}</div><p class="hint">前月末から続く全日勤務：{% if row.tail is none %}未確定（必要な勤務情報が未入力）{% else %}{{ row.tail }}日{% endif %}</p></section>{% endfor %}
-{% if staff %}<button>前月末の勤務を保存</button>{% endif %}</form></section>
-</main><script src="{{ url_for('static', filename='leave_history.js') }}"></script></body></html>
+{% if staff %}<button>前月末の勤務を保存</button>{% endif %}</form></details>
+{% include "_page_footer.html" %}</main><script src="{{ url_for('static', filename='leave_history.js') }}"></script></body></html>

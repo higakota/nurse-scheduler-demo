@@ -1,0 +1,16 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ホーム | 看護師勤務表</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"></head>
+<body class="app-layout home-page">{% include '_shell.html' %}
+<main class="container app-main" id="main-content">
+<div class="home-heading"><div><p class="eyebrow">毎月の勤務表づくり</p><h1>{{ ui_month_label }}の勤務表</h1><p class="page-description">必要な情報をそろえて、勤務表を自動で作成するための準備をしましょう。</p></div><span class="month-chip">1日〜{{ month_days }}日</span></div>
+<ol class="workflow-overview"><li class="is-current"><span>1</span>今月の準備</li><li><span>2</span>自動作成</li><li><span>3</span>確認・修正</li><li><span>4</span>印刷</li></ol>
+<div class="home-grid">
+<section class="home-hero"><p class="eyebrow">はじめに</p><h2>入力をそろえて、<br>勤務表づくりの準備を。</h2><p>医師予定・希望休・必要人数を、順に確認できます。<br>保存した内容はあとから変更できます。</p>
+{% if staff_count %}<a class="button-link hero-action" href="{{ url_for(next_card.endpoint, month=month) }}">準備を続ける <span aria-hidden="true">→</span></a><p class="hero-hint">次の確認：{{ next_card.title }}</p>{% else %}<a class="button-link hero-action" href="{{ url_for('staff_settings', month=month) }}">スタッフを登録する →</a><p class="hero-hint">最初に、勤務表に載せるスタッフを登録しましょう。</p>{% endif %}
+</section>
+<section class="creation-card"><span class="status-badge muted">これから追加</span><h2>勤務表を自動作成</h2><p>入力した条件をもとに、<br>1か月の勤務と配置を組み立てます。</p><div class="sheet-illustration" aria-hidden="true"><div class="sheet-mini-title">月間勤務表</div>{% for r in range(4) %}<div class="sheet-mini-row"><i></i>{% for c in range(7) %}<span></span>{% endfor %}</div>{% endfor %}</div><button disabled aria-describedby="creation-note">勤務表を自動作成</button><p id="creation-note" class="hint">自動作成・結果の確認・印刷は準備中です。<br>今は入力画面を利用できます。</p></section>
+<section class="preparation-section"><div class="section-heading"><div><h2>今月の準備</h2><p class="hint">必要な項目から入力・見直しできます。</p></div><span class="save-count">{{ saved_count }}/4項目に保存あり</span></div>
+<div class="preparation-grid">{% for card in cards %}<a class="preparation-card" href="{{ url_for(card.endpoint, month=month) }}"><div class="card-top"><span class="step-number">{{ '%02d'|format(loop.index) }}</span><span class="status-badge {{ 'attention' if card.attention else ('saved' if card.saved else 'muted') }}">{{ '再確認が必要' if card.attention else ('保存あり' if card.saved else 'これから') }}</span></div><h3>{{ card.title }} <span aria-hidden="true">↗</span></h3><p>{{ card.description }}</p><div class="card-detail">{{ card.detail }}</div></a>{% endfor %}</div>
+<p class="hint status-footnote">「保存あり」は入力を保存した状態です。条件の整合性や、作成可能かどうかの判定ではありません。</p>
+</section>
+<aside class="home-support"><h2>毎月共通の設定</h2><a class="settings-shortcut" href="{{ url_for('staff_settings', month=month) }}"><span>スタッフ設定<small>{{ staff_count }}人登録済み · 職種・勤務区分・ベテラン</small></span><span>→</span></a><div class="home-help"><h3>進め方に迷ったら</h3><p>まずは医師予定のExcelを取り込みます。希望休・有給を入れたら、診療の最低人数を確認してください。</p></div></aside>
+</div></main></body></html>

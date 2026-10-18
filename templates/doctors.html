@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>医師予定のExcel取込</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
-<body><header><nav class="container"><p class="brand">看護師勤務表</p><a href="{{ url_for('monthly_settings', month=month) }}">月別入力へ</a></nav></header>
-<main class="container"><h1>医師予定のExcel取込</h1><p><a href="{{ url_for('coverage_settings', month=month) }}">診療の必要人数へ進む</a></p>
-<form method="get" class="month-picker"><label for="month">対象月</label><input type="month" name="month" id="month" value="{{ month }}" required><button>この月を開く</button></form>
+<title>医師予定のExcel取込</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"></head>
+<body class="app-layout">{% include "_shell.html" %}
+<main class="container app-main" id="main-content">{% include "_page_intro.html" %}<h1>医師予定のExcel取込</h1><p class="page-description">{{ ui_description }}</p>
+
 <p>対象月：{{ month }}。Excel選択 → シート選択 → 内容の確認・修正 → 保存の順に進みます。</p>
 <p class="hint">見本と同じ、4行目が日付・6行目が医師のxlsxに対応します。医師欄は左が午前、右が午後です。ファイルはPC内だけで処理します。</p>
 {% if needs_recheck %}<p class="error" role="alert">以前の読取方式で保存された医師予定は、午前・午後が逆の可能性や金曜・日曜の割当の誤りがあります。旧データは削除していませんが、そのまま使用せず、Excelから読み取り直し、月間一覧で再確認してください。判別不能・変更のある日だけ個別確認が必要です。</p>{% endif %}{% if saved %}<p class="success" role="status">医師予定を保存しました。</p>{% endif %}
@@ -47,4 +47,4 @@
 {% if current %}<div class="table-wrap"><table><thead><tr><th>日付</th><th>午前</th><th>人数</th><th>午後</th><th>人数</th><th>編集</th></tr></thead><tbody>
 {% for day, plan in current.items() %}<tr><th>{{ day|date_with_weekday }}</th><td>{{ plan.am|join('/') or '担当医なし' }}</td><td>{{ plan.am|length }}人</td><td>{{ plan.pm|join('/') or '担当医なし' }}</td><td>{{ plan.pm|length }}人</td><td><a href="{{ url_for('doctor_edit', month=month, day=day) }}">編集</a></td></tr>{% endfor %}
 </tbody></table></div>{% else %}<p>まだ保存されていません。</p>{% endif %}
-</section><p class="hint">医師予定のみの取込です。希望休・会議・休日日数は変更しません。検査室の1人／2人は「診療の必要人数」で指定できます。勤務表の自動作成は今後追加します。</p></main><script src="{{ url_for('static', filename='doctors.js') }}"></script></body></html>
+</section><p class="hint">医師予定のみの取込です。希望休・会議・休日日数は変更しません。検査室の1人／2人は「診療の必要人数」で指定できます。勤務表の自動作成は今後追加します。</p>{% include "_page_footer.html" %}</main><script src="{{ url_for('static', filename='doctors.js') }}"></script></body></html>

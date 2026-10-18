@@ -4,22 +4,19 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>月別入力 | 看護師勤務表</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-<header><nav class="container"><p class="brand">看護師勤務表</p><a href="{{ url_for('staff_settings') }}">スタッフ設定</a><span aria-current="page">月別入力</span></nav></header>
-<main class="container">
-<h1>月別入力：{{ month }}</h1><p><a href="{{ url_for('leave_history', month=month) }}">有給・前月末勤務を入力する</a></p><p><a href="{{ url_for('coverage_settings', month=month) }}">診療の必要人数を確認・設定する</a></p><p><a href="{{ url_for('doctor_import', month=month) }}">医師予定をExcelから取り込む・確認する</a></p>
-<form method="get" class="month-picker">
-<label for="month">対象月</label><input id="month" type="month" name="month" value="{{ month }}" required min="1900-01" max="9998-12">
-<button>この月の入力を開く</button>
-</form>
+<link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"></head>
+<body class="app-layout">{% include "_shell.html" %}
+
+<main class="container app-main" id="main-content">
+{% include "_page_intro.html" %}<h1>希望休・会議</h1><p class="page-description">{{ ui_description }}</p>
+
 <p>休日日数・希望休・休診日を保存してから、会議を登録してください。月を切り替える前に保存してください。</p>
 {% if saved %}<p class="success" role="status">保存しました。</p>{% endif %}
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 {% for warning in warnings %}<p class="error" role="alert">{{ warning }}</p>{% endfor %}
-<form method="post" class="monthly-form">
+<nav class="month-tabs" aria-label="月別入力の項目"><a href="#wishes" data-month-tab="wishes">希望休</a><a href="#targets" data-month-tab="targets">休日日数</a><a href="#closures" data-month-tab="closures">休診日</a><a href="#meetings" data-month-tab="meetings">会議</a></nav><form method="post" class="monthly-form">
 <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="settings">
-<section class="panel">
+<section class="panel" id="targets" data-month-panel="targets">
 <h2>スタッフ別の休日日数</h2>
 <p class="hint">空欄は未設定です。有給はこの日数に含めません。</p>
 {% if not staff %}<p><a href="{{ url_for('staff_settings') }}">先にスタッフを登録してください。</a></p>{% endif %}
@@ -28,7 +25,7 @@
 <input id="target_{{ person.id }}" type="number" name="target_{{ person.id }}" value="{{ data.targets.get(person.id|string, '') }}" min="0" max="{{ days|length }}" step="0.5">
 {% endfor %}
 </section>
-<section class="panel">
+<section class="panel" id="closures" data-month-panel="closures">
 <h2>休診日</h2>
 <p class="hint">日曜は全員休み、金曜午後は診療なしです。祝日は現在、自動設定されないため指定してください。年末年始は対象月ごとに該当日を指定します。</p>
 <div class="table-wrap"><table><thead><tr><th>日付</th><th>休診の指定</th><th>固定の診療休み</th></tr></thead><tbody>
@@ -40,8 +37,8 @@
 {% endfor %}</select></td><td>{{ '全日休み' if day.weekday() == 6 else ('午後診療なし（会議可）' if day.weekday() == 4 else '—') }}</td></tr>{% endfor %}
 </tbody></table></div>
 </section>
-<section class="panel">
-<h2>希望休</h2><p class="hint">選ぶと文字と色が変わります。選択後は「入力内容を保存」を押してください。指定なしは出勤確定を意味しません。表は横にスクロールできます。</p>
+<section class="panel" id="wishes" data-month-panel="wishes">
+<h2>希望休</h2><p class="hint">スタッフを選び、カレンダーの希望休を指定してください。「—」は希望休の指定なしです。最後に「入力内容を保存」を押します。</p>
 <div class="table-wrap"><table class="wishes-table"><thead><tr><th>スタッフ</th>{% for day in days %}<th>{{ day.day }}日<br>{{ weekdays[day.weekday()] }}</th>{% endfor %}</tr></thead><tbody>
 {% for person in staff %}<tr><th>{{ person.name }}</th>{% for day in days %}
 {% set key = (person.id|string) ~ '_' ~ day.isoformat() %}
@@ -52,9 +49,9 @@
 {% endfor %}</select></td>{% endfor %}</tr>{% endfor %}
 </tbody></table></div>
 </section>
-<div class="save-bar"><p id="settings-status" role="status">休日日数・休診日・希望休をまとめて保存します。</p><button>入力内容を保存</button></div>
+<div class="save-bar" data-month-save><p id="settings-status" role="status">休日日数・休診日・希望休をまとめて保存します。</p><button>入力内容を保存</button></div>
 </form>
-<section class="panel">
+<section class="panel" id="meetings" data-month-panel="meetings">
 <h2>午後の会議</h2>
 <p class="hint">参加者は午後全体を診療に配置できません。全員参加の場合は全員にチェックを入れてください。</p>
 {% for meeting in data.meetings %}<article class="meeting">
@@ -72,4 +69,4 @@
 </form>
 </section>
 <p class="hint">入力の保存用画面です。医師予定はページ上部のリンクから取り込めます。勤務表の自動作成・印刷は今後追加します。</p>
-</main><script src="{{ url_for('static', filename='monthly.js') }}"></script></body></html>
+{% include "_page_footer.html" %}</main><script src="{{ url_for('static', filename='monthly.js') }}"></script></body></html>

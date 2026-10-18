@@ -1,8 +1,8 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>診療の必要人数 | 看護師勤務表</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
-<body><header><nav class="container"><p class="brand">看護師勤務表</p><a href="{{ url_for('monthly_settings', month=month) }}">月別入力</a><a href="{{ url_for('doctor_import', month=month) }}">医師予定</a></nav></header>
-<main class="container"><h1>診療の必要人数</h1>
-<form method="get" class="month-picker"><label for="month">対象月</label><input type="month" name="month" id="month" value="{{ month }}" min="1900-01" max="9998-12" required><button>この月を開く</button></form>
+<title>診療の必要人数 | 看護師勤務表</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"></head>
+<body class="app-layout">{% include "_shell.html" %}
+<main class="container app-main" id="main-content">{% include "_page_intro.html" %}<h1>診療の必要人数</h1><p class="page-description">{{ ui_description }}</p>
+
 <p>A・B・C番の人数は最低人数です。A番は看護師2人以上、B番は医師と同人数以上、C番は医師3人以上なら最低2人です。ほかは最低1人／2人を指定します。</p>
 {% if saved %}<p class="success" role="status">検査室の必要人数を保存しました。</p>{% endif %}
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
@@ -31,4 +31,4 @@
 <div class="save-bar"><p id="coverage-status" role="status"></p><p class="hint">C番は検査技師を含めた最低人数です。必要人数以上の配置は可能です。検査技師が配置される場合は看護師が1人少なくなります。配置の可否や不足人数の判定はまだ行いません。</p><button {% if not trusted %}disabled{% endif %}>検査室の必要人数を保存</button></div>
 </form>
 <p class="hint">C番1人：検査技師ありなら看護師0人／なしなら1人。C番2人：検査技師ありなら看護師1人／なしなら2人。会議の参加者は診療人数に含めません。</p>
-</main><script src="{{ url_for('static', filename='coverage.js') }}"></script></body></html>
+{% include "_page_footer.html" %}</main><script src="{{ url_for('static', filename='coverage.js') }}"></script></body></html>

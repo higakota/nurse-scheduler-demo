@@ -1,0 +1,4 @@
+<nav class="page-footer" aria-label="準備の前後へ">
+<a class="button-link secondary" href="{{ url_for(ui_previous[0], month=ui_month) if ui_previous else url_for('index', month=ui_month) }}">← {{ ui_previous[1] if ui_previous else 'ホーム' }}</a>
+{% if ui_next %}<a class="button-link" href="{{ url_for(ui_next[0], month=ui_month) }}">次へ：{{ ui_next[1] }} →</a>{% else %}<a class="button-link" href="{{ url_for('index', month=ui_month) }}">ホームで準備状況を確認 →</a>{% endif %}
+</nav>

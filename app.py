@@ -2,6 +2,8 @@ import secrets
 import sqlite3
 from pathlib import Path
 
+from ui import register_ui, render_home
+
 from flask import Flask, abort, redirect, render_template, request, session, url_for
 
 app = Flask(__name__)
@@ -32,7 +34,7 @@ def connect_db():
 
 @app.route("/")
 def index():
-    return redirect(url_for("staff_settings"))
+    return render_home(connect_db)
 
 
 @app.route("/staff", methods=["GET", "POST"])
@@ -108,6 +110,9 @@ register_coverage(app, connect_db)
 from leave_and_history import register_leave_and_history
 
 register_leave_and_history(app, connect_db)
+
+
+register_ui(app)
 
 
 if __name__ == "__main__":

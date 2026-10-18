@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>スタッフ設定 | 看護師勤務表</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-<header><div class="container"><p class="brand">看護師勤務表</p><span>スタッフ設定</span><a href="{{ url_for('monthly_settings') }}">月別入力</a></div></header>
-<main class="container">
-  <h1>スタッフ設定</h1>
+<link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"></head>
+<body class="app-layout">{% include "_shell.html" %}
+
+<main class="container app-main" id="main-content">
+  {% include "_page_intro.html" %}<h1>スタッフ設定</h1><p class="page-description">{{ ui_description }}</p>
   <p>勤務表に載せるスタッフを登録します。名前や勤務区分は後から変更できます。</p>
   {% if saved %}<p class="success" role="status">保存しました。</p>{% endif %}
   <section class="panel" aria-labelledby="list-title">
@@ -55,7 +55,7 @@
     </form>
   </section>
   <p class="hint">現在はスタッフ設定が利用できます。月別入力から希望休や会議を設定できます。勤務表の自動作成は今後追加します。</p>
-</main>
+{% include "_page_footer.html" %}</main>
 <script src="{{ url_for('static', filename='staff.js') }}"></script>
 </body>
 </html>
