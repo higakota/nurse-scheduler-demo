@@ -1,6 +1,7 @@
 """既存の勤務を複数スタッフで交換する。入力条件・未承諾ヘルプは変更しない。"""
 import itertools
 import time
+from help_limits import helper_demand, helper_demand_roles, PREFERRED_DAILY_HELPERS
 
 
 def improve_jointly(problem, grid, allow_shortages=False, max_full_days=6, seconds=1):
@@ -35,8 +36,8 @@ def improve_jointly(problem, grid, allow_shortages=False, max_full_days=6, secon
                 continue
             if work_units(left)+work_units(right)!=wanted_work:
                 continue
-            # 本人希望の半日勤務は、休みの集約を理由に全休へ変更しない。
-            if any((day,i) in problem.get("requested_half_rests",set()) and automatic_requested(old)
+            # 通常の休みの集約では、本人希望の半日勤務を維持する。
+            if not allow_shortages and any((day,i) in problem.get("requested_half_rests",set()) and automatic_requested(old)
                    and new!=old for day,old,new in ((d,a,left),(e,b,right))):
                 continue
             pairs.append((left,right))
@@ -50,17 +51,20 @@ def improve_jointly(problem, grid, allow_shortages=False, max_full_days=6, secon
         improved=False
         scores={d:deficits(d,rows) for d,rows in enumerate(result)}
         halves={d:half_score(d,rows) for d,rows in enumerate(result)}
-        priority=sorted(days,key=lambda d:(-sum(scores[d]),-halves[d],d))
+        demand_roles={d:helper_demand_roles(problem,d,rows) for d,rows in enumerate(result)}
+        priority=sorted(days,key=lambda d:(-max(0,demand_roles[d][0]-1),-sum(scores[d]),-halves[d],d))
         original_runs=len(six_day_runs(problem,result))
-        for d in priority:
-            for e in priority:
-                if e<=d:
-                    continue
+        for position,d in enumerate(priority):
+            for e in priority[position+1:]:
                 if time.monotonic()>=deadline:
                     return result
                 left,right=abstract(result[d]),abstract(result[e])
                 old_def=[a+b for a,b in zip(scores[d],scores[e])]
                 old_half=halves[d]+halves[e]
+                old_roles=[demand_roles[day] for day in (d,e)]
+                old_demand=[sum(role) for role in old_roles]
+                old_cap=(sum(max(0,nurses-1) for nurses,tech in old_roles),
+                         sum(max(0,n-PREFERRED_DAILY_HELPERS) for n in old_demand),max(old_demand))
                 variations={i:alternatives(d,e,i,left[i],right[i]) for i in own}
                 # 1人の休み移動と、2人の交換を両方調べる。
                 groups=[(i,) for i in own if variations[i]]
@@ -80,7 +84,21 @@ def improve_jointly(problem, grid, allow_shortages=False, max_full_days=6, secon
                         new_half=half_score(d,new_left)+half_score(e,new_right)
                         if any(x>y for x,y in zip(new_def,old_def)) or new_half>old_half:
                             continue
-                        if new_def==old_def and new_half==old_half:
+                        new_roles=[helper_demand_roles(problem,day,rows) for day,rows in ((d,new_left),(e,new_right))]
+                        new_demand=[sum(role) for role in new_roles]
+                        new_cap=(sum(max(0,nurses-1) for nurses,tech in new_roles),
+                                 sum(max(0,n-PREFERRED_DAILY_HELPERS) for n in new_demand),max(new_demand))
+                        moved_requested_work = any(
+                            (day,i) in problem.get("requested_half_rests",set()) and automatic_requested(old) and old != new
+                            for i,(x,y) in zip(group,changes)
+                            for day,old,new in ((d,left[i],x),(e,right[i],y)))
+                        # 希望した休みはoptionsで必ず守る。反対側の勤務の移動は、
+                        # 自院の不足を補い、必要なヘルプが減る場合だけ採用する。
+                        if moved_requested_work and (not allow_shortages or sum(new_demand) >= sum(old_demand)):
+                            continue
+                        if allow_shortages and new_cap > old_cap:
+                            continue
+                        if new_def==old_def and new_half==old_half and (not allow_shortages or new_cap>=old_cap):
                             continue
                         candidate=list(result)
                         candidate[d],candidate[e]=new_left,new_right

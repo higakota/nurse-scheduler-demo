@@ -10,15 +10,24 @@ def conditions_hash(snapshot):
     return hashlib.sha256(json.dumps(values,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
 
 
-def write_reference(db, snapshot, fingerprint, rows, kind="draft"):
+def write_reference(db, snapshot, fingerprint, rows, kind="draft", source_kind=None, source_raw=None):
     db.execute("CREATE TABLE IF NOT EXISTS help_shortage_previews(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
     value=dict(input_hash=fingerprint,conditions_hash=conditions_hash(snapshot),rows=rows,
                kind=kind,created=datetime.now(timezone.utc).isoformat())
+    if kind == "verified":
+        previous=db.execute("SELECT data FROM help_shortage_previews WHERE month=?",(snapshot["month"],)).fetchone()
+        if previous:
+            old=json.loads(previous[0])
+            for key in ("source_kind","source_hash"):
+                if key in old:
+                    value[key]=old[key]
+    if source_kind is not None and source_raw is not None:
+        value.update(source_kind=source_kind,source_hash=hashlib.sha256(source_raw.encode()).hexdigest())
     db.execute("INSERT INTO help_shortage_previews VALUES (?,?) ON CONFLICT(month) DO UPDATE SET data=excluded.data",
                (snapshot["month"],json.dumps(value,ensure_ascii=False)))
 
 
-def publish_reference(connect_db, snapshot, fingerprint, rows, kind="draft"):
+def publish_reference(connect_db, snapshot, fingerprint, rows, kind="draft", outcome=None, expected_source=None):
     from schedule import read_snapshot
     db=connect_db()
     try:
@@ -27,7 +36,21 @@ def publish_reference(connect_db, snapshot, fingerprint, rows, kind="draft"):
         if latest!=fingerprint:
             db.rollback()
             return False
+        if expected_source:
+            source_kind, source_raw = expected_source
+            current = source_data(db, snapshot["month"], source_kind)
+            if current != source_raw:
+                db.rollback()
+                return False
         write_reference(db,snapshot,fingerprint,rows,kind=kind)
+        if expected_source:
+            row = db.execute("SELECT data FROM help_shortage_previews WHERE month=?", (snapshot["month"],)).fetchone()
+            value = json.loads(row[0])
+            value.update(source_kind=source_kind, source_hash=hashlib.sha256(source_raw.encode()).hexdigest())
+            db.execute("UPDATE help_shortage_previews SET data=? WHERE month=?", (json.dumps(value, ensure_ascii=False), snapshot["month"]))
+        if outcome is not None:
+            from manual_schedule import seed_draft
+            seed_draft(db, snapshot["month"], snapshot, fingerprint, outcome)
         db.commit()
         return True
     finally:
@@ -42,7 +65,9 @@ def load_reference(db, month):
         return dict(state="missing",days={},kind="draft",created="")
     reference=json.loads(row["data"])
     snapshot,fp,_=read_snapshot(db,month)
-    if reference["conditions_hash"]!=conditions_hash(snapshot) or (
+    source_changed = bool(reference.get("source_hash")) and reference["source_hash"] != hashlib.sha256(
+        source_data(db, month, reference["source_kind"]).encode()).hexdigest()
+    if source_changed or reference["conditions_hash"]!=conditions_hash(snapshot) or (
         reference["kind"]=="verified" and reference["input_hash"]!=fp
     ):
         return dict(state="outdated",days={},kind=reference["kind"],created=reference["created"])
@@ -53,6 +78,8 @@ def load_reference(db, month):
         if veteran:
             label=(f"看護師{count}人（うちベテラン{veteran}人）" if count else
                    f"人数充足・ベテラン{veteran}人への交代")
+        elif item["area"] == "検査室を担当できる看護師":
+            label=f"看護師{count}人（検査室を担当できる人）"
         elif "検査技師" in item["area"]:
             label=f"検査技師{count}人（C番）"
         else:
@@ -60,3 +87,29 @@ def load_reference(db, month):
         days.setdefault(item["date"],[]).append(dict(half=item["half"],label=label))
     return dict(state="reference" if reference["input_hash"]!=fp else "current",days=days,
                 kind=reference["kind"],created=reference["created"])
+
+
+def source_data(db, month, kind):
+    from fixed_help import load_seed, load_manual_source
+    return (load_manual_source if kind == "manual" else load_seed)(db, month)
+
+
+def shortages_from_source(snapshot, raw):
+    """保存した自院勤務を維持して不足だけを再計算する。"""
+    from scheduler_engine import prepare, verify, draft_shortages
+    from schedule_display import grouped_shortages
+    source = json.loads(raw)
+    if source.get("conditions_hash") not in (None, conditions_hash(snapshot)):
+        raise ValueError("元の勤務表の保存後に条件が変わっています。編集画面で確認・保存してから不足を更新してください。")
+    problem = prepare(snapshot, use_help=False)
+    if problem["errors"]:
+        raise ValueError(problem["errors"][0])
+    positions = {str(p["id"]): i for i, p in enumerate(source["people"]) if not p["is_help"]}
+    if set(positions) != {str(p["id"]) for p in problem["people"]} or source["days"] != problem["days"]:
+        raise ValueError("自院スタッフ・対象日が変わっています。編集画面で元の勤務表を確認してください。")
+    grid = [[rows[positions[str(p["id"])]] for p in problem["people"]] for rows in source["grid"]]
+    errors = verify(problem, grid, allow_shortages=True, max_full_days=6)
+    if errors:
+        raise ValueError("保存した自院勤務を確認してください：" + errors[0])
+    shortages = [row for d, rows in enumerate(grid) for row in draft_shortages(problem, d, rows)]
+    return grouped_shortages(shortages, problem, grid)

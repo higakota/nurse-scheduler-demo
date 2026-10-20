@@ -184,4 +184,5 @@ class TechnicianExceptionRouteTest(unittest.TestCase):
         finally:
             db.close()
         text=self.client.get("/schedule?month=2026-02").get_data(as_text=True)
-        self.assertIn("以前の結果",text)
+        self.assertIn("最新の条件で勤務表を作成",text)
+        self.assertNotIn('id="saved-print"',text)

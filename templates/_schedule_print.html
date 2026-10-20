@@ -1,5 +1,5 @@
 <section id="{{ print_id }}" class="print-packet" aria-hidden="true">
-<section class="print-sheet">
+<section class="print-sheet print-monthly-sheet">
 <header class="print-heading"><h1>{{ month }}　{{ 'ヘルプ相談用の仮勤務表' if is_draft else '保存済み勤務表' }}</h1><p>{{ '仮表・未確定／相談用' if is_draft else ('以前の条件の結果・要再作成' if stale else '保存済みの作成結果') }}</p></header>
 
 {% if stale and not is_draft %}<p class="print-warning">保存後に入力が変わっています。この用紙は以前の結果で、最新の条件を反映していません。</p>{% endif %}

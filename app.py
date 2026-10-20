@@ -66,7 +66,7 @@ def staff_settings():
             if values["is_help"]:
                 values["employment"] = "full"
             elif values["role"] == "nurse":
-                values["allowed_areas"] = "ABC"
+                values["allowed_areas"] = "AB" if request.form.get("no_c") == "1" else "ABC"
             if values["role"] == "technician":
                 values.update(employment="part" if values["employment"] == "part" else "", veteran=False, allowed_areas="C")
             if edit_id is not None and db.execute(
@@ -146,6 +146,10 @@ register_input_review(app, connect_db)
 from manual_schedule import register_manual_schedule
 
 register_manual_schedule(app, connect_db)
+
+from negotiated_leave import register_negotiated_leave
+
+register_negotiated_leave(app, connect_db)
 
 register_ui(app)
 

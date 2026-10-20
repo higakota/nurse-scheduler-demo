@@ -5,6 +5,8 @@ import time
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from doctor_import import IMPORT_VERSION
+from help_limits import nurse_helper_excess
+
 from leave_and_history import trailing_full_days
 from meeting_rules import checked_times, check_meeting_overlap
 from weekly_rules import build_weekly, work_units, weekly_summary
@@ -28,6 +30,20 @@ def rest_units(pair):
     if "P" in pair:
         return 2 if "R" in pair else 0
     return pair.count("R")
+
+
+def agreed_work_halves(monthly):
+    """了承出勤を勤務条件として保持する。後で明示した代休はその日の合意を置き換える。"""
+    slots={}
+    for record in monthly.get("agreed_wish_changes",[]):
+        if record.get("cancelled"):
+            continue
+        key=str(record["staff_id"])+"_"+record["date"]
+        slots.setdefault(key,set()).update({"full":(0,1),"am":(0,),"pm":(1,)}.get(record.get("work_period"),()))
+        replacement=record.get("replacement_date")
+        if replacement:
+            slots.pop(str(record["staff_id"])+"_"+replacement,None)
+    return slots
 
 
 def prepare(snapshot, use_help=False, allow_nurse_help=True):
@@ -66,6 +82,7 @@ def prepare(snapshot, use_help=False, allow_nurse_help=True):
         except (ValueError, InvalidOperation):
             errors.append(person["name"] + "：月の休日日数を0.5日単位で指定してください。")
             targets.append(0)
+    agreed_work = agreed_work_halves(monthly)
     meetings = monthly.get("meetings", [])
     ids = {str(p["id"]) for p in staff}
     meeting_people = {}
@@ -151,6 +168,8 @@ def prepare(snapshot, use_help=False, allow_nurse_help=True):
                     halves.append(("O", "R"))
                 elif req[h][0] and can_visit:
                     halves.append(("W", "R"))
+                elif person["is_help"] and visit == "full" and can_visit:
+                    halves.append(("O", "R"))
                 else:
                     halves.append(("R",))
             possible = []
@@ -158,6 +177,8 @@ def prepare(snapshot, use_help=False, allow_nurse_help=True):
                 if person["role"] == "technician" and b in ("W", "M", "O") and a not in ("W", "M", "O"):
                     continue
                 pair = a + b
+                if any(pair[h] not in ("W","M","O") for h in agreed_work.get(key,())):
+                    continue
                 if (day_index,person_index) in weekly["fixed"] and work_units(pair) != weekly["fixed"][(day_index,person_index)]:
                     continue
                 if person_index in weekly["parts"]:
@@ -179,11 +200,15 @@ def prepare(snapshot, use_help=False, allow_nurse_help=True):
             if not req[h][0]:
                 continue
             nurses = [p for i, p in enumerate(people) if p["role"] == "nurse" and any(v[h] == "W" for v in choices[i])]
-            tech = any(p["role"] == "technician" and any(v[h] == "W" for v in choices[i]) for i, p in enumerate(people))
+            tech = sum(p["role"] == "technician" and any(v[h] == "W" for v in choices[i]) for i, p in enumerate(people))
             need = req[h][0] + req[h][1] + max(0, req[h][2] - int(tech))
             for area, required in (("A（受付）", req[h][0]), ("B（診察室）", req[h][1]), ("全配置の看護師合計", need)):
                 if len(nurses) < required:
                     shortages.append(dict(date=day_text, half=half, area=area, required=required, available=len(nurses), missing=required-len(nurses)))
+            c_need = max(0, req[h][2] - int(tech))
+            c_available = sum("C" in p.get("allowed_areas", "ABC") for p in nurses)
+            if c_available < c_need:
+                shortages.append(dict(date=day_text, half=half, area="検査室を担当できる看護師", required=c_need, available=c_available, missing=c_need-c_available))
             if not any(p["veteran"] for p in nurses):
                 shortages.append(dict(date=day_text, half=half, area="診療側のベテラン看護師", required=1, available=0, missing=1))
     tails = []
@@ -263,8 +288,8 @@ def allocate(problem, day_index, pairs, partial=False):
             continue
         nurses = [i for i, p in enumerate(people) if p["role"] == "nurse" and pairs[i][half] == "W"]
         techs = [i for i, p in enumerate(people) if p["role"] == "technician" and pairs[i][half] == "W"]
-        c_nurses = max(0, c - int(bool(techs)))
-        if not partial and (len(nurses) < a + b + c_nurses or not any(people[i]["veteran"] for i in nurses)):
+        c_nurses = max(0, c - len(techs))
+        if not partial and (len(nurses) < a + b + c_nurses or sum("C" in people[i].get("allowed_areas", "ABC") for i in nurses) < c_nurses or not any(people[i]["veteran"] for i in nurses)):
             return None
         for i in nurses:
             grid[i][half] = "D"
@@ -302,11 +327,16 @@ def verify(problem, grid, allow_shortages=False, max_full_days=6):
             if len(row) != 2 or any(code not in "ABCDMORP" for code in row):
                 return ["作成結果の勤務記号が不正です。"]
             abstract = "".join("W" if code in "ABCD" else code for code in row)
-            if abstract not in problem["options"][d][i]:
-                errors.append(problem["days"][d] + "：希望休・有給・会議・来院予定・職種の条件違反です。")
             person = problem["people"][i]
+            if abstract not in problem["options"][d][i]:
+                if person["is_help"] and any(code in WORK for code in row):
+                    errors.append(problem["days"][d]+" "+person["name"]+"：表の出勤時間がヘルプの来院予定に入っていません。編集内容を確認・保存して来院予定へ反映してください。")
+                else:
+                    errors.append(problem["days"][d] + "：希望休・有給・会議・来院予定・職種の条件違反です。")
             if person["role"] == "technician" and any(code in "ABD" for code in row):
                 errors.append("検査技師を検査室以外に配置しています。")
+            if person["role"] == "nurse" and "C" not in person.get("allowed_areas", "ABC") and "C" in row:
+                errors.append(person["name"] + "：検査室を担当できないスタッフに検査室を指定しています。")
             # 休みと有給の算入は、勤務表の記号から再計算する。
             if "P" in row:
                 rest[i] += 2 if "R" in row else 0
@@ -330,11 +360,14 @@ def verify(problem, grid, allow_shortages=False, max_full_days=6):
                     errors.append("休診時間帯に診療配置があります。")
                 continue
             nurses = [i for i, p in enumerate(problem["people"]) if p["role"] == "nurse"]
-            tech_present = any(p["role"] == "technician" and rows[i][half] == "C" for i,p in enumerate(problem["people"]))
+            tech_present = sum(p["role"] == "technician" and rows[i][half] == "C" for i,p in enumerate(problem["people"]))
             required_nurses = need_a + need_b + max(0, need_c-int(tech_present))
             available_nurses = sum(rows[i][half] in "ABCD" for i in nurses)
             if not allow_shortages and available_nurses < required_nurses:
                 errors.append("診療に必要な看護師の合計人数が不足しています。")
+            c_available = sum(rows[i][half] in "ABCD" and "C" in problem["people"][i].get("allowed_areas", "ABC") for i in nurses)
+            if not allow_shortages and c_available < max(0, need_c-int(tech_present)):
+                errors.append("検査室を担当できる看護師が不足しています。")
             if not allow_shortages and not any(problem["people"][i]["veteran"] and rows[i][half] in "ABCD" for i in nurses):
                 errors.append("診療側のベテラン看護師が不足しています。")
     for k, i in enumerate(problem["regular"]):
@@ -349,7 +382,41 @@ def verify(problem, grid, allow_shortages=False, max_full_days=6):
     return list(dict.fromkeys(errors))
 
 
-def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, partial=False, draft_max_full_days=5):
+
+def daily_shortages_from_options(problem, d):
+    """その日に勤務可能な人数の上限から、確実に不足する職種・時間帯を調べる。"""
+    rows=[]
+    people=problem["people"]
+    choices=problem["options"][d]
+    absent=not any(any(any(c in "WMO" for c in pair) for pair in choices[i]) for i in problem["local_tech"])
+    def add(half,area,required,available):
+        if required>available:
+            rows.append(dict(date=problem["days"][d],half=half,area=area,
+                             required=required,available=available,missing=required-available))
+    for h,label in enumerate(("午前","午後")):
+        a,b,c=problem["requirements"][d][h]
+        if not a:
+            continue
+        possible=[i for i in range(len(people)) if any(pair[h]=="W" for pair in choices[i])]
+        nurses=[i for i in possible if people[i]["role"]=="nurse"]
+        tech=sum(people[i]["role"]=="technician" for i in possible)
+        add(label,"診療の看護師合計",a+b+max(0,c-tech),len(nurses))
+        add(label,"検査室を担当できる看護師",max(0,c-tech),
+            sum("C" in people[i].get("allowed_areas","ABC") for i in nurses))
+        add(label,"診療側のベテラン看護師（看護師人数の内数）",1,
+            int(any(people[i]["veteran"] for i in nurses)))
+        if absent and problem["days"][d] not in problem["technician_exceptions"]:
+            add(label,"他院の検査技師（C番として計上）",1,
+                int(any(i in possible for i in problem["helper_tech"])))
+    from schedule_display import grouped_shortages
+    grouped=grouped_shortages(rows,problem,[])
+    for row in grouped:
+        if row["area"]=="検査技師（C番として計上）":
+            row["area"]="他院の検査技師（C番として計上）"
+    return grouped
+
+
+def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, partial=False, draft_max_full_days=5, fixed_regular=None):
     problem = prepare(snapshot, use_help, allow_nurse_help)
     mandatory=compulsory_six_runs(problem) if draft_max_full_days==5 and not problem["errors"] else []
     permitted={run["index"] for run in mandatory}
@@ -361,6 +428,30 @@ def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, parti
     base = dict(problem=problem, grid=None, messages=[], shortages=problem["shortages"])
     if problem["errors"]:
         return dict(base, status="input_error", messages=problem["errors"])
+    if use_help:
+        for d, day in enumerate(problem["days"]):
+            choices = list(problem["options"][d])
+            for i, person in enumerate(problem["people"]):
+                if not person["is_help"] or snapshot.get("help_availability", {}).get(str(person["id"]) + "_" + day) != "full":
+                    continue
+                full = tuple(pair for pair in choices[i] if all(code in ("W", "M", "O") for code in pair))
+                if full:
+                    # 来院OKの全日を使う。余剰人数を理由に半日だけには切り詰めない。
+                    choices[i] = tuple(pair for pair in choices[i] if pair in full or not any(code in ("W", "M", "O") for code in pair))
+            problem["options"][d] = tuple(choices)
+    if fixed_regular is not None:
+        for d, day in enumerate(problem["days"]):
+            choices = list(problem["options"][d])
+            for i, person in enumerate(problem["people"]):
+                if person["is_help"]:
+                    continue
+                pair = fixed_regular.get((day, str(person["id"])))
+                abstract = "".join("W" if code in "ABCD" else code for code in (pair or ""))
+                if abstract not in choices[i]:
+                    return dict(base, status="input_error", messages=[
+                        day + " " + person["name"] + "：元の仮表と現在の入力条件が一致しません。自院の仮表を確認してください。"])
+                choices[i] = (abstract,)
+            problem["options"][d] = tuple(choices)
     if partial:
         issues = []
         for k, i in enumerate(problem["regular"]):
@@ -377,7 +468,12 @@ def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, parti
     if partial:
         return _draft_by_person(problem, seconds, max_full_days=draft_max_full_days)
     if problem["shortages"] and not partial:
-        return dict(base, status="infeasible", messages=["希望休・会議・来院予定を守ると、下記の時間帯で最低人数を満たせません。"])
+        affected={row["date"] for row in problem["shortages"]}
+        rows=[row for d,day in enumerate(problem["days"]) if day in affected for row in daily_shortages_from_options(problem,d)]
+        rows=rows or problem["shortages"]
+        from schedule_display import concise_shortages
+        messages=[day["date"]+" "+item+"。" for day in concise_shortages(rows) for item in day["items"]]
+        return dict(base,status="infeasible",shortages=rows,messages=messages)
     started = time.monotonic()
     deadline = started + seconds
     n = len(problem["people"])
@@ -399,6 +495,7 @@ def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, parti
                     full = tuple(all(code in ("W","M","O") for code in pair) for pair in pairs)
                     attend = tuple(any(code in ("W","M","O") for code in pair) for pair in pairs)
                     help_used = (
+                        nurse_helper_excess(problem['people'],pairs),
                         sum(sum(code in ("W","M","O") for code in pairs[i]) for i,p in enumerate(problem["people"]) if p["is_help"] and p["role"] == "nurse"),
                         sum(sum(code in ("W","M","O") for code in pairs[i]) for i,p in enumerate(problem["people"]) if p["is_help"]))
                     candidate = (grid, tuple(rests[i] for i in problem["regular"]), full, attend, help_used,
@@ -417,7 +514,13 @@ def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, parti
                 cache[key] = candidates
             patterns.append(cache[key])
             if not patterns[-1]:
-                return dict(base, status="infeasible", messages=[problem["days"][d] + "：同時配置・会議・職種・全日休み時の検査技師代替条件を満たす日別勤務がありません。"])
+                rows=daily_shortages_from_options(problem,d)
+                from schedule_display import concise_shortages
+                summary=concise_shortages(rows)
+                messages=[day["date"]+" "+item+"。" for day in summary for item in day["items"]]
+                if not messages:
+                    messages=[problem["days"][d]+"：午前・午後を同時に担当できる配置がありません。自院の勤務かヘルプの来院予定を調整してください。"]
+                return dict(base,status="infeasible",shortages=rows,messages=messages)
         width = len(problem["regular"])
         low = [[0]*width for _ in range(len(patterns)+1)]
         high = [[0]*width for _ in range(len(patterns)+1)]
@@ -451,10 +554,14 @@ def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, parti
             first_day = weekly["weeks"][w]["indices"][0]
             future_part_capacity[w] = future_part_capacity[w+1] + sum(min(weekly["limits"][k]-weekly["external"][w][k],week_max[first_day][k]) for k in range(part_count))
         answer = None
-        def search(strict, limit, whole_rest_first=False):
+        def search(strict, limit, whole_rest_first=False, limit_split=False):
             failed = set()
             path = []
-            def visit(d, remaining, runs, attendance, week_used):
+            half_caps = tuple(max(problem["targets"][k] % 2,
+                sum(all(automatic_half_rest(problem,d,i,pair) for pair in choices[i])
+                    for d,choices in enumerate(problem["options"])))
+                for k,i in enumerate(problem["regular"]))
+            def visit(d, remaining, runs, attendance, week_used, half_used):
                 nonlocal answer
                 if time.monotonic() >= limit or len(failed) > 100000:
                     raise SearchLimit
@@ -472,7 +579,7 @@ def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, parti
                 # 各日 rest - part_work <= 最大値。週上限から月末までの part_work の上限を合わせる。
                 if sum(remaining) > rest_minus_part[d] + available_part:
                     return False
-                state = (d, remaining, runs, attendance if strict else (), week_used)
+                state = (d, remaining, runs, attendance if strict else (), week_used, half_used if limit_split else ())
                 if state in failed:
                     return False
                 desired = tuple(local_low[d][k] + (remaining[k]-low[d][k]) / max(1,high[d][k]-low[d][k]) * (local_high[d][k]-local_low[d][k]) for k in range(width))
@@ -495,16 +602,20 @@ def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, parti
                     new_week_used = tuple(week_used[k]+part_work[k] for k in range(part_count))
                     if any(new_week_used[k] + weekly["external"][w][k] > weekly["limits"][k] for k in range(part_count)):
                         continue
+                    new_halves = tuple(half_used[k] + int(automatic_half_rest(problem,d,i,grid[i]))
+                                       for k,i in enumerate(problem["regular"]))
+                    if limit_split and any(value > cap for value,cap in zip(new_halves,half_caps)):
+                        continue
                     new_remaining = tuple(remaining[k]-rest[k] for k in range(width))
                     path.append(grid)
-                    if visit(d+1, new_remaining, new_runs, new_attendance, new_week_used):
+                    if visit(d+1, new_remaining, new_runs, new_attendance, new_week_used, new_halves):
                         return True
                     path.pop()
                 failed.add(state)
                 return False
-            return visit(0, problem["targets"], problem["tails"], problem["attendance_tails"], tuple(0 for _ in range(part_count)))
+            return visit(0, problem["targets"], problem["tails"], problem["attendance_tails"], tuple(0 for _ in range(part_count)), tuple(0 for _ in range(width)))
         try:
-            search(True, min(deadline, time.monotonic() + max(0, deadline-time.monotonic())*0.15), whole_rest_first=True)
+            search(True, min(deadline, time.monotonic() + max(0, deadline-time.monotonic())*0.15), whole_rest_first=True, limit_split=True)
         except SearchLimit:
             pass
         if answer is None:
@@ -566,6 +677,12 @@ def rest_plan_key(result):
     return len(six_day_runs(problem,grid)),halves,helpers
 
 
+def help_plan_key(result):
+    key=rest_plan_key(result)
+    repeated_nurses=sum(nurse_helper_excess(result["problem"]["people"],rows) for rows in result["grid"])
+    return key[:2]+(repeated_nurses,key[2])
+
+
 def generate(snapshot, use_help=False, seconds=10, allow_six=False):
     """全日休みを確保できるなら承諾済みヘルプの案も比較する。6連勤への緩和は従来どおり。"""
     started=time.monotonic()
@@ -591,7 +708,7 @@ def generate(snapshot, use_help=False, seconds=10, allow_six=False):
             key=rest_plan_key(result)
             if not include_help:
                 own_halves=key[1]
-            if best is None or key<rest_plan_key(best):
+            if best is None or help_plan_key(result)<help_plan_key(best):
                 best=result
             # 希望外の半休も6連勤もない案なら、追加のヘルプを探す必要はない。
             if rest_plan_key(best)[:2]==(0,0):
@@ -629,10 +746,12 @@ def draft_shortages(problem, d, rows):
             if required > available:
                 result.append(dict(date=problem["days"][d], half=label, area=area,
                                    required=required, available=available, missing=required-available))
-        tech_present = any(row[half] == "C" and p["role"] == "technician" for p,row in zip(people,rows))
+        tech_present = sum(row[half] == "C" and p["role"] == "technician" for p,row in zip(people,rows))
         available_nurses = sum(p["role"] == "nurse" and row[half] in "ABCD" for p,row in zip(people,rows))
         required_nurses = need[0]+need[1]+max(0,need[2]-int(tech_present))
         add("診療の看護師合計", required_nurses, available_nurses)
+        add("検査室を担当できる看護師", max(0, need[2]-int(tech_present)),
+            sum(p["role"] == "nurse" and row[half] in "ABCD" and "C" in p.get("allowed_areas", "ABC") for p,row in zip(people,rows)))
         add("診療側のベテラン看護師（看護師人数の内数）", 1,
             int(any(p["role"] == "nurse" and p["veteran"] and row[half] in "ABCD" for p,row in zip(people,rows))))
         if absent and problem["days"][d] not in problem["technician_exceptions"]:
@@ -732,7 +851,7 @@ def _draft_by_person(problem, seconds, max_full_days=5):
                                 continue
                             need_a, need_b, need_c = problem["requirements"][d][h]
                             nurse_count = sum(people[j]["role"] == "nurse" and grid[d][j][h] == "W" for j in range(len(people)) if j != i)
-                            tech_present = any(people[j]["role"] == "technician" and grid[d][j][h] == "W" for j in range(len(people)) if j != i)
+                            tech_present = sum(people[j]["role"] == "technician" and grid[d][j][h] == "W" for j in range(len(people)) if j != i)
                             if people[i]["role"] == "technician":
                                 benefit += int(need_c > 0 and not tech_present)
                             else:
@@ -799,6 +918,8 @@ def _draft_by_person(problem, seconds, max_full_days=5):
                                     seconds=min(2, max(0, seconds*0.25)))
         allocated = consolidate_rest_days(problem, allocated, allow_shortages=True, max_full_days=max_full_days, prefer_whole_rest=True,
                                           seconds=min(2, max(0.1, seconds*0.15)))
+        allocated = improve_jointly(problem, allocated, allow_shortages=True, max_full_days=max_full_days,
+                                    seconds=min(1, max(0, seconds*0.1)))
         shortages = [row for d, rows in enumerate(allocated) for row in draft_shortages(problem, d, rows)]
         six_day_runs = []
         for i, person in enumerate(people):

@@ -36,7 +36,7 @@ class ScheduleComparisonTest(unittest.TestCase):
         db.commit()
         db.close()
         text = self.client.get("/schedule?month=2026-02").get_data(as_text=True)
-        self.assertIn('data-compare-schedule="saved"', text)
+        self.assertNotIn('data-compare-schedule="saved"', text)
         self.assertNotIn('class="paper-request-wish"', text)
 
     def test_legacy_stale_result_does_not_compare_against_current_wishes(self):
@@ -51,6 +51,6 @@ class ScheduleComparisonTest(unittest.TestCase):
         db.commit()
         db.close()
         text = self.client.get("/schedule?month=2026-02").get_data(as_text=True)
-        self.assertIn("作成時の希望休・有給が残っていない", text)
+        self.assertNotIn("自動で作った月間勤務表", text)
         self.assertNotIn('data-compare-schedule="saved"', text)
-        self.assertIn('class="doctor-unknown">記録なし', text)
+        self.assertNotIn('id="saved-print"', text)

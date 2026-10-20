@@ -1,4 +1,4 @@
-"""手動編集用の下書き。自動作成結果・入力条件は更新しない。"""
+"""手動編集用の下書き。有給の編集は確認後に登録と同期し、再作成の元へ引き継ぐ。"""
 import calendar
 import hashlib
 import json
@@ -17,7 +17,8 @@ CODES = {"R":"休み", "D":"診療勤務（看護師）", "C":"検査室（検�
 def seed_draft(db, month, snapshot, fingerprint, outcome):
     """仮作成の結果を編集開始用として保管する。編集中の下書きは変えない。"""
     problem = outcome["problem"]
-    data = dict(days=problem["days"], people=problem["people"], grid=outcome["grid"],
+    from help_shortages import conditions_hash
+    data = dict(conditions_hash=conditions_hash(snapshot), days=problem["days"], people=problem["people"], grid=outcome["grid"],
                 input_hash=fingerprint, source="仮作成の表", created=datetime.now(timezone.utc).isoformat())
     db.execute("CREATE TABLE IF NOT EXISTS manual_schedule_seeds(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
     db.execute("INSERT INTO manual_schedule_seeds VALUES (?,?) ON CONFLICT(month) DO UPDATE SET data=excluded.data",
@@ -47,6 +48,28 @@ def load_manual(db, month, snapshot, fingerprint, generated):
                      if day in source_days and str(p["id"]) in source_people else "RR" for p in people])
     return dict(days=days,people=people,grid=grid,history=[],input_hash=source.get("input_hash",fingerprint),
                 source=source.get("source","保存済みの自動作成結果" if generated else "手入力（初期状態は全員休み）")), token
+
+
+def align_helper_rows(snapshot, base):
+    """後から追加したヘルプの空行を補い、自院の全セルと元データを保持する。"""
+    current = snapshot["staff"]
+    if {str(p["id"]) for p in base["people"] if not p["is_help"]} != {str(p["id"]) for p in current if not p["is_help"]}:
+        raise ValueError("自院スタッフの構成が下書きと異なります。現在の表を確認してください。")
+    if [str(p["id"]) for p in base["people"]] == [str(p["id"]) for p in current]:
+        return dict(base, people=current)
+    indexes = {str(p["id"]): i for i,p in enumerate(base["people"])}
+    def remap(grid):
+        if any(len(row) != len(base["people"]) for row in grid):
+            raise ValueError("下書き履歴のスタッフ構成を確認できません。変更は保存していません。")
+        return [[row[indexes[str(p["id"])]] if str(p["id"]) in indexes else "RR" for p in current] for row in grid]
+    aligned = dict(base, people=current, grid=remap(base["grid"]))
+    aligned["staff_alignment_original"] = dict(people=base["people"], grid=base["grid"])
+    aligned["history"] = []
+    for entry in base.get("history", []):
+        item = dict(entry, grid=remap(entry["grid"]))
+        item.setdefault("staff_alignment_original", dict(people=base["people"], grid=entry["grid"]))
+        aligned["history"].append(item)
+    return aligned
 
 
 def checked_patch(base, text):
@@ -100,6 +123,67 @@ def diagnostics(snapshot, base, grid):
     return list(dict.fromkeys(messages)),shortages
 
 
+
+def synchronize_paid_inputs(snapshot, base, grid):
+    """表で指定した有給と、その表で明示的に取り消した有給を入力へ反映する案。"""
+    from copy import deepcopy
+    updated=deepcopy(snapshot)
+    leaves=updated.setdefault("leave_history",{}).setdefault("leaves",{})
+    changes=[]
+    periods={frozenset((0,1)):"full",frozenset((0,)):"am",frozenset((1,)):"pm"}
+    for d,day in enumerate(base["days"]):
+        for i,person in enumerate(base["people"]):
+            if person["is_help"]:
+                continue
+            pair=grid[d][i]
+            key=str(person["id"])+"_"+day
+            paid=periods.get(frozenset(h for h,c in enumerate(pair) if c=="P"),"")
+            old=leaves.get(key,"")
+            if paid and paid!=old or not paid and old and "P" in base["grid"][d][i] and pair!=base["grid"][d][i]:
+                changes.append(dict(key=key,date=day,name=person["name"],before=old,after=paid))
+                if paid:
+                    leaves[key]=paid
+                else:
+                    leaves.pop(key,None)
+    return updated,changes
+
+
+def save_paid_inputs(db, snapshot):
+    db.execute("CREATE TABLE IF NOT EXISTS leave_history(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
+    db.execute("INSERT INTO leave_history VALUES (?,?) ON CONFLICT(month) DO UPDATE SET data=excluded.data",
+               (snapshot["month"],json.dumps(snapshot["leave_history"],ensure_ascii=False)))
+
+
+
+def synchronize_help_inputs(snapshot, base, grid):
+    """編集中のヘルプ出勤に必要な来院枠を提案する。承諾の保存は別に確認する。"""
+    from copy import deepcopy
+    updated=deepcopy(snapshot)
+    visits=updated.setdefault("help_availability",{})
+    periods={"full":{0,1},"am":{0},"pm":{1},"":set()}
+    labels={frozenset((0,1)):"full",frozenset((0,)):"am",frozenset((1,)):"pm"}
+    changes=[]
+    for d,day in enumerate(base["days"]):
+        for i,person in enumerate(base["people"]):
+            if not person["is_help"]:
+                continue
+            needed={h for h,c in enumerate(grid[d][i]) if c in "ABCDMO"}
+            key=str(person["id"])+"_"+day
+            before=visits.get(key,"")
+            missing=needed-periods.get(before,set())
+            if missing:
+                after=labels[frozenset(needed|periods.get(before,set()))]
+                visits[key]=after
+                changes.append(dict(key=key,date=day,name=person["name"],before=before,after=after))
+    return updated,changes
+
+
+def save_help_inputs(db,snapshot):
+    db.execute("CREATE TABLE IF NOT EXISTS help_availability(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
+    db.execute("INSERT INTO help_availability VALUES (?,?) ON CONFLICT(month) DO UPDATE SET data=excluded.data",
+               (snapshot["month"],json.dumps(snapshot["help_availability"],ensure_ascii=False)))
+
+
 def register_manual_schedule(app, connect_db):
     @app.template_filter("manual_pair")
     def manual_pair(pair):
@@ -112,6 +196,8 @@ def register_manual_schedule(app, connect_db):
         session.setdefault("csrf_token",secrets.token_hex(32))
         db=connect_db()
         error=None
+        paid_changes=[]
+        help_changes=[]
         preview=False
         changes=[]
         patch="{}"
@@ -124,7 +210,10 @@ def register_manual_schedule(app, connect_db):
             else:
                 db.execute("BEGIN")
             snapshot,fp,generated=read_snapshot(db,month)
+            request_snapshot=snapshot
             base,token=load_manual(db,month,snapshot,fp,generated)
+            if {str(p["id"]) for p in base["people"] if not p["is_help"]} == {str(p["id"]) for p in snapshot["staff"] if not p["is_help"]}:
+                base=align_helper_rows(snapshot,base)
             grid=base["grid"]
             seed_row=db.execute("SELECT data FROM manual_schedule_seeds WHERE month=?",(month,)).fetchone() if db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='manual_schedule_seeds'").fetchone() else None
             import_sources={}
@@ -156,6 +245,9 @@ def register_manual_schedule(app, connect_db):
                         previous=base["history"][-1]["grid"]
                         patch=json.dumps({str(d)+"_"+str(i):pair for d,row in enumerate(previous) for i,pair in enumerate(row)})
                     grid,changes=checked_patch(base,patch)
+                    if action!="edit":
+                        snapshot,paid_changes=synchronize_paid_inputs(snapshot,base,grid)
+                        snapshot,help_changes=synchronize_help_inputs(snapshot,base,grid)
                     signature=digest(json.dumps([month,fp,token,patch]))
                     if action in ("preview","undo","import"):
                         preview=True
@@ -167,13 +259,26 @@ def register_manual_schedule(app, connect_db):
                     elif action=="save":
                         if request.form.get("confirm")!="yes" or session.get("manual_confirmation")!=signature:
                             raise ValueError("変更内容を確認し、保存のチェックを入れてください。")
-                        if changes:
+                        if help_changes and request.form.get("help_consent")!="yes":
+                            raise ValueError("ヘルプの来院OKを確認し、来院予定への反映にチェックしてください。")
+                        if changes or paid_changes or help_changes or base.get("input_hash") != fp or "updated" not in base:
+                            from help_shortages import conditions_hash
                             history=list(base.get("history",[]))
-                            history.append(dict(grid=base["grid"],saved=datetime.now(timezone.utc).isoformat()))
-                            saved=dict(base,grid=grid,history=history[-20:],input_hash=fp,updated=datetime.now(timezone.utc).isoformat())
+                            if changes:
+                                history.append(dict(grid=base["grid"],saved=datetime.now(timezone.utc).isoformat()))
+                            if paid_changes:
+                                save_paid_inputs(db,snapshot)
+                            if help_changes:
+                                save_help_inputs(db,snapshot)
+                            current,new_fp,_=read_snapshot(db,month)
+                            saved=dict(base,grid=grid,history=history[-20:],input_hash=new_fp,conditions_hash=conditions_hash(current),updated=datetime.now(timezone.utc).isoformat())
                             db.execute("CREATE TABLE IF NOT EXISTS manual_schedules(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
+                            saved_raw=json.dumps(saved,ensure_ascii=False)
                             db.execute("INSERT INTO manual_schedules VALUES (?,?) ON CONFLICT(month) DO UPDATE SET data=excluded.data",
-                                       (month,json.dumps(saved,ensure_ascii=False)))
+                                       (month,saved_raw))
+                            from help_shortages import write_reference
+                            _,saved_shortages=diagnostics(current,saved,grid)
+                            write_reference(db,current,new_fp,saved_shortages,source_kind="manual",source_raw=saved_raw)
                             db.commit()
                         session.pop("manual_confirmation",None)
                         return redirect(url_for("manual_schedule",month=month,saved="1"),code=303)
@@ -181,6 +286,7 @@ def register_manual_schedule(app, connect_db):
                         abort(400)
         except ValueError as exc:
             error=str(exc)
+            snapshot=request_snapshot
         finally:
             db.close()
         warnings,shortages=diagnostics(snapshot,base,grid)
@@ -199,6 +305,10 @@ def register_manual_schedule(app, connect_db):
             for row in display["deficits"]:
                 for cell in row["cells"]:
                     cell["label"]="未確認"
-        return render_template("manual_schedule.html",month=month,base=base,grid=grid,display=display,
+        from leave_candidates import leave_candidates
+        paid_candidates = (leave_candidates(snapshot,base if "updated" in base else None,fp)
+                           if not preview and not error else
+                           dict(days=[],groups=[],message="編集内容を確認・保存してから、有給候補を確認してください。"))
+        return render_template("manual_schedule.html",help_changes=help_changes,paid_changes=paid_changes,paid_candidates=paid_candidates,month=month,base=base,grid=grid,display=display,
                                fingerprint=fp,revision=token,error=error,preview=preview,changes=changes,patch=patch,initial_patch=initial_patch,
                                warnings=warnings,shortages=shortages,codes=CODES,import_sources=import_sources,checks_incomplete=checks_incomplete,stale=base["input_hash"]!=fp)

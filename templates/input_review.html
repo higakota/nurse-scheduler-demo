@@ -25,4 +25,6 @@
 <section id="helper-inputs"><div class="review-heading"><h2>ヘルプの来院予定</h2><a href="{{ url_for('help_availability',month=month) }}">来院予定を修正する →</a></div>
 <p class="hint">登録済みの来院予定です。不足の解消や担当可能な業務を判定する一覧ではありません。</p>
 <ul class="review-visits">{% set state=namespace(found=false) %}{% for d in days %}{% if d.visits %}{% set state.found=true %}<li><strong>{{ d.label }}</strong>{% for v in d.visits %}<span>{{ v.name }}（{{ v.period }}）</span>{% endfor %}</li>{% endif %}{% endfor %}{% if not state.found %}<li>この月の来院予定は未登録です。</li>{% endif %}</ul></section>
-</main></body></html>
+<details class="compact-help"><summary>勤務表の作成ルール</summary>
+<p>通常のヘルプ込み作成では、不足を確認した自院の勤務を維持してヘルプを追加します。新規作成では、自院のみ、検査技師ヘルプのみ、看護師ヘルプも含める順で探索します。希望休・有給・休日日数などは自動で変更しません。原則5連勤以内とし、公休等から本人の6連勤が必須の場合だけ例外を許容します。人数不足はヘルプを先に確認します。</p>
+<p>本人が希望していない半休を重ねるより、丸1日の休みを優先します。ヘルプ込みの作成では、全日休みを確保できる承諾済みヘルプの案も比較します。自動作成のルールは調整中です。作成後は「編集・印刷」で下書きを修正できます。確定機能は未実装です。</p></details></main></body></html>

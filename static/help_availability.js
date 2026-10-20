@@ -46,6 +46,13 @@ if(button)button.disabled=document.body.dataset.helpVisitDirty==="true"||documen
     document.body.dataset.helpVisitDirty=String(dirty);updateHelpRefresh();
     document.getElementById("help-changes").value = JSON.stringify(changes);
   }
+  function otherVisitors(day) {
+    return people.filter(person=>{
+      if(String(person.id)===staff.value)return false;
+      const key=person.id+"_"+day;
+      return Boolean(Object.hasOwn(changes,key)?changes[key]:original[key]);
+    }).length;
+  }
   function choosePeriod(period){
     if(!selectedDay)return;
     const key=staff.value+"_"+selectedDay.dataset.helpDay;
@@ -60,6 +67,8 @@ if(button)button.disabled=document.body.dataset.helpVisitDirty==="true"||documen
       document.getElementById("help-visit-person").textContent=staff.selectedOptions[0].textContent.trim();
       const note=document.getElementById("help-visit-note"),closed=picker.querySelector('option[value="full"]').disabled;
       note.textContent=closed?"全日休診です。登録済みの予定は取り消せます。":date.getDay()===5?"金曜午後は診療なしです。相手が承諾した範囲だけ登録してください。":"相手が承諾した来院時間帯を選んでください。";
+      const abovePreferred=otherVisitors(day)>=2;
+      if(abovePreferred&&!closed)note.textContent="この日は3人以上になります。できれば自院で調整して2人以内にしますが、必要な場合は登録できます。";
       const context=document.getElementById("help-visit-shortage");context.replaceChildren();
       for(const line of picker.querySelectorAll(".help-shortage-item")){const p=document.createElement("p");p.textContent="不足の目安："+line.textContent;context.append(p);}
       modal.querySelectorAll("[data-help-period]").forEach(button=>{

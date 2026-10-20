@@ -26,5 +26,44 @@ class ScheduleActionsTest(unittest.TestCase):
     def test_without_visits_explains_how_to_enable_help_action(self):
         text=self.client.get("/schedule?month=2026-02").get_data(as_text=True)
         self.assertNotIn('name="mode" value="help"',text)
-        self.assertIn("来院予定を保存",text)
+        self.assertIn("来院予定を登録",text)
         self.assertIn("スタッフ登録だけでは勤務に含めません",text)
+
+    def test_creation_does_not_require_storage_checkbox(self):
+        self.client.post("/schedule?month=2026-02",data=fixtures.ScheduleRouteTest.fields(self))
+        text=self.client.get("/schedule?month=2026-02").get_data(as_text=True)
+        self.assertNotIn('type="checkbox" name="replace"',text)
+        self.assertIn('type="hidden" name="replace" value="yes"',text)
+        self.assertNotIn("保存済みの自動作成結果を置き換えます",text)
+
+    def test_current_result_comes_before_closed_recreation_controls(self):
+        self.client.post("/schedule?month=2026-02",data=fixtures.ScheduleRouteTest.fields(self))
+        text=self.client.get("/schedule?month=2026-02").get_data(as_text=True)
+        self.assertLess(text.index('id="saved-result"'),text.index('id="schedule-recreate"'))
+        self.assertIn('<details class="compact-help recreate-controls" id="schedule-recreate">',text)
+        self.assertNotIn("どの表にヘルプを加える？",text)
+        self.assertIn('name="mode" value="draft"',text)
+
+    def test_changed_inputs_keep_creation_controls_visible(self):
+        self.client.post("/schedule?month=2026-02",data=fixtures.ScheduleRouteTest.fields(self))
+        db=connect_db()
+        db.execute("UPDATE staff SET name='看護仮名変更' WHERE id=1")
+        db.commit();db.close()
+        text=self.client.get("/schedule?month=2026-02").get_data(as_text=True)
+        self.assertNotIn('id="schedule-recreate"',text)
+        self.assertIn('class="panel creation-controls"',text)
+
+    def test_explicit_manual_help_action_keeps_creation_controls_visible(self):
+        self.client.post("/schedule?month=2026-02",data=fixtures.ScheduleRouteTest.fields(self))
+        text=self.client.get("/schedule?month=2026-02&help_source=manual").get_data(as_text=True)
+        self.assertNotIn('id="schedule-recreate"',text)
+        self.assertIn('class="panel creation-controls"',text)
+
+    def test_help_result_also_hides_creation_panel_by_default(self):
+        fields=dict(fixtures.ScheduleRouteTest.fields(self),mode="help")
+        response=self.client.post("/schedule?month=2026-02",data=fields)
+        self.assertEqual(response.status_code,302)
+        text=self.client.get(response.location).get_data(as_text=True)
+        self.assertIn("ヘルプ込み。",text)
+        self.assertLess(text.index('id="saved-result"'),text.index('id="schedule-recreate"'))
+        self.assertIn('<details class="compact-help recreate-controls" id="schedule-recreate">',text)

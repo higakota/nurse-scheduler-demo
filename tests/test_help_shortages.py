@@ -117,3 +117,31 @@ class HelpShortagesTest(unittest.TestCase):
         db=connect_db()
         self.assertEqual(db.execute("SELECT data FROM help_shortage_previews").fetchone()[0],original)
         db.close()
+
+    def test_refresh_preserves_saved_manual_and_invalidates_after_edit(self):
+        self.shortage()
+        self.draft()
+        db=connect_db()
+        raw=db.execute("SELECT data FROM manual_schedule_seeds").fetchone()[0]
+        value=json.loads(raw)
+        value["updated"]="2099-01-01T00:00:00"
+        raw=json.dumps(value)
+        db.execute("CREATE TABLE IF NOT EXISTS manual_schedules(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
+        db.execute("INSERT INTO manual_schedules VALUES (?,?)",("2026-02",raw))
+        db.commit()
+        db.close()
+        with self.client.session_transaction() as session:token=session["csrf_token"]
+        with patch("scheduler_engine.generate_draft") as calculate:
+            response=self.client.post("/help/shortages?month=2026-02",data=dict(csrf_token=token))
+            calculate.assert_not_called()
+        self.assertEqual(response.status_code,303)
+        self.assertEqual(self.reference()["kind"],"manual")
+        db=connect_db()
+        self.assertEqual(db.execute("SELECT data FROM manual_schedules").fetchone()[0],raw)
+        snapshot,fp,_=read_snapshot(db,"2026-02")
+        value["updated"]="2099-01-02T00:00:00"
+        db.execute("UPDATE manual_schedules SET data=?",(json.dumps(value),))
+        db.commit()
+        db.close()
+        self.assertEqual(self.reference()["state"],"outdated")
+        self.assertFalse(publish_reference(connect_db,snapshot,fp,[],expected_source=("manual",raw)))

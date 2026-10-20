@@ -15,7 +15,7 @@ STEPS = [
 INPUT_TABS = [("doctor_import","医師予定"),("monthly_settings","希望休・会議"),("coverage_settings","必要人数"),
               ("leave_history","前月末勤務"),("weekly_settings","月をまたぐ週"),("input_review","入力一覧")]
 SCHEDULE_TABS = [("schedule","自動作成"),("manual_schedule","編集・印刷")]
-PAGE_ALIASES = {"doctor_edit":"doctor_import", "staff_delete":"staff_settings",
+PAGE_ALIASES = {"agreed_record_edit":"manual_schedule", "agreed_wish_change":"manual_schedule", "doctor_edit":"doctor_import", "staff_delete":"staff_settings",
                 "preview_restore":"data_backup", "restore_backup":"data_backup"}
 
 PAGES = {

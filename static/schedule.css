@@ -176,3 +176,19 @@
 .shift-edit-link{display:flex;align-items:center;justify-content:center;min-height:40px;color:inherit;font:inherit;text-decoration:none}.shift-edit-link:hover,.shift-edit-link:focus-visible{background:#d9eee4;outline:2px solid #14645c;outline-offset:-2px}.paper-grid td:has(>.shift-edit-link){padding:0}
 
 .schedule-sheet-toolbar .schedule-comparison-control{margin:0;padding:0;border:0;flex:1}.schedule-sheet-toolbar{gap:12px;flex-wrap:wrap}
+
+@media print {
+  html, body.schedule-printing { margin:0 !important; padding:0 !important; }
+  body.schedule-printing { display:block !important; min-height:0 !important; }
+  .print-monthly-sheet { width:281mm; max-width:none; box-sizing:border-box; break-inside:avoid; }
+  .print-monthly-sheet .paper-grid { table-layout:fixed; }
+  .print-monthly-sheet .shift-edit-link { min-height:0; }
+  .print-monthly-sheet .paper-schedule-title { display:none; }
+}
+
+.help-source-options input[type=radio]{width:20px;height:20px;flex:0 0 20px;padding:0;margin:0}
+.help-source-options label{padding:12px;border:1px solid #c4d4cc;border-radius:8px;cursor:pointer}
+.help-source-options label:has(input:checked){border:2px solid #226e5a;background:#e9f4ed;font-weight:700}
+
+.request-agreed-note{display:block;margin-top:3px;padding:2px 0;border:1px solid #977021;border-radius:3px;background:#fff1c9;color:#684b15;font-size:9px;line-height:1.2;overflow-wrap:anywhere}
+@media print{.print-sheet .request-agreed-note{font-size:6px;padding:1px 0;margin-top:1px;print-color-adjust:exact}}

@@ -100,3 +100,35 @@ class JointImprovementTest(unittest.TestCase):
             result=prefer_five(data,seconds=3,allow_six=True)
         self.assertEqual(result["grid"],first)
         self.assertFalse(result["six_day_runs"])
+
+    def test_requested_afternoon_rest_allows_moving_morning_to_shortage_day(self):
+        from test_weekly_work import part_time
+        from weekly_rules import weekly_summary
+        from help_limits import helper_demand
+        data=sample(open_days=(2,3,4,6,7),regular_count=5)
+        part_time(data,person=4,limit=7)
+        data["staff"][4]["allowed_areas"]="AB"
+        data["monthly_settings"]["wishes"].update({"5_2026-02-06":"pm","5_2026-02-07":"pm"})
+        problem=prepare(data)
+        self.assertEqual(problem["errors"],[])
+        problem["requirements"][6]=((2,3,2),(2,2,1))
+        grid=[]
+        for d,choices in enumerate(problem["options"]):
+            pairs=[next((p for p in options if all(c in "WMO" for c in p)),options[0]) for options in choices]
+            if d==5:pairs[4]="WR"
+            elif d==6:pairs[4]="RR"
+            grid.append(allocate(problem,d,pairs,partial=True))
+        self.assertEqual(verify(problem,grid,allow_shortages=True,max_full_days=5),[])
+        added=[list(row) for row in grid]
+        added[6][4]="DR"
+        self.assertTrue(any("週勤務上限" in error for error in verify(problem,added,allow_shortages=True)))
+        result=improve_jointly(problem,grid,allow_shortages=True,max_full_days=5,seconds=2)
+        self.assertEqual(result[5][4],"RR")
+        self.assertEqual(result[6][4],"DR")
+        self.assertEqual(helper_demand(problem,6,result[6]),1)
+        self.assertEqual(helper_demand(problem,5,result[5]),0)
+        self.assertEqual(verify(problem,result,allow_shortages=True,max_full_days=5),[])
+        week=next(row for row in weekly_summary(problem,result) if row["name"]==problem["people"][4]["name"] and row["start"]=="2026-02-02")
+        self.assertEqual(week["known"],3.5)
+        self.assertEqual(grid[5][4],"DR")
+        self.assertEqual(grid[6][4],"RR")

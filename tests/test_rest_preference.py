@@ -133,3 +133,13 @@ class FullDayRestPreferenceTest(unittest.TestCase):
         self.assertEqual(rest_plan_key(result)[1],2)
         self.assertEqual(rest_plan_key(result)[2],0)
         self.assertEqual(verify(result["problem"],result["grid"],max_full_days=result["max_full_days"]),[])
+
+    def test_search_prefers_whole_rest_before_post_processing(self):
+        from unittest.mock import patch
+        data=sample(open_days=(2,3),regular_count=5)
+        data["monthly_settings"]["targets"]["1"]="27"
+        with patch("scheduler_engine.consolidate_rest_days",side_effect=lambda problem,grid,**kwargs:grid), patch("schedule_improvement.improve_jointly",side_effect=lambda problem,grid,**kwargs:grid):
+            result=generate(data,seconds=3)
+        self.assertEqual(result["status"],"success",result["messages"])
+        self.assertEqual(sum(split_rest(row[0]) for row in result["grid"]),0)
+        self.assertEqual(verify(result["problem"],result["grid"]),[])

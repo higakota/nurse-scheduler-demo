@@ -12,7 +12,8 @@
   {% include "_page_intro.html" %}<h1>スタッフ設定</h1>
   <p>勤務表に載せるスタッフを登録します。名前や勤務区分は後から変更できます。</p><p class="hint">他院ヘルプは不足時に追加します。登録だけでは毎日の勤務対象にせず、<a href="{{ url_for('help_availability', month=ui_month) }}">来院が決まった日・午前午後</a>を別に指定します。</p>
   {% if request.args.get('deleted') == '1' %}<p class="success" role="status">スタッフを削除しました。会議の参加者を確認し、勤務表を再作成してください。</p>{% endif %}
-  {% if saved %}<p class="success" role="status">保存しました。</p>{% endif %}
+  {% if saved %}<p class="success" role="status">保存しました。担当範囲を変更した場合は、勤務表を再作成してください。</p>{% endif %}
+{% if edit_id %}{% include "_staff_form.html" %}{% endif %}
   <section class="panel" aria-labelledby="list-title">
     <h2 id="list-title">登録済みスタッフ <span class="count">{{ staff|length }}人</span></h2>
     {% if staff %}
@@ -29,35 +30,7 @@
     </table></div>
     {% else %}<p class="empty">まだ登録されていません。下の欄からスタッフを追加してください。</p>{% endif %}
   </section>
-  <section class="panel" id="staff-form" aria-labelledby="form-title">
-    <h2 id="form-title">{{ 'スタッフを編集' if edit_id else 'スタッフを追加' }}</h2>
-    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-    <form method="post" action="{{ url_for('staff_settings') }}">
-      <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
-      <input type="hidden" name="id" value="{{ edit_id if edit_id is not none else '' }}">
-      <label for="name">名前 <span class="required">必須</span></label>
-      <input id="name" name="name" value="{{ values.name }}" maxlength="50" required placeholder="例：看護 花子">
-      <label for="role">職種</label>
-      <select id="role" name="role">
-        <option value="nurse" {% if values.role == 'nurse' %}selected{% endif %}>看護師</option>
-        <option value="technician" {% if values.role == 'technician' %}selected{% endif %}>検査技師</option>
-      </select>
-      <label class="checkbox"><input id="is-help" type="checkbox" name="is_help" value="1" {% if values.is_help %}checked{% endif %}>他院からのヘルプ</label>
-      <p class="hint">ヘルプの看護師は全員A（受付）・B（診察室）・C（検査室）を担当でき、勤務時間は常勤と同じです。配置の選択は不要です。</p>
-      <div id="nurse-fields">
-        <label for="employment">勤務区分</label>
-        <select id="employment" name="employment">
-          <option value="full" {% if values.employment in ('full','') %}selected{% endif %}>常勤</option>
-          <option value="part" {% if values.employment == 'part' %}selected{% endif %}>非常勤</option>
-        </select>
-        <p id="weekly-fields" class="hint">非常勤の週上限は、登録後に<a href="{{ url_for('monthly_settings', month=ui_month, _anchor='targets') }}">休日日数・週上限</a>で設定してください。</p>
-        <label class="checkbox"><input type="checkbox" name="veteran" value="1" {% if values.veteran %}checked{% endif %}> ベテラン看護師として数える</label>
-      </div>
-      <p class="hint">検査技師は検査室のみ担当し、診療側のベテラン人数には数えません。</p>
-      <div class="actions"><button type="submit">{{ '変更を保存' if edit_id else '登録する' }}</button>
-      {% if edit_id %}<a href="{{ url_for('staff_settings') }}">編集をやめる</a>{% endif %}</div>
-    </form>
-  </section>
+{% if not edit_id %}{% include "_staff_form.html" %}{% endif %}
   <p class="hint">現在はスタッフ設定が利用できます。月別入力から希望休や会議を設定できます。勤務表の自動作成は共通メニューから開けます。</p>
 </main>
 <script src="{{ url_for('static', filename='staff.js') }}"></script>

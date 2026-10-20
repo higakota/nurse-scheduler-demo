@@ -166,16 +166,29 @@ def register_help_availability(app, connect_db):
         from schedule import read_snapshot
         from scheduler_engine import generate_draft
         from schedule_display import grouped_shortages
-        from help_shortages import publish_reference
+        from help_shortages import publish_reference, shortages_from_source
+        from fixed_help import load_seed, load_manual_source, preferred_help_source
         db=connect_db()
         try:
             snapshot,fp,_=read_snapshot(db,month)
+            draft_raw, manual_raw = load_seed(db,month), load_manual_source(db,month)
+            source_kind = preferred_help_source(snapshot,draft_raw,manual_raw)
+            source_raw = manual_raw if source_kind == "manual" else draft_raw
         finally:
             db.close()
+        if source_raw:
+            try:
+                rows = shortages_from_source(snapshot, source_raw)
+                if publish_reference(connect_db,snapshot,fp,rows,kind=source_kind,expected_source=(source_kind,source_raw)):
+                    return redirect(url_for("help_availability",month=month,shortages_updated="1"),code=303)
+                flash("計算中に元の勤務表が変わりました。もう一度更新してください。","help-shortage-error")
+            except ValueError as exc:
+                flash(str(exc),"help-shortage-error")
+            return redirect(url_for("help_availability",month=month),code=303)
         outcome=generate_draft(snapshot,seconds=app.config.get("SCHEDULER_SECONDS",10))
         if outcome["status"]=="draft":
             rows=grouped_shortages(outcome["shortages"],outcome["problem"],outcome["grid"])
-            if publish_reference(connect_db,snapshot,fp,rows):
+            if publish_reference(connect_db,snapshot,fp,rows,outcome=outcome):
                 return redirect(url_for("help_availability",month=month,shortages_updated="1"),code=303)
             flash("計算中に入力が変わったため不足表示を更新していません。再確認してください。","help-shortage-error")
         else:

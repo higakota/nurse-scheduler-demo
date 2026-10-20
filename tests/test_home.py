@@ -23,7 +23,7 @@ class HomeTest(unittest.TestCase):
         self.assertEqual(page.status_code, 200)
         text = page.get_data(as_text=True)
         self.assertIn("2026年10月の勤務表", text)
-        self.assertIn("0/4項目に保存あり", text)
+        self.assertIn("0/4項目に入力あり", text)
         self.assertIn("スタッフを登録する", text)
         self.assertIn("確定機能は未実装", text)
         self.assertIn("/schedule?month=2026-10", text)
@@ -48,7 +48,7 @@ class HomeTest(unittest.TestCase):
         db.close()
         page = self.client.get("/?month=2026-10").get_data(as_text=True)
         self.assertNotIn("再確認が必要", page)
-        self.assertIn("1/4項目に保存あり", page)
+        self.assertIn("1/4項目に入力あり", page)
 
     def test_paid_leave_record_does_not_claim_history_was_entered(self):
         self.client.get("/")
@@ -58,9 +58,9 @@ class HomeTest(unittest.TestCase):
         db.commit()
         before=list(db.iterdump())
         text=self.client.get("/?month=2026-11").get_data(as_text=True)
-        self.assertIn("0/4項目に保存あり",text)
-        self.assertIn("自動作成結果",text)
-        self.assertIn("手動下書き",text)
+        self.assertIn("0/4項目に入力あり",text)
+        self.assertIn("自動で作った勤務表",text)
+        self.assertIn("調整した勤務表",text)
         self.assertEqual(before,list(db.iterdump()))
         db.close()
 
@@ -87,3 +87,37 @@ class NavigationTest(unittest.TestCase):
         self.assertIn('編集・印刷',edit)
         self.assertIn('/schedule?month=2026-11',edit)
         self.assertNotIn('準備の前後へ',edit)
+
+
+class HomeWorkflowTest(unittest.TestCase):
+    def setUp(self):
+        import test_scheduler as fixtures
+        fixtures.ScheduleRouteTest.setUp(self)
+
+    def tearDown(self):
+        import test_scheduler as fixtures
+        fixtures.ScheduleRouteTest.tearDown(self)
+
+    def test_next_action_opens_current_manual_work_and_skips_stale_manual(self):
+        import test_scheduler as fixtures
+        self.client.post("/schedule?month=2026-02",data=fixtures.ScheduleRouteTest.fields(self))
+        db=connect_db()
+        generated=json.loads(db.execute("SELECT data FROM generated_schedules").fetchone()[0])
+        manual=dict(generated,updated="current",history=[],source="調整中")
+        db.execute("CREATE TABLE manual_schedules(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
+        db.execute("INSERT INTO manual_schedules VALUES ('2026-02',?)",(json.dumps(manual),))
+        db.commit()
+        before=list(db.iterdump())
+        text=self.client.get("/?month=2026-02").get_data(as_text=True)
+        callout=text.split('aria-label="次の操作"',1)[1].split("</section>",1)[0]
+        self.assertIn("調整した勤務表の続きを開く",callout)
+        self.assertIn("/schedule/manual?month=2026-02",callout)
+        self.assertEqual(before,list(db.iterdump()))
+        manual["input_hash"]="stale"
+        db.execute("UPDATE manual_schedules SET data=?",(json.dumps(manual),))
+        db.commit()
+        text=self.client.get("/?month=2026-02").get_data(as_text=True)
+        callout=text.split('aria-label="次の操作"',1)[1].split("</section>",1)[0]
+        self.assertNotIn("調整した勤務表の続きを開く",callout)
+        self.assertIn("作成した表を確認して仕上げる",callout)
+        db.close()

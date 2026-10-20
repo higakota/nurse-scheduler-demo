@@ -5,8 +5,8 @@
 <main class="container app-main" id="main-content">{% include "_page_intro.html" %}<h1>医師予定のExcel取込</h1><p class="page-description">{{ ui_description }}</p>
 
 <p>対象月：{{ month }}。Excel選択 → シート選択 → 内容の確認・修正 → 保存の順に進みます。</p>
-<p class="hint">見本と同じ、4行目が日付・6行目が医師のxlsxに対応します。医師欄は左が午前、右が午後です。ファイルはPC内だけで処理します。</p>
-{% if needs_recheck %}<p class="error" role="alert">以前の読取方式で保存された医師予定は、午前・午後が逆の可能性や金曜・日曜の割当の誤りがあります。旧データは削除していませんが、そのまま使用せず、Excelから読み取り直し、月間一覧で再確認してください。判別不能・変更のある日だけ個別確認が必要です。</p>{% endif %}{% if saved %}<p class="success" role="status">選択・確認した予定を保存しました。</p>{% endif %}
+<p class="hint">見本と同じ、4行目が日付・6行目が医師のxlsxに対応します。医師欄は左が午前、右が午後です。赤字の医師は休みとして出勤人数から除外します。ファイルはPC内だけで処理します。</p>
+{% if needs_recheck %}<p class="error" role="alert">以前の読取方式で保存された医師予定は、赤字の休みの医師を出勤人数に含めていた可能性や、午前・午後が逆の可能性や金曜・日曜の割当の誤りがあります。旧データは削除していませんが、そのまま使用せず、Excelから読み取り直し、月間一覧で再確認してください。判別不能・変更のある日だけ個別確認が必要です。</p>{% endif %}{% if saved %}<p class="success" role="status">選択・確認した予定を保存しました。</p>{% endif %}
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 <section class="panel"><h2>1. Excelを選ぶ</h2>{% if loaded_filename %}<p class="success" role="status"><strong>読込済み：{{ loaded_filename }}</strong><br>次は下の「2. 対象シートを選ぶ」へ進んでください。ファイルを選び直す必要はありません。</p><details><summary>別のExcelに変更する</summary>{% endif %}
 <form method="post" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="upload">

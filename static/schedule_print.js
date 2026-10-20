@@ -1,12 +1,46 @@
 let selectedPacket = null;
 let originalTitle = document.title;
 
+function fitMonthlySheet() {
+  if (!selectedPacket) return;
+  const sheet = selectedPacket.querySelector(".print-monthly-sheet");
+  if (!sheet) return;
+  // beforeprintでは印刷用CSSの反映時期がブラウザで異なるため、
+  // 同じ印刷ルールを計測中だけ有効にして寸法を求める。
+  const measurementStyle = document.createElement("style");
+  const printRules = [];
+  for (const stylesheet of document.styleSheets) {
+    try {
+      for (const rule of stylesheet.cssRules) {
+        if (rule.type === CSSRule.MEDIA_RULE && rule.conditionText === "print") {
+          printRules.push(...[...rule.cssRules].map(item => item.cssText));
+        }
+      }
+    } catch { /* このアプリの同一オリジンのCSSだけを対象にする。 */ }
+  }
+  measurementStyle.textContent = printRules.join("\n");
+  document.head.append(measurementStyle);
+  sheet.style.zoom = "1";
+  // A4 landscape minus 8mm margins; leave room for print rounding.
+  const ruler = document.createElement("div");
+  ruler.style.cssText = "position:absolute;width:281mm;height:175mm;visibility:hidden;pointer-events:none";
+  selectedPacket.append(ruler);
+  const available = ruler.getBoundingClientRect();
+  const content = sheet.getBoundingClientRect();
+  const scale = Math.min(0.9, available.width / Math.max(content.width, sheet.scrollWidth),
+                         available.height / Math.max(content.height, sheet.scrollHeight));
+  sheet.style.zoom = String(scale);
+  ruler.remove();
+  measurementStyle.remove();
+}
+
 function preparePrint(packet) {
   document.querySelectorAll(".print-packet").forEach(item => {
     const selected = item === packet;
     item.classList.toggle("print-active", selected);
     item.setAttribute("aria-hidden", String(!selected));
   });
+  if (!packet && selectedPacket) selectedPacket.querySelectorAll(".print-monthly-sheet").forEach(sheet => sheet.style.removeProperty("zoom"));
   selectedPacket = packet;
   document.body.classList.toggle("schedule-printing", Boolean(packet));
   if (packet) {
@@ -28,6 +62,7 @@ window.addEventListener("beforeprint", () => {
     originalTitle = document.title;
     preparePrint(document.getElementById("manual-print") || document.getElementById("draft-print") || document.getElementById("saved-print"));
   }
+  fitMonthlySheet();
 });
 window.addEventListener("afterprint", () => {
   preparePrint(null);

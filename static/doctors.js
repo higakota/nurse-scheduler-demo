@@ -13,7 +13,7 @@ document.querySelectorAll(".doctor-half input").forEach(input => {
   input.after(count);
   function update() {
     const names = input.value.split(/[/／、,\n]+/).map(name => name.trim()).filter(Boolean);
-    count.textContent = input.readOnly ? "0人（診療なし）" : names.length ? names.length + "人" : "担当医なし（0人）・要確認";
+    count.textContent = input.readOnly ? "0人（診療なし）" : names.length ? names.length + "人" : "担当医なし（0人）";
   }
   input.addEventListener("input", () => { update(); requireReview(input.closest(".doctor-day")); });
   update();

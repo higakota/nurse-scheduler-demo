@@ -283,7 +283,7 @@ class ScheduleRouteTest(unittest.TestCase):
         response=self.client.post("/schedule?month=2026-02",data=self.fields())
         self.assertEqual(response.status_code,302)
         before=self.stored()
-        self.assertIn("保存済みの月間勤務表",self.client.get(response.location).get_data(as_text=True))
+        self.assertIn("自動で作った月間勤務表",self.client.get(response.location).get_data(as_text=True))
         stale=self.fields()
         db=connect_db()
         db.execute("UPDATE staff SET veteran=0")
@@ -295,7 +295,8 @@ class ScheduleRouteTest(unittest.TestCase):
         response=self.client.post("/schedule?month=2026-02",data=self.fields())
         self.assertIn("現在の条件では作成できません",response.get_data(as_text=True))
         self.assertEqual(self.stored(),before)
-        self.assertIn("以前の結果",response.get_data(as_text=True))
+        self.assertNotIn("自動で作った月間勤務表", response.get_data(as_text=True))
+        self.assertNotIn('id="saved-print"', response.get_data(as_text=True))
 
     def test_csrf_month_and_explicit_replacement(self):
         self.assertEqual(self.client.post("/schedule?month=2026-02",data={}).status_code,400)

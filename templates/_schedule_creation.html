@@ -1,0 +1,20 @@
+<section class="panel creation-controls" aria-labelledby="creation-title">
+<div class="section-heading"><div><p class="eyebrow">作成・再作成</p><h2 id="creation-title">{{ '登録したヘルプを加えて作成' if help_count else '自院の勤務表から始める' }}</h2></div>{% if help_count %}<span class="status-badge saved">来院予定 {{ help_count }}件</span>{% endif %}</div>
+<form method="post" class="schedule-form">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="result_token" value="{{ result_token }}"><input type="hidden" name="seed_token" value="{{ seed_token }}">
+
+<input type="hidden" name="replace" value="yes">
+
+{% if help_count %}<div class="creation-option help-create-primary">
+<div><h3>ヘルプ込みで勤務表を作成</h3><p class="hint">{% if fixed_help_base %}不足を確認した自院の表は変えず、ヘルプを追加します。{% else %}元の仮表がないため、自院スタッフも含めて新規作成します。{% endif %}</p><p class="hint">自院を優先し、看護師ヘルプが同じ日に2人以上になる配置はできるだけ避けます。看護師＋検査技師の2人は問題ありません。全日来院OKの人は全日勤務にします。</p><a href="{{ url_for('help_availability',month=month) }}">来院予定を確認・修正 →</a></div>
+<button name="mode" value="help">ヘルプ込みで勤務表を作成</button></div>{% endif %}
+<div class="creation-option creation-secondary"><div><h3>自院だけの不足を調べる</h3><p class="hint">登録済みのヘルプは使いません。相談用の仮表を作り、不足を表示します。編集画面の表は上書きしません。</p></div><button name="mode" value="draft" class="{{ 'secondary' if help_count else '' }}">不足を残して仮作成する</button></div>
+{% if not help_count %}<p class="hint">ヘルプを使う場合は、<a href="{{ url_for('help_availability',month=month) }}">来院予定を登録</a>してください。スタッフ登録だけでは勤務に含めません。</p>{% endif %}
+<details class="creation-option-more"><summary>ほかの作成方法</summary>
+<div class="creation-option"><div><h3>自院だけで作成</h3><p class="hint">不足のない勤務表を作ります。</p></div><button name="mode" value="self" class="secondary">自院スタッフだけで作成</button></div>
+</details>
+{% if outcome and outcome.status in ('infeasible','draft') and outcome.shortages and request.form.get('mode') != 'draft_six' %}
+<details class="creation-option-more"><summary>ヘルプを確保できず、不足が残るとき</summary><p class="hint">希望休・有給を守り、自院の勤務を組み直した仮案を表示します。6連勤になる人と日付を確認してから、編集画面へ反映できます。7連勤以上にはしません。</p><button name="mode" value="draft_six" class="secondary">6連勤を含めて組み直す</button></details>
+{% endif %}
+<p id="schedule-action-status" class="schedule-action-status" role="status" hidden></p>
+</form><p class="hint"><a href="{{ url_for('input_review',month=month) }}">入力内容をまとめて確認 →</a></p></section>

@@ -1,5 +1,6 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ヘルプの来院予定</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='help_availability.css') }}"></head><body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content"><h1>ヘルプの来院予定</h1>
 <p class="page-description">不足の目安を見ながら、来院が決まった人・日・時間帯を登録します。</p>
+<div class="workflow-callout"><div><strong>① 不足を確認 → ② 承諾済みの来院予定を保存 → ③ 勤務表を作成</strong><p class="hint">保存した来院予定は、再作成すると勤務表に反映されます。</p></div><a class="button-link" href="{{ url_for('schedule',month=month) }}">勤務表を作成へ →</a></div>
 <details class="help-policy-note"><summary>ヘルプの扱い</summary><p>ヘルプの公休・週勤務日数・連勤は所属院で管理します。現在の設定では、看護師はA・B・Cの対象です。ヘルプの担当可能業務は運用を再確認してください。来院予定を保存したら、ヘルプ込みで勤務表を再作成してください。</p></details>
 
 {% if request.args.get('saved') == '1' %}<p class="success" role="status">来院予定を保存しました。</p>{% endif %}
@@ -12,16 +13,16 @@
 {% if shortages.state == 'missing' %}<p><strong>不足はまだ計算されていません。</strong>「不足を表示・更新」で、自院の仮表を計算して表示できます。</p>
 {% elif shortages.state == 'outdated' %}<p class="error" role="alert">入力条件が変わっています。古い不足人数は表示していません。「不足を表示・更新」を押してください。</p>
 {% elif shortages.kind == 'verified' %}<p class="success"><strong>直近の検証済み勤務表では、不足はありません。</strong></p>
-{% else %}<p><strong>{{ '再作成前の仮表での不足（参考）' if shortages.state == 'reference' else '自院スタッフの仮表での不足' }}</strong></p><p class="hint">看護師・検査技師の人数を午前午後別に表示します。ベテランは看護師人数の内数です。来院予定はまだ差し引いていません。登録後、ヘルプ込みで再作成して残りの不足を確認してください。</p>
+{% else %}<p><strong>{{ '再作成前の仮表での不足（参考）' if shortages.state == 'reference' else '保存した自院勤務での不足' if shortages.kind == 'manual' else '自院スタッフの仮表での不足' }}</strong></p><p class="hint">看護師・検査技師の人数を午前午後別に表示します。ベテランは看護師人数の内数です。来院予定はまだ差し引いていません。登録後、ヘルプ込みで再作成して残りの不足を確認してください。</p>
 {% if shortages.kind == 'draft_six' %}<p class="hint">6連勤まで許容した最終案を基準にした人数です。</p>{% endif %}
 {% if not shortages.days %}<p>この仮表では、不足はありません。</p>{% endif %}{% endif %}
 {% for message in get_flashed_messages(category_filter=['help-shortage-error']) %}<p class="error" role="alert">不足を更新できませんでした：{{ message }}</p>{% endfor %}
-{% if request.args.get('shortages_updated') %}<p class="success" role="status">自院の仮表を計算し、不足表示を更新しました。</p>{% endif %}
+{% if request.args.get('shortages_updated') %}<p class="success" role="status">自院の勤務を基に、不足表示を更新しました。</p>{% endif %}
 <form method="post" action="{{ url_for('refresh_help_shortages',month=month) }}"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><button class="button-quiet" id="refresh-shortages">不足を表示・更新</button></form>
 </section>
 {% if staff %}<form method="post" id="help-calendar-form">
 <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="changes" id="help-changes">
-<div class="help-calendar-toolbar"><div><label for="help-staff">予定を入力するヘルプ</label><select id="help-staff" name="staff">{% for person in staff %}<option value="{{ person.id }}" data-role="{{ person.role }}" {% if person.id|string == selected %}selected{% endif %}>{{ person.name }}（{{ '検査技師' if person.role == 'technician' else '看護師' }}）</option>{% endfor %}</select></div><div><strong>{{ month[:4] }}年{{ month[5:]|int }}月</strong><p class="hint">日付を押して入力できます</p></div></div><p class="help-calendar-legend"><span>茶色：仮表の不足</span><span>緑：登録した来院予定（全員分）</span><a href="{{ url_for('staff_settings',month=month) }}#staff-form">ヘルプを登録・編集する →</a></p>
+<div class="help-calendar-toolbar"><div><label for="help-staff">予定を入力するヘルプ</label><select id="help-staff" name="staff">{% for person in staff %}<option value="{{ person.id }}" data-role="{{ person.role }}" {% if person.id|string == selected %}selected{% endif %}>{{ person.name }}（{{ '検査技師' if person.role == 'technician' else '看護師' }}）</option>{% endfor %}</select></div><div><strong>{{ month[:4] }}年{{ month[5:]|int }}月</strong><p class="hint">日付を押して入力できます</p></div></div><p class="hint">看護師＋検査技師の2人は問題ありません。看護師2人以上はできるだけ避けますが、必要なら登録・配置できます。</p><p class="help-calendar-legend"><span>茶色：仮表の不足</span><span>緑：登録した来院予定（全員分）</span><a href="{{ url_for('staff_settings',month=month) }}#staff-form">ヘルプを登録・編集する →</a></p>
 {% else %}<p>ヘルプスタッフは未登録です。来院する人が決まったら、上のリンクから登録してください。</p>{% endif %}
 <table class="leave-calendar help-visits-calendar"><caption>{{ month }}の不足と来院予定</caption><thead><tr>{% for label in '日月火水木金土' %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead><tbody>
 {% for week in weeks %}<tr>{% for day in week %}{% if day %}{% set text=day.isoformat() %}<td class="{{ 'help-has-shortage' if shortages.days.get(text) else '' }}" data-shortage-day="{{ text }}">
@@ -31,7 +32,7 @@
 {% else %}<div class="help-readonly-day"><span class="calendar-date">{{ day.day }}</span>{{ shortage_lines(text) }}</div>{% endif %}
 </td>{% else %}<td class="calendar-empty"></td>{% endif %}{% endfor %}</tr>{% endfor %}
 </tbody></table>
-{% if staff %}<div class="save-bar"><p id="help-status" role="status">来院が決まった日だけ選んでください。</p><button id="help-save" disabled>来院予定をまとめて保存</button></div><p class="hint">保存後、勤務表をヘルプ込みで再作成して残りの不足を確認してください。来院予定は不足表示から自動では差し引きません。</p><p><a href="{{ url_for('schedule',month=month) }}">勤務表に戻ってヘルプ込みで再作成する →</a></p><noscript><p>入力にはJavaScriptを有効にしてください。</p></noscript></form>
+{% if staff %}<div class="save-bar"><p id="help-status" role="status">来院が決まった日だけ選んでください。</p><button id="help-save" disabled>来院予定をまとめて保存</button></div><p class="hint">保存後、勤務表をヘルプ込みで再作成して残りの不足を確認してください。来院予定は不足表示から自動では差し引きません。</p><noscript><p>入力にはJavaScriptを有効にしてください。</p></noscript></form>
 <dialog id="help-visit-dialog" aria-labelledby="help-visit-title"><h2 id="help-visit-title">来院予定を入力</h2><p id="help-visit-person"></p><div id="help-visit-shortage"></div><p id="help-visit-note" class="hint"></p><div class="help-period-buttons">{% for value,label in [('full','全日来院'),('am','午前のみ'),('pm','午後のみ'),('','予定を取り消す')] %}<button type="button" data-help-period="{{ value }}">{{ label }}</button>{% endfor %}</div><p class="hint">ここでは未保存です。最後にまとめて保存してください。</p><button type="button" id="help-visit-close" class="secondary">変更せず閉じる</button></dialog>
 <script type="application/json" id="help-people">{{ staff|tojson }}</script>
 <script type="application/json" id="help-original">{{ data|tojson }}</script><script type="application/json" id="help-pending">{{ request.form.get('changes', '')|tojson }}</script>{% endif %}

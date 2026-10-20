@@ -41,6 +41,18 @@ class StaffSettingsTest(unittest.TestCase):
         other_client = app.test_client()
         self.assertIn("看護 次郎", other_client.get("/staff").get_data(as_text=True))
 
+    def test_nurse_can_be_limited_to_reception_and_consultation(self):
+        self.assertEqual(self.save(no_c="1").status_code, 302)
+        row = self.rows()[0]
+        self.assertEqual(row["allowed_areas"], "AB")
+        page = self.client.get("/staff?edit=" + str(row["id"])).get_data(as_text=True)
+        self.assertIn('value="1" selected>受付・診察室のみ', page)
+        self.assertEqual(self.save(id=str(row["id"]), no_c="1", employment="part").status_code, 302)
+        self.assertEqual(self.rows()[0]["allowed_areas"], "AB")
+        self.assertEqual(self.save(id=str(row["id"]), no_c="0").status_code, 302)
+        self.assertEqual(self.rows()[0]["allowed_areas"], "ABC")
+
+
     def test_technician_cannot_count_as_veteran(self):
         self.save(name="検査 花子", role="technician", employment="full", veteran="1")
         row = self.rows()[0]

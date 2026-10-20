@@ -8,6 +8,8 @@ function updateRole() {
   const veteran = document.querySelector('input[name="veteran"]');
   veteran.disabled = !isNurse;
   if (!isNurse) veteran.checked = false;
+  const noC = document.querySelector('[name="no_c"]');
+  if (noC) { noC.disabled = !isNurse || help; document.getElementById("no-c-field").hidden = !isNurse || help; }
   const part = !help && employment.value === "part";
   document.getElementById("weekly-fields").hidden = !part;
 }

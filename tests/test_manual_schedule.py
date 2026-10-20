@@ -204,6 +204,25 @@ class ManualScheduleTest(unittest.TestCase):
         self.assertIn("以前の条件の表",response.get_data(as_text=True))
         self.assertEqual(before,list(self.db.iterdump()))
 
+    def test_unchanged_draft_can_be_reconfirmed_for_current_inputs(self):
+        fields = self.fields()
+        self.post(fields, "preview", {"1_0":"DR"})
+        self.post(fields, "save", {"1_0":"DR"})
+        saved = json.loads(self.db.execute("SELECT data FROM manual_schedules").fetchone()[0])
+        count = len(saved["history"])
+        saved["input_hash"] = "old-inputs"
+        self.db.execute("UPDATE manual_schedules SET data=?", (json.dumps(saved),))
+        self.db.commit()
+        fields = self.fields()
+        preview = self.post(fields, "preview", {}).get_data(as_text=True)
+        self.assertIn("この内容を下書き保存", preview)
+        self.assertEqual(self.post(fields, "save", {}).status_code, 303)
+        latest = json.loads(self.db.execute("SELECT data FROM manual_schedules").fetchone()[0])
+        self.assertNotEqual(latest["input_hash"], "old-inputs")
+        self.assertIn("conditions_hash", latest)
+        self.assertEqual(latest["grid"], saved["grid"])
+        self.assertEqual(len(latest["history"]), count)
+
     def test_empty_month_and_invalid_month(self):
         self.db.execute("DELETE FROM staff")
         self.db.commit()

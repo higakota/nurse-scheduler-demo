@@ -5,3 +5,14 @@
 .manual-print-actions button:disabled{opacity:.5;cursor:not-allowed}
 
 .manual-bulk-tools{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0}.manual-bulk-tools label{margin:0}.manual-bulk-tools button,.manual-undo-actions button{padding:6px 12px;font-size:13px}.manual-undo-actions{display:flex;gap:8px;margin:5px 0 10px}.paper-schedule .manual-cell.is-selected{box-shadow:inset 0 0 0 3px #286bad;background:#e1effb}
+
+.editor-actionbar.manual-print-actions{gap:10px 16px;margin:12px 0 16px;padding:12px 0;align-items:center}
+.editor-actionbar>a:not(.button-link){font-size:12px}.editor-advanced{margin-left:auto;font-size:12px}
+.editor-advanced>summary{cursor:pointer;color:#416352;padding:8px}.editor-advanced[open]{flex-basis:100%;margin-left:0}
+.editor-advanced-panel{padding:15px;background:#f2f6f3;border:1px solid #d9e4dc;border-radius:8px}
+.editor-advanced-panel h3{margin:12px 0 5px}.editor-advanced-panel p{font-size:13px;margin:5px 0 12px}
+.manual-savebar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;padding:10px 16px}
+.manual-savebar #manual-status{margin:0 auto 0 0;font-weight:600}.manual-undo-actions{display:flex;gap:6px}
+.manual-savebar>button{margin:0}.manual-savebar>details,.manual-savebar>#manual-recheck{flex-basis:100%;margin:0;font-size:12px}
+.manual-savebar .secondary{padding:7px 10px}.manual-savebar[hidden]{display:none}
+@media(max-width:700px){.editor-advanced{margin-left:0}.manual-savebar{gap:8px}.manual-savebar>button{width:100%}}

@@ -2,8 +2,9 @@
 const form=document.querySelector(".schedule-form");
 if(!form)return;
 let submitting=false;
+form.querySelectorAll('input[name="help_source"]').forEach(input=>input.addEventListener("change",()=>{const name=document.getElementById("help-source-name");if(name)name.textContent=input.dataset.label;}));
 const status=document.getElementById("schedule-action-status");
-const replace=form.querySelector('[name="replace"]');
+const replace=form.querySelector('input[type="checkbox"][name="replace"]');
 replace?.addEventListener("change",()=>{replace.removeAttribute("aria-invalid");status.hidden=true;});
 form.addEventListener("submit",event=>{
 if(submitting){event.preventDefault();return;}

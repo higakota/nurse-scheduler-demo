@@ -15,7 +15,7 @@ from flask import abort, redirect, render_template, request, session, url_for
 
 NS = {"s": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-IMPORT_VERSION = 4
+IMPORT_VERSION = 5
 
 
 def xml_read(book, path):
@@ -62,11 +62,16 @@ def parse_schedule(raw, sheet_name, month):
         workbook = xml_read(book, "xl/workbook.xml")
         properties = workbook.find("s:workbookPr", NS)
         epoch = date(1904, 1, 1) if properties is not None and properties.get("date1904") in ("1", "true") else date(1899, 12, 30)
+        from excel_font_colors import FontColors, clinical_groups
+        colors = FontColors(book)
+        shared_nodes = []
         shared = []
         if "xl/sharedStrings.xml" in book.namelist():
-            shared = [plain_text(node) for node in xml_read(book, "xl/sharedStrings.xml").findall("s:si", NS)]
+            shared_nodes = xml_read(book, "xl/sharedStrings.xml").findall("s:si", NS)
+            shared = [plain_text(node) for node in shared_nodes]
         cells = {}
         rotations = {}
+        color_flags = {}
         styles = []
         if "xl/styles.xml" in book.namelist():
             style_root = xml_read(book, "xl/styles.xml").find("s:cellXfs", NS)
@@ -79,11 +84,16 @@ def parse_schedule(raw, sheet_name, month):
                 formulas.add(ref)
             value = cell.find("s:v", NS)
             text = value.text or "" if value is not None else ""
+            text_node = None
             if cell.get("t") == "s":
+                text_node = shared_nodes[int(text)]
                 text = shared[int(text)]
             elif cell.get("t") == "inlineStr":
                 inline = cell.find("s:is", NS)
+                text_node = inline
                 text = plain_text(inline) if inline is not None else ""
+            style = styles[int(cell.get("s", "0"))] if styles else None
+            color_flags[ref] = colors.characters(text_node, text, style)
             cells[ref] = text
             rotation = 0
             if styles:
@@ -91,6 +101,26 @@ def parse_schedule(raw, sheet_name, month):
                 if alignment is not None:
                     rotation = int(alignment.get("textRotation", "0"))
             rotations[ref] = rotation
+        # 文字色を変える条件付き書式だけ個別確認へ。背景色・罫線は担当医の赤字判定に影響しない。
+        for conditional in root.findall("s:conditionalFormatting", NS):
+            if not colors.conditional_font_uncertain(conditional):
+                continue
+            for area in conditional.get("sqref", "").split():
+                ends = area.replace("$", "").split(":")
+                parsed = [re.fullmatch(r"([A-Z]+)([0-9]+)", end) for end in ends]
+                if not all(parsed):
+                    continue
+                first, last = parsed[0], parsed[-1]
+                def column_number(value):
+                    total = 0
+                    for letter in value:
+                        total = total * 26 + ord(letter) - 64
+                    return total
+                if int(first[2]) <= 6 <= int(last[2]):
+                    for address, text in cells.items():
+                        match = re.fullmatch(r"([A-Z]+)6", address)
+                        if match and column_number(first[1]) <= column_number(match[1]) <= column_number(last[1]):
+                            color_flags[address] = [None] * len(text)
         year, number = map(int, month.split("-"))
         found = {}
         detected_months = set()
@@ -109,7 +139,7 @@ def parse_schedule(raw, sheet_name, month):
                 raise ValueError("日付が重複しています。見本と同じ4行目の日付配置か確認してください。")
             column = match[1]
             raw_text = cells.get(column + "6", "")
-            groups = [part.strip() for part in re.split(r"(?:[ \u3000]{2,}|[\r\n]+)", raw_text.strip()) if part.strip()]
+            groups, excluded, color_uncertain = clinical_groups(raw_text, color_flags.get(column + "6", []))
             am, pm, note = "", "", ""
             if day.weekday() == 6:
                 note = "日曜は全日休診です。午前・午後とも診療担当医0人に固定します。"
@@ -129,9 +159,14 @@ def parse_schedule(raw, sheet_name, month):
                     note = "横書きの左・右の候補です。Excelと照合してください。"
             else:
                 note = "午前・午後を判別できません。両欄への自動割当はしていません。元のExcelを見て入力してください。"
+            if color_uncertain and day.weekday() != 6:
+                am, pm = "", ""
+                note = "文字色を確定できないため、出勤候補を自動入力していません。赤字は休みとして元のExcelで確認してください。"
+            elif excluded and day.weekday() != 6:
+                note = "赤字の医師を休みとして出勤候補から除外しました。 " + note
             if column + "6" in formulas or ref in formulas:
                 note = "数式の保存済み値です。最新の内容か必ず確認してください。 " + note
-            found[day.isoformat()] = {"date": day.isoformat(), "raw": raw_text, "am": am, "pm": pm, "note": note, "cell": column + "6", "sheet": sheet_name, "rotation": rotations.get(column + "6", 0), "friday": day.weekday() == 4, "sunday": day.weekday() == 6, "ambiguous": day.weekday() != 6 and (not groups or (day.weekday() != 4 and (len(groups) != 2 or rotations.get(column + "6", 0) not in (0, 255))))}
+            found[day.isoformat()] = {"date": day.isoformat(), "raw": raw_text, "am": am, "pm": pm, "note": note, "cell": column + "6", "sheet": sheet_name, "rotation": rotations.get(column + "6", 0), "friday": day.weekday() == 4, "sunday": day.weekday() == 6, "ambiguous": day.weekday() != 6 and (color_uncertain or not groups or (day.weekday() != 4 and (len(groups) != 2 or rotations.get(column + "6", 0) not in (0, 255))))}
         expected = calendar.monthrange(year, number)[1]
         if len(found) != expected:
             detected = "、".join(sorted(detected_months)) or "日付を検出できませんでした"

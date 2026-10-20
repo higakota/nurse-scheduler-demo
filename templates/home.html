@@ -1,19 +1,27 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ホーム | 看護師勤務表</title><link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='app-ui.css') }}"></head>
 <body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content">
-<div class="home-heading"><div><p class="eyebrow">今月のワークスペース</p><h1>{{ ui_month_label }}の勤務表</h1><p class="page-description">入力して、作成して、表を見ながら仕上げる。</p></div><span class="month-chip">{{ month_days }}日間</span></div>
+<div class="home-heading"><div><p class="eyebrow">勤務表づくり</p><h1>{{ ui_month_label }}の勤務表</h1><p class="page-description">入力 → 自院で仮作成 → ヘルプ追加 → 確認・修正 → 印刷</p></div><span class="month-chip">{{ month_days }}日間</span></div>
 {% if not staff_count %}<div class="setup-notice"><strong>はじめにスタッフを登録してください。</strong><a class="button-link" href="{{ url_for('staff_settings',month=month) }}">スタッフを登録する</a></div>{% endif %}
-<section class="month-overview" aria-label="この月の状態">
-<div><span>自動作成結果</span><strong>{{ '入力変更あり・再確認' if generated_stale else ('保存あり' if generated_saved else '未作成') }}</strong></div>
-<div><span>手動下書き</span><strong>{{ '入力変更あり・要確認' if manual_stale else ('保存あり・未確定' if manual_saved else '未保存') }}</strong></div>
-<div><span>ヘルプの来院予定</span><strong>{{ help_visits }}件 保存済み</strong></div></section>
-{% if generated_saved and not manual_saved %}<p class="home-next-action">作成した結果があります。「編集・印刷」で開いて、内容を確認できます。</p>{% elif help_visits and not generated_saved %}<p class="home-next-action">ヘルプの来院予定が登録されています。<a href="{{ url_for('schedule',month=month) }}">ヘルプ込みの勤務表を作成する →</a></p>{% endif %}
-<div class="workspace-actions">
-<section class="workspace-card"><span class="workspace-number">01</span><h2>今月の入力</h2><p>医師予定、希望休・有給、会議などを準備します。</p><a class="button-link secondary" href="{{ url_for(next_card.endpoint,month=month) }}">入力を続ける →</a><small>次の確認：{{ next_card.title }}</small></section>
-<section class="workspace-card"><span class="workspace-number">02</span><h2>勤務表を作成</h2><p>入力した条件から表を作り、不足を確認します。</p><a class="button-link secondary" href="{{ url_for('schedule',month=month) }}">自動作成へ →</a><small>自動作成のルールは調整中です。</small></section>
-<section class="workspace-card workspace-primary"><span class="workspace-number">03</span><h2>表を確認・編集</h2><p>マスを押して修正し、保存した下書きを印刷します。</p><a class="button-link" href="{{ url_for('manual_schedule',month=month) }}">{{ '保存した下書きを開く' if manual_saved else '編集・印刷へ' }} →</a><small>{{ '入力変更あり。下書きを開いて確認してください。' if manual_stale else ('保存した下書きを編集・印刷できます。' if manual_saved else '確定機能は未実装です。下書きとして保存します。') }}</small></section>
-</div>
-<section class="panel home-inputs"><div class="section-heading"><div><h2>入力の保存状況</h2><p class="hint">保存ありは、内容の正しさや作成可能を示す判定ではありません。</p></div><span class="save-count">{{ saved_count }}/4項目に保存あり</span></div>
-<div class="input-status-list">{% for card in cards %}<a href="{{ url_for(card.endpoint,month=month) }}"><span><strong>{{ card.title }}</strong><small>{{ card.detail }}</small></span><span class="status-badge {{ 'attention' if card.attention else ('saved' if card.saved else 'muted') }}">{{ '再確認が必要' if card.attention else ('保存あり' if card.saved else '未入力') }}</span><span aria-hidden="true">→</span></a>{% endfor %}</div>
-<p class="home-review-link"><a href="{{ url_for('input_review',month=month) }}">保存した入力をまとめて見る →</a></p></section>
-<p class="home-bottom-links"><a href="{{ url_for('help_availability',month=month) }}">ヘルプの来院予定</a><a href="{{ url_for('staff_settings',month=month) }}">スタッフ {{ staff_count }}人</a></p>
+<details class="compact-help"><summary>今月の状況を見る</summary><section class="month-overview" aria-label="この月の状態">
+<div><span>自動で作った勤務表</span><strong>{{ '入力変更あり・再確認' if generated_stale else ('作成済み' if generated_saved else '未作成') }}</strong></div>
+<div><span>調整した勤務表</span><strong>{{ '入力変更あり・要確認' if manual_stale else ('調整あり' if manual_saved else 'まだありません') }}</strong></div>
+<div><span>ヘルプの来院予定</span><strong>{{ help_visits }}件 登録</strong></div></section></details>
+{% if staff_count %}<section class="workflow-callout" aria-label="次の操作"><div><p class="eyebrow">次の操作</p>
+{% if cards|selectattr('attention')|list %}<strong>変更した医師予定を確認する</strong><p class="hint">赤字の休みや午前午後を確認して保存してください。</p></div><a class="button-link" href="{{ url_for('doctor_import',month=month) }}">医師予定を確認 →</a>
+{% elif manual_saved and not manual_stale %}<strong>調整した勤務表の続きを開く</strong><p class="hint">表を確認して、修正や印刷に進めます。</p></div><a class="button-link" href="{{ url_for('manual_schedule',month=month) }}">勤務表を開く →</a>
+{% elif generated_saved and not generated_stale %}<strong>作成した表を確認して仕上げる</strong><p class="hint">表を確認して、必要なら編集・印刷に進みます。</p></div><a class="button-link" href="{{ url_for('schedule',month=month,_anchor='saved-result') }}">作成結果を確認 →</a>
+{% elif help_visits %}<strong>来院OKのヘルプを勤務表に加える</strong><p class="hint">元の自院勤務を維持して作成できます。</p></div><a class="button-link" href="{{ url_for('schedule',month=month) }}">ヘルプ込みで作成へ →</a>
+{% elif saved_count == 4 %}<strong>自院スタッフの勤務表を作る</strong><p class="hint">まず仮作成して、不足する日と時間帯を確認できます。</p></div><a class="button-link" href="{{ url_for('schedule',month=month) }}">勤務表を作成 →</a>
+{% else %}<strong>今月の入力を準備する</strong><p class="hint">次の確認：{{ next_card.title }}</p></div><a class="button-link" href="{{ url_for(next_card.endpoint,month=month) }}">入力を続ける →</a>{% endif %}
+</section>{% endif %}
+<nav class="workflow-path" aria-label="勤務表を作る流れ"><ol>
+<li><a href="{{ url_for('monthly_settings',month=month) }}"><span>1</span><strong>今月の入力</strong><small>医師予定・希望休・人数</small></a></li>
+<li><a href="{{ url_for('schedule',month=month) }}"><span>2</span><strong>自院で仮作成</strong><small>足りない日と人数を確認</small></a></li>
+<li><a href="{{ url_for('help_availability',month=month) }}"><span>3</span><strong>ヘルプを追加</strong><small>来院OKの人と日を登録</small></a></li>
+<li><a href="{{ url_for('manual_schedule',month=month) }}"><span>4</span><strong>確認・修正 → 印刷</strong><small>表を見ながら仕上げる</small></a></li>
+</ol></nav>
+<section class="panel home-inputs"><div class="section-heading"><div><h2>今月の入力</h2><p class="hint">入力内容を確認・変更する場合はこちら。</p></div><span class="save-count">{{ saved_count }}/4項目に入力あり</span></div>
+<div class="input-status-list">{% for card in cards %}<a href="{{ url_for(card.endpoint,month=month) }}"><span><strong>{{ card.title }}</strong><small>{{ card.detail }}</small></span><span class="status-badge {{ 'attention' if card.attention else ('saved' if card.saved else 'muted') }}">{{ '再確認が必要' if card.attention else ('入力あり' if card.saved else '未入力') }}</span><span aria-hidden="true">→</span></a>{% endfor %}</div>
+<p class="home-review-link"><a href="{{ url_for('input_review',month=month) }}">入力をまとめて確認 →</a></p></section>
+<details class="compact-help"><summary>勤務表の確認について</summary><p>確定機能は未実装です。作成・修正した表は、運用前に確認してください。</p></details><p class="home-bottom-links"><a href="{{ url_for('help_availability',month=month) }}">ヘルプの来院予定</a><a href="{{ url_for('staff_settings',month=month) }}">スタッフ {{ staff_count }}人</a></p>
 </main></body></html>
