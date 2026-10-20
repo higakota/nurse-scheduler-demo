@@ -53,9 +53,10 @@ class LeaveHistoryTest(unittest.TestCase):
         self.post(action="leave_save", staff="1", day="2026-10-20", period="am")
         self.assertEqual(self.stored()["leaves"]["1_2026-10-20"], "am")
         page = self.client.get("/leave-history?month=2026-10").get_data(as_text=True)
-        self.assertIn("看護 花子：0.5日", page)
+        self.assertIn("/monthly?month=2026-10", page)
+        self.assertIn("有給：午前", self.client.get("/inputs?month=2026-10").get_data(as_text=True))
         edit = self.client.get("/leave-history?month=2026-10&staff=1&day=2026-10-20").get_data(as_text=True)
-        self.assertIn('data-period="am" aria-pressed="true"', edit)
+        self.assertIn("/monthly?month=2026-10", edit)
         self.post(action="leave_delete", key="1_2026-10-20")
         self.assertEqual(self.stored()["leaves"], {})
 

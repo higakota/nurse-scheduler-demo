@@ -11,6 +11,7 @@ app.config.update(
     SECRET_KEY=secrets.token_hex(32),
     DATABASE=str(Path(app.instance_path) / "staff.sqlite3"),
     SESSION_COOKIE_SAMESITE="Strict",
+    HELP_REQUESTS_ENABLED=False,
     MAX_CONTENT_LENGTH=6 * 1024 * 1024,
 )
 
@@ -20,15 +21,8 @@ def connect_db():
     path.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(path)
     db.row_factory = sqlite3.Row
-    db.execute("""CREATE TABLE IF NOT EXISTS staff (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
-        role TEXT NOT NULL CHECK(role IN ('nurse', 'technician')),
-        employment TEXT NOT NULL CHECK(employment IN ('full', 'part', '')),
-        veteran INTEGER NOT NULL CHECK(veteran IN (0, 1)),
-        CHECK((role = 'nurse' AND employment IN ('full', 'part'))
-           OR (role = 'technician' AND employment = '' AND veteran = 0))
-    )""")
+    from staff_schema import ensure_staff_schema
+    ensure_staff_schema(db)
     return db
 
 
@@ -42,7 +36,7 @@ def staff_settings():
     if "csrf_token" not in session:
         session["csrf_token"] = secrets.token_hex(32)
     error = None
-    values = {"name": "", "role": "nurse", "employment": "full", "veteran": False}
+    values = {"name": "", "role": "nurse", "employment": "full", "veteran": False, "is_help": False, "allowed_areas": "ABC"}
     edit_id = request.args.get("edit", type=int)
     db = connect_db()
     try:
@@ -60,25 +54,34 @@ def staff_settings():
                 "role": request.form.get("role", ""),
                 "employment": request.form.get("employment", ""),
                 "veteran": request.form.get("veteran") == "1",
+                "is_help": request.form.get("is_help") == "1",
+                "allowed_areas": "ABC",
             }
             if not values["name"] or len(values["name"]) > 50:
                 error = "名前は1～50文字で入力してください。"
             elif values["role"] not in ("nurse", "technician"):
                 error = "職種を選択してください。"
-            elif values["role"] == "nurse" and values["employment"] not in ("full", "part"):
-                error = "看護師の勤務区分を選択してください。"
+            elif values["employment"] not in ("full", "part") and not values["is_help"] and not (values["role"] == "technician" and values["employment"] == ""):
+                error = "勤務区分を選択してください。"
+            if values["is_help"]:
+                values["employment"] = "full"
+            elif values["role"] == "nurse":
+                values["allowed_areas"] = "ABC"
             if values["role"] == "technician":
-                values.update(employment="", veteran=False)
+                values.update(employment="part" if values["employment"] == "part" else "", veteran=False, allowed_areas="C")
             if edit_id is not None and db.execute(
                 "SELECT id FROM staff WHERE id = ?", (edit_id,)
             ).fetchone() is None:
                 abort(404)
             if error is None:
-                data = (values["name"], values["role"], values["employment"], int(values["veteran"]))
+                data = (values["name"], values["role"], values["employment"], int(values["veteran"]), int(values["is_help"]), values["allowed_areas"])
                 if edit_id is None:
-                    db.execute("INSERT INTO staff (name, role, employment, veteran) VALUES (?, ?, ?, ?)", data)
+                    from staff_deletion import next_staff_id
+                    db.execute("BEGIN IMMEDIATE")
+                    new_id = next_staff_id(db)
+                    db.execute("INSERT INTO staff (id, name, role, employment, veteran, is_help, allowed_areas) VALUES (?, ?, ?, ?, ?, ?, ?)", (new_id,) + data)
                 else:
-                    db.execute("UPDATE staff SET name=?, role=?, employment=?, veteran=? WHERE id=?", data + (edit_id,))
+                    db.execute("UPDATE staff SET name=?, role=?, employment=?, veteran=?, is_help=?, allowed_areas=? WHERE id=?", data + (edit_id,))
                 db.commit()
                 return redirect(url_for("staff_settings", saved="1"))
         elif edit_id is not None:
@@ -111,6 +114,38 @@ from leave_and_history import register_leave_and_history
 
 register_leave_and_history(app, connect_db)
 
+
+from help_availability import register_help_availability
+
+register_help_availability(app, connect_db)
+
+from schedule import register_schedule
+
+register_schedule(app, connect_db)
+
+from help_requests import register_help_requests
+
+register_help_requests(app, connect_db)
+
+from staff_deletion import register_staff_deletion
+
+register_staff_deletion(app, connect_db)
+
+from weekly_settings import register_weekly_settings
+
+register_weekly_settings(app, connect_db)
+
+from data_backup import register_data_backup
+
+register_data_backup(app, connect_db)
+
+from input_review import register_input_review
+
+register_input_review(app, connect_db)
+
+from manual_schedule import register_manual_schedule
+
+register_manual_schedule(app, connect_db)
 
 register_ui(app)
 

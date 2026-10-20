@@ -1,0 +1,25 @@
+<section id="{{ manual_print_id }}" class="print-packet" aria-hidden="true">
+<section class="print-sheet">
+<header class="print-heading"><h1>{{ month }} 手動修正した勤務表</h1><p>下書き・未確定 ／ 保存済みの手動修正を印刷</p></header>
+<p>保存日時：{{ base.updated }}<br>医師予定・会議・希望休等の表示と下の確認事項は、この画面を開いた時点の入力に基づきます。</p>
+{% if stale %}<p class="print-warning">下書き保存後に入力条件が変わっています。修正内容と現在の条件を確認してください。</p>{% endif %}
+{% with is_draft=true, manual_editable=false %}{% include "_schedule_grid.html" %}{% endwith %}
+</section>
+{% if print_with_notes %}
+<section class="print-sheet print-new-page">
+<header class="print-heading"><h2>{{ month }} 下書きの不足・確認事項</h2><p>下書き・未確定 ／ 保存済みの手動修正に対する確認</p></header>
+{% if checks_incomplete %}<p class="print-warning">入力不足等のため、人数不足や勤務条件の全体チェックは未完了です。不足なしと判断しないでください。</p>{% endif %}
+<h3>確認事項</h3>
+<ul>{% for message in warnings %}<li>{{ message }}</li>{% else %}<li>現在のチェックで確認事項は見つかりませんでした。</li>{% endfor %}</ul>
+<h3>配置・資格の不足</h3>
+{% if shortages %}<table class="print-shortages"><thead><tr><th>日付</th><th>午前・午後</th><th>配置・条件</th><th>必要人数</th><th>配置済み</th><th>不足人数</th></tr></thead><tbody>
+{% for row in shortages %}<tr><td>{{ row.date|date_with_weekday }}</td><td>{{ row.half }}</td><td>{{ row.area }}{% if row.note %}（{{ row.note }}）{% endif %}</td><td>{{ row.required }}</td><td>{{ row.available }}</td><td>{{ row.missing }}人{% if row.veteran_missing %}（うちベテラン{{ row.veteran_missing }}人）{% endif %}</td></tr>{% endfor %}
+</tbody></table><p>資格の不足は人数の不足と重なるため、単純に合計しないでください。ヘルプの必要人数が最小であることを示す一覧ではありません。</p>
+{% elif checks_incomplete %}<p>未確認です。入力内容の確認が必要です。</p>{% else %}<p>現在のチェックでは、配置・資格の不足は見つかりませんでした。</p>{% endif %}
+<h3>お母さんへの確認メモ</h3>
+<p>□ 希望休・有給　□ 会議の参加者　□ 公休日数・週上限　□ 連勤<br>□ ヘルプの担当可能業務　□ 不足が残った場合の対応</p>
+<p>再確認中の勤務ルールがあります。この用紙は完成・確定した勤務表ではありません。</p>
+<div class="print-writing-lines"><p>確認したこと・変更すること：</p><hr><hr><hr></div>
+</section>
+{% endif %}
+</section>

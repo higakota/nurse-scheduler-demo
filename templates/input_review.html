@@ -1,0 +1,28 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>入力内容の確認</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='app-ui.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='input_review.css') }}"></head>
+<body class="app-layout">{% include "_shell.html" %}<main class="container app-main input-review" id="main-content">
+<h1>{{ ui_month_label }}の入力内容</h1><p>保存した内容をまとめて確認できます。変更したい項目の「修正する」から入力画面へ進んでください。</p>
+<p class="hint">保存済みの入力の一覧です。作成できるかの判定や、勤務表の結果ではありません。ほかの画面の未保存の変更は表示されません。</p>
+<section class="panel review-missing"><h2>入力の抜けを確認</h2>
+{% if issues %}<p>{{ issues|length }}項目に確認が必要です。下の項目から修正画面へ進めます。</p>
+{% for issue in issues %}<details><summary>{{ issue.title }}（{{ issue.details|length }}件）</summary><p>{{ issue.details|join('・') }}</p><a class="button-link secondary" href="{{ url_for(issue.endpoint,month=month,_anchor=issue.anchor) }}">確認・修正する →</a></details>{% endfor %}
+{% else %}<p>このチェック対象の未入力は見つかりませんでした。</p>{% endif %}
+<p class="hint">医師予定・検査室人数・公休日数・週上限・会議参加者を確認します。条件の成立や、すべての入力の正しさを保証する判定ではありません。</p></section>
+<nav class="review-jump" aria-label="確認する項目"><a href="#staff-inputs">希望休・有給・勤務日数</a><a href="#daily-inputs">医師予定・休診日・会議</a><a href="#helper-inputs">ヘルプの来院予定</a></nav>
+<section id="staff-inputs"><div class="review-heading"><h2>希望休・有給・勤務日数</h2><a href="{{ url_for('monthly_settings',month=month,_anchor='targets') }}">公休日数・週上限を修正する →</a></div>
+<p class="hint">週上限は非常勤スタッフの共通設定です。希望休と有給は別々に表示します。</p>
+<div class="review-people">{% for p in people %}<article class="panel"><div class="review-heading"><h3>{{ p.name }}</h3><a href="{{ url_for('monthly_settings',month=month,staff=p.id,_anchor='wishes') }}">希望休・有給を修正する →</a></div>
+<p>{{ p.role }}・{{ p.employment }} ／ <strong>{{ p.setting }}</strong></p>
+{% if p.entries %}<ul class="review-absences">{% for e in p.entries %}<li><strong>{{ e.label }}</strong>{% if e.wish %}<span class="review-tag">希望休：{{ e.wish }}</span>{% endif %}{% if e.paid %}<span class="review-tag paid">有給：{{ e.paid }}</span>{% endif %}</li>{% endfor %}</ul>{% else %}<p class="hint">希望休・有給の登録なし</p>{% endif %}</article>{% else %}<p>自院スタッフが未登録です。<a href="{{ url_for('staff_settings',month=month) }}">スタッフを登録する →</a></p>{% endfor %}</div></section>
+<section id="daily-inputs"><h2>医師予定・休診日・会議</h2>
+<div class="review-jump"><a href="{{ url_for('doctor_import',month=month) }}">医師予定を修正する →</a><a href="{{ url_for('monthly_settings',month=month,_anchor='closures') }}">休診日を修正する →</a><a href="{{ url_for('monthly_settings',month=month,_anchor='meetings') }}">会議を修正する →</a></div>
+<p class="{{ 'hint' if reviewed else 'error' }}">{{ '医師予定：確認して保存済み' if reviewed else ('医師予定：再確認が必要です' if has_doctors else '医師予定：未登録です') }}</p>
+<p class="hint">医師名は保存されている内容をそのまま表示します。休診と医師名が重なっている場合は、元の入力を確認してください。会議は午後の予定です。</p>
+<div class="review-days">{% for d in days %}<article class="panel review-day"><h3>{{ d.label }} {% if d.closed %}<span class="review-tag">{{ d.closed }}</span>{% endif %}</h3>
+<dl><dt>午前の医師</dt><dd>{{ d.doctors.am|join('・') if d.doctors.am is defined and d.doctors.am else ('登録なし（0人）' if d.doctors.am is defined else '未登録') }}</dd>
+<dt>午後の医師</dt><dd>{% if d.friday %}<span class="hint">金曜午後は診療なし</span><br>{% endif %}{{ d.doctors.pm|join('・') if d.doctors.pm is defined and d.doctors.pm else ('登録なし（0人）' if d.doctors.pm is defined else '未登録') }}</dd>
+<dt>午後の会議</dt><dd>{% for m in d.meetings %}<div class="review-meeting"><strong>{{ m.title }}</strong><br>参加者：{{ m.participants|join('・') or '未登録' }}</div>{% else %}<span class="hint">登録なし</span>{% endfor %}</dd></dl></article>{% endfor %}</div></section>
+<section id="helper-inputs"><div class="review-heading"><h2>ヘルプの来院予定</h2><a href="{{ url_for('help_availability',month=month) }}">来院予定を修正する →</a></div>
+<p class="hint">登録済みの来院予定です。不足の解消や担当可能な業務を判定する一覧ではありません。</p>
+<ul class="review-visits">{% set state=namespace(found=false) %}{% for d in days %}{% if d.visits %}{% set state.found=true %}<li><strong>{{ d.label }}</strong>{% for v in d.visits %}<span>{{ v.name }}（{{ v.period }}）</span>{% endfor %}</li>{% endif %}{% endfor %}{% if not state.found %}<li>この月の来院予定は未登録です。</li>{% endif %}</ul></section>
+</main></body></html>

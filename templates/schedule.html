@@ -1,0 +1,43 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>勤務表の自動作成</title><link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='app-ui.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='schedule.css') }}"></head><body class="app-layout schedule-page">{% include "_shell.html" %}<main class="container app-main" id="main-content">
+<div class="page-heading"><h1>勤務表を作成</h1><p class="page-description">{{ "来院予定を登録したヘルプを含めて、勤務表を作成できます。" if help_count else "自院の勤務表を作成します。不足を相談したいときは、仮作成で確認できます。" }}</p></div>
+<details class="compact-help"><summary>作成ルールと現在の対応範囲</summary>
+<p>自院のみ、検査技師ヘルプのみ、看護師ヘルプも含める順で探索します。希望休・有給・休日日数などは自動で変更しません。原則5連勤以内とし、公休等から本人の6連勤が必須の場合だけ例外を許容します。人数不足はヘルプを先に確認します。</p>
+<p>本人が希望していない半休を重ねるより、丸1日の休みを優先します。ヘルプ込みの作成では、全日休みを確保できる承諾済みヘルプの案も比較します。自動作成のルールは調整中です。作成後は「編集・印刷」で下書きを修正できます。確定機能は未実装です。</p></details>
+{% if request.args.get('saved') == '1' %}<p class="success" role="status">条件を検証した勤務表を保存しました。</p>{% endif %}
+{% if stale %}<p class="error" role="alert">保存後に入力条件が変わっています。下の表は以前の結果です。最新の条件で再作成してください。</p>{% endif %}
+{% if outcome %}<section class="panel" role="status"><h2>{{ {'input_error':'入力の確認が必要です','infeasible':'現在の条件では作成できません','unknown':'今回の探索では判定できません','draft':'ヘルプ相談用の仮表'}.get(outcome.status,'作成結果') }}</h2>{% if outcome.status == 'draft' %}<details class="schedule-result-notes"><summary>この仮表の条件・注意事項</summary>{% endif %}{% for message in outcome.messages[:8] %}<p>{{ message }}</p>{% endfor %}{% if outcome.messages|length > 8 %}<details><summary>ほか{{ outcome.messages|length - 8 }}件の確認事項</summary>{% for message in outcome.messages[8:] %}<p>{{ message }}</p>{% endfor %}</details>{% endif %}
+{% if outcome.status == 'draft' %}</details>{% endif %}
+{% if outcome.shortages %}<details {% if outcome.status != 'draft' %}open{% endif %}><summary>不足の詳しい内訳（{{ shortage_rows|length }}件）</summary><div class="table-wrap"><table><thead><tr><th>日付</th><th>午前午後</th><th>配置・条件</th><th>最低人数</th><th>{{ '配置済み人数' if outcome.status == 'draft' else '最大候補人数' }}</th><th>不足人数</th></tr></thead><tbody>{% for row in shortage_rows %}<tr><td>{{ row.date|date_with_weekday }}</td><td>{{ row.half }}</td><td>{{ row.area }}{% if row.note %} <small>（{{ row.note }}）</small>{% endif %}</td><td>{{ row.required if row.required is not none else '—' }}</td><td>{{ row.available if row.available is not none else '—' }}</td><td>{{ '人数は充足' if row.veteran_missing and not row.missing else row.missing }}</td></tr>{% endfor %}</tbody></table></div>{% if outcome.status != 'draft' %}<p class="hint">人数はその時間帯で勤務可能な候補の上限です。各行の不足は重複するため足し合わせないでください。月全体の休日日数・連勤が絡む不足は、この表だけでは説明できません。</p>{% endif %}</details>{% endif %}
+{% if outcome.status == 'draft' %}
+{% if outcome.six_day_runs %}<details class="schedule-result-notes"><summary>6連勤になるスタッフ・期間（{{ outcome.six_day_runs|length }}人）</summary>
+<ul>{% for run in outcome.six_day_runs %}<li>{{ run.name }}：{{ run.start|date_with_weekday }} ～ {{ run.end|date_with_weekday }}</li>{% else %}<li>この仮表では全日6連勤はありません。</li>{% endfor %}</ul></details>{% endif %}
+
+<p>不足する日・午前午後・人数を見て他院へ相談し、来られる人が決まったら登録してください。</p>
+<p><a class="button" href="{{ url_for('help_availability', month=month) }}">決まったヘルプの来院予定を登録する</a></p>
+<h3>自院スタッフの仮配置（完成版ではありません）</h3>
+<div class="schedule-print-actions"><button type="button" data-print-packet="draft-print">仮表・不足一覧・確認メモを印刷／PDF保存</button><p class="hint">A4横向きの相談用レイアウトです。印刷画面で「PDFに保存」も選べます。印刷用紙・記号の正式な仕様は後日調整します。</p></div>
+{% with display=draft_display, is_draft=true %}{% include "_schedule_grid.html" %}{% endwith %}
+{% if not outcome.shortages %}<p>この仮表には配置人数・資格条件の不足はありません。作成結果として保存する場合は通常の作成を行ってください。確定ではありません。</p>{% endif %}
+{% endif %}
+{% if result %}<p>保存済みの勤務表は変更していません。下の表は今回の作成結果ではありません。</p>{% endif %}</section>{% endif %}
+<section class="panel creation-controls"><h2>{{ 'ヘルプ登録後の勤務表作成' if help_count else '勤務表を作成する' }}</h2>
+<form method="post" class="schedule-form"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="result_token" value="{{ result_token }}">
+{% if result %}<label class="checkbox schedule-replace"><input type="checkbox" name="replace" value="yes">保存済みの自動作成結果を置き換えます。</label><p class="hint">仮作成では置き換えません。手動修正した下書きも変更しません。</p>{% endif %}
+{% if help_count %}<div class="creation-option help-create-primary">
+<div><span class="status-badge saved">ヘルプの来院予定を保存済み</span><h3>登録したヘルプを含めて作成</h3><p>来院予定 {{ help_count }}件を参照し、勤務条件を確認して保存します。</p><a href="{{ url_for('help_availability',month=month) }}">登録した来院予定を確認 →</a></div>
+<button name="mode" value="help">ヘルプ込みで勤務表を作成</button></div>{% else %}
+<p class="hint">ヘルプを使う場合は、<a href="{{ url_for('help_availability',month=month) }}">来院予定を保存</a>すると、ここにヘルプ込みの作成ボタンが表示されます。スタッフ登録だけでは勤務に含めません。</p>{% endif %}
+<div class="creation-option creation-secondary"><div><h3>自院だけの不足を調べる</h3><p class="hint">相談前の確認用です。登録済みのヘルプは使いません。</p></div><button name="mode" value="draft" class="{{ 'secondary' if help_count else '' }}">不足を残して仮作成する</button></div>
+<div class="creation-option creation-secondary"><div><h3>ヘルプを使わず作成・保存</h3><p class="hint">自院スタッフだけで、条件を満たす表を探します。</p></div><button name="mode" value="self" class="secondary">自院スタッフだけで作成</button></div>
+<details class="creation-option-more"><summary>ヘルプ確保が難しい場合の最終案</summary><p class="hint">人員不足時はヘルプを先に確認してください。6連勤まで許容する案です。7連勤以上は禁止です。</p><div class="actions"><button name="mode" value="draft_six" class="secondary">6連勤までの仮案を確認する</button><button name="mode" value="six" class="secondary">6連勤まで許容して作成する</button></div></details>
+<p id="schedule-action-status" class="schedule-action-status" role="status" hidden></p></form><p class="hint"><a href="{{ url_for('input_review',month=month) }}">入力内容を確認する</a></p></section>
+{% if result %}<section class="panel"><h2>保存済みの月間勤務表{% if stale %}（以前の条件）{% endif %}</h2><div class="schedule-print-actions"><button type="button" data-print-packet="saved-print">保存済みの表を印刷／PDF保存</button></div><p>{{ 'ヘルプ込み' if result.mode == 'help' else '自院スタッフのみ' }}。Excelの見本に寄せた1人1行の表示です。</p>
+{% with display=saved_display, is_draft=false %}{% include "_schedule_grid.html" %}{% endwith %}
+{% include "_result_summary.html" %}
+{% if result.get('weekly_summary') %}<details class="schedule-result-notes"><summary>週の勤務日数を詳しく見る</summary><h3>非常勤の週ごとの確認</h3><div class="table-wrap"><table><thead><tr><th>スタッフ</th><th>週（月曜〜日曜）</th><th>この月の勤務</th><th>前後月の決定済み</th><th>週上限</th><th>残り枠</th><th>翌月の未定日</th></tr></thead><tbody>{% for row in result.weekly_summary %}<tr><th>{{ row.name }}</th><td>{{ row.start }}〜{{ row.end }}</td><td>{{ row.current }}日</td><td>{{ row.outside }}日</td><td>{{ row.limit }}日</td><td>{{ row.remaining }}日</td><td>{{ row.pending|join('、') or 'なし' }}</td></tr>{% endfor %}</tbody></table></div><p class="hint">未定日は勤務なしと確定していません。翌月を作成するときにも、この月の実績を合算して上限を守ります。残り枠は勤務が保証される日数ではありません。</p></details>{% endif %}
+</section>{% endif %}
+{% if outcome and outcome.status == 'draft' %}
+{% with print_id='draft-print', print_display=draft_display, is_draft=true, experimental=outcome.experimental, print_shortages=shortage_rows, print_runs=outcome.six_day_runs %}{% include "_schedule_print.html" %}{% endwith %}
+{% endif %}
+{% if result %}{% with print_id='saved-print', print_display=saved_display, is_draft=false, experimental=false, print_shortages=[], print_runs=result.get('six_day_runs', []) %}{% include "_schedule_print.html" %}{% endwith %}{% endif %}
+</main><script src="{{ url_for('static', filename='schedule_print.js') }}"></script><script src="{{ url_for('static',filename='schedule_actions.js') }}"></script></body></html>

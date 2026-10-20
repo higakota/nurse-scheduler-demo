@@ -1,12 +1,13 @@
 <a class="skip-link" href="#main-content">本文へ移動</a>
 <aside class="app-sidebar" aria-label="メインメニュー">
-<a class="app-logo" href="{{ url_for('index', month=ui_month) }}"><span class="logo-mark" aria-hidden="true">▦</span><span>看護師勤務表<small>毎月の勤務づくりを、もっと楽に。</small></span></a>
+<a class="app-logo" href="{{ url_for('index',month=ui_month) }}"><span class="logo-mark" aria-hidden="true">▦</span><span>看護師勤務表<small>毎月の勤務を、ひとつの場所で。</small></span></a>
 <nav class="side-nav">
-<a href="{{ url_for('index', month=ui_month) }}" {% if ui_active == 'index' %}aria-current="page"{% endif %}><span aria-hidden="true">⌂</span>ホーム</a>
-<p class="nav-caption">勤務表の準備</p>
-{% for endpoint, title, description in ui_steps %}<a href="{{ url_for(endpoint, month=ui_month) }}" {% if ui_active == endpoint %}aria-current="page"{% endif %}><span class="nav-number">{{ loop.index }}</span>{{ title }}</a>{% endfor %}
-<p class="nav-caption">基本設定</p><a href="{{ url_for('staff_settings', month=ui_month) }}" {% if ui_active == 'staff_settings' %}aria-current="page"{% endif %}><span aria-hidden="true">⚙</span>スタッフ設定</a>
-</nav><div class="sidebar-note"><span class="local-dot"></span> このPC内に保存<p>入力した勤務データは<br>インターネットに公開しません。</p></div>
+{% for endpoint,label,group,mark in [('index','ホーム','index','⌂'),('monthly_settings','今月の入力','inputs','01'),('schedule','勤務表','schedules','02'),('help_availability','ヘルプ','help_availability','03'),('staff_settings','スタッフ','staff_settings','⚙')] %}
+<a href="{{ url_for(endpoint,month=ui_month) }}" {% if ui_group==group %}aria-current="page"{% endif %}><span class="nav-number" aria-hidden="true">{{ mark }}</span>{{ label }}</a>
+{% endfor %}
+</nav>
+<div class="sidebar-bottom"><a class="backup-nav {% if ui_active=='data_backup' %}is-current{% endif %}" href="{{ url_for('data_backup',month=ui_month) }}">バックアップ・復元</a><div class="sidebar-note"><span class="local-dot"></span> このPC内に保存</div></div>
 </aside>
-<header class="app-topbar"><div><span class="topbar-label">勤務表づくり</span><span class="topbar-divider">/</span><strong>{{ ui_title }}</strong></div>
-<form method="get" action="{{ url_for(request.endpoint if request.endpoint != 'doctor_edit' else 'index') }}" class="topbar-month"><label for="nav-month">作成する月</label><input id="nav-month" type="month" name="month" value="{{ ui_month }}" min="1900-01" max="9998-12" required><button class="button-quiet">切替</button></form></header>
+<header class="app-topbar"><strong>{{ ui_title }}</strong>
+<form method="get" action="{{ url_for(ui_month_endpoint) }}" class="topbar-month"><label for="nav-month">対象月</label><input id="nav-month" type="month" name="month" value="{{ ui_month }}" min="1900-01" max="9998-12" required><button class="button-quiet">切替</button></form></header>
+{% if ui_tabs %}<nav class="page-subnav" aria-label="{{ '今月の入力' if ui_group=='inputs' else '勤務表' }}の画面">{% for endpoint,label in ui_tabs %}<a href="{{ url_for(endpoint,month=ui_month) }}" {% if ui_active==endpoint %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>{% endif %}

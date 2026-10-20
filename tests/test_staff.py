@@ -35,7 +35,7 @@ class StaffSettingsTest(unittest.TestCase):
         self.assertEqual(self.save(veteran="1").status_code, 302)
         row = self.rows()[0]
         self.assertEqual((row["employment"], row["veteran"]), ("full", 1))
-        self.assertEqual(self.save(id=str(row["id"]), name="看護 次郎", employment="part").status_code, 302)
+        self.assertEqual(self.save(id=str(row["id"]), name="看護 次郎", employment="part", weekly_limit="3").status_code, 302)
         row = self.rows()[0]
         self.assertEqual((row["name"], row["employment"], row["veteran"]), ("看護 次郎", "part", 0))
         other_client = app.test_client()

@@ -173,6 +173,7 @@ def register_doctor_import(app, connect_db):
         session.setdefault("import_owner", secrets.token_hex(24))
         error = None
         loaded_filename = ""
+        extra_staff = []
         selected_sheet = request.form.get("sheet", "")
         preview = None
         sheets = []
@@ -185,6 +186,7 @@ def register_doctor_import(app, connect_db):
             columns = {row["name"] for row in db.execute("PRAGMA table_info(doctor_import_draft)")}
             if "filename" not in columns:
                 db.execute("ALTER TABLE doctor_import_draft ADD COLUMN filename TEXT NOT NULL DEFAULT ''")
+            extra_staff = db.execute("SELECT id, name FROM staff ORDER BY id").fetchall()
             current_row = db.execute("SELECT data FROM doctor_plans WHERE month=?", (month,)).fetchone()
             current_raw = current_row["data"] if current_row else None
             current = json.loads(current_raw) if current_raw else {}
@@ -231,6 +233,12 @@ def register_doctor_import(app, connect_db):
                         for item in rows:
                             item["initial_am"], item["initial_pm"] = item["am"], item["pm"]
                         preview = {"month": month, "rows": rows, "original": current_raw, "version": IMPORT_VERSION}
+                        from excel_events import extract_events, monthly_snapshot
+                        preview["extras"] = extract_events(draft["workbook"], request.form.get("sheet", ""), rows)
+                        preview["monthly_original"] = monthly_snapshot(db, month)
+                        db.execute("CREATE TABLE IF NOT EXISTS excel_event_drafts(owner TEXT, month TEXT, data TEXT NOT NULL, PRIMARY KEY(owner, month))")
+                        db.execute("INSERT INTO excel_event_drafts VALUES (?, ?, ?) ON CONFLICT(owner, month) DO UPDATE SET data=excluded.data",
+                                   (session["import_owner"], month, json.dumps({"extras": preview["extras"], "monthly_original": preview["monthly_original"]}, ensure_ascii=False)))
                         db.execute("UPDATE doctor_import_draft SET preview=? WHERE owner=?", (json.dumps(preview, ensure_ascii=False), session["import_owner"]))
                     elif action == "save":
                         if not preview:
@@ -320,7 +328,7 @@ def register_doctor_import(app, connect_db):
         finally:
             db.close()
         return render_template("doctors.html", month=month, error=error, sheets=sheets, preview=preview,
-                               current=current, needs_recheck=needs_recheck, aliases=aliases, loaded_filename=loaded_filename, selected_sheet=selected_sheet, saved=request.args.get("saved") == "1")
+                               extra_staff=extra_staff, current=current, needs_recheck=needs_recheck, aliases=aliases, loaded_filename=loaded_filename, selected_sheet=selected_sheet, saved=request.args.get("saved") == "1")
 
     @app.route("/doctors/edit", methods=["GET", "POST"])
     def doctor_edit():

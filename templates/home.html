@@ -1,16 +1,19 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ホーム | 看護師勤務表</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"></head>
-<body class="app-layout home-page">{% include '_shell.html' %}
-<main class="container app-main" id="main-content">
-<div class="home-heading"><div><p class="eyebrow">毎月の勤務表づくり</p><h1>{{ ui_month_label }}の勤務表</h1><p class="page-description">必要な情報をそろえて、勤務表を自動で作成するための準備をしましょう。</p></div><span class="month-chip">1日〜{{ month_days }}日</span></div>
-<ol class="workflow-overview"><li class="is-current"><span>1</span>今月の準備</li><li><span>2</span>自動作成</li><li><span>3</span>確認・修正</li><li><span>4</span>印刷</li></ol>
-<div class="home-grid">
-<section class="home-hero"><p class="eyebrow">はじめに</p><h2>入力をそろえて、<br>勤務表づくりの準備を。</h2><p>医師予定・希望休・必要人数を、順に確認できます。<br>保存した内容はあとから変更できます。</p>
-{% if staff_count %}<a class="button-link hero-action" href="{{ url_for(next_card.endpoint, month=month) }}">準備を続ける <span aria-hidden="true">→</span></a><p class="hero-hint">次の確認：{{ next_card.title }}</p>{% else %}<a class="button-link hero-action" href="{{ url_for('staff_settings', month=month) }}">スタッフを登録する →</a><p class="hero-hint">最初に、勤務表に載せるスタッフを登録しましょう。</p>{% endif %}
-</section>
-<section class="creation-card"><span class="status-badge muted">これから追加</span><h2>勤務表を自動作成</h2><p>入力した条件をもとに、<br>1か月の勤務と配置を組み立てます。</p><div class="sheet-illustration" aria-hidden="true"><div class="sheet-mini-title">月間勤務表</div>{% for r in range(4) %}<div class="sheet-mini-row"><i></i>{% for c in range(7) %}<span></span>{% endfor %}</div>{% endfor %}</div><button disabled aria-describedby="creation-note">勤務表を自動作成</button><p id="creation-note" class="hint">自動作成・結果の確認・印刷は準備中です。<br>今は入力画面を利用できます。</p></section>
-<section class="preparation-section"><div class="section-heading"><div><h2>今月の準備</h2><p class="hint">必要な項目から入力・見直しできます。</p></div><span class="save-count">{{ saved_count }}/4項目に保存あり</span></div>
-<div class="preparation-grid">{% for card in cards %}<a class="preparation-card" href="{{ url_for(card.endpoint, month=month) }}"><div class="card-top"><span class="step-number">{{ '%02d'|format(loop.index) }}</span><span class="status-badge {{ 'attention' if card.attention else ('saved' if card.saved else 'muted') }}">{{ '再確認が必要' if card.attention else ('保存あり' if card.saved else 'これから') }}</span></div><h3>{{ card.title }} <span aria-hidden="true">↗</span></h3><p>{{ card.description }}</p><div class="card-detail">{{ card.detail }}</div></a>{% endfor %}</div>
-<p class="hint status-footnote">「保存あり」は入力を保存した状態です。条件の整合性や、作成可能かどうかの判定ではありません。</p>
-</section>
-<aside class="home-support"><h2>毎月共通の設定</h2><a class="settings-shortcut" href="{{ url_for('staff_settings', month=month) }}"><span>スタッフ設定<small>{{ staff_count }}人登録済み · 職種・勤務区分・ベテラン</small></span><span>→</span></a><div class="home-help"><h3>進め方に迷ったら</h3><p>まずは医師予定のExcelを取り込みます。希望休・有給を入れたら、診療の最低人数を確認してください。</p></div></aside>
-</div></main></body></html>
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ホーム | 看護師勤務表</title><link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='app-ui.css') }}"></head>
+<body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content">
+<div class="home-heading"><div><p class="eyebrow">今月のワークスペース</p><h1>{{ ui_month_label }}の勤務表</h1><p class="page-description">入力して、作成して、表を見ながら仕上げる。</p></div><span class="month-chip">{{ month_days }}日間</span></div>
+{% if not staff_count %}<div class="setup-notice"><strong>はじめにスタッフを登録してください。</strong><a class="button-link" href="{{ url_for('staff_settings',month=month) }}">スタッフを登録する</a></div>{% endif %}
+<section class="month-overview" aria-label="この月の状態">
+<div><span>自動作成結果</span><strong>{{ '入力変更あり・再確認' if generated_stale else ('保存あり' if generated_saved else '未作成') }}</strong></div>
+<div><span>手動下書き</span><strong>{{ '入力変更あり・要確認' if manual_stale else ('保存あり・未確定' if manual_saved else '未保存') }}</strong></div>
+<div><span>ヘルプの来院予定</span><strong>{{ help_visits }}件 保存済み</strong></div></section>
+{% if generated_saved and not manual_saved %}<p class="home-next-action">作成した結果があります。「編集・印刷」で開いて、内容を確認できます。</p>{% elif help_visits and not generated_saved %}<p class="home-next-action">ヘルプの来院予定が登録されています。<a href="{{ url_for('schedule',month=month) }}">ヘルプ込みの勤務表を作成する →</a></p>{% endif %}
+<div class="workspace-actions">
+<section class="workspace-card"><span class="workspace-number">01</span><h2>今月の入力</h2><p>医師予定、希望休・有給、会議などを準備します。</p><a class="button-link secondary" href="{{ url_for(next_card.endpoint,month=month) }}">入力を続ける →</a><small>次の確認：{{ next_card.title }}</small></section>
+<section class="workspace-card"><span class="workspace-number">02</span><h2>勤務表を作成</h2><p>入力した条件から表を作り、不足を確認します。</p><a class="button-link secondary" href="{{ url_for('schedule',month=month) }}">自動作成へ →</a><small>自動作成のルールは調整中です。</small></section>
+<section class="workspace-card workspace-primary"><span class="workspace-number">03</span><h2>表を確認・編集</h2><p>マスを押して修正し、保存した下書きを印刷します。</p><a class="button-link" href="{{ url_for('manual_schedule',month=month) }}">{{ '保存した下書きを開く' if manual_saved else '編集・印刷へ' }} →</a><small>{{ '入力変更あり。下書きを開いて確認してください。' if manual_stale else ('保存した下書きを編集・印刷できます。' if manual_saved else '確定機能は未実装です。下書きとして保存します。') }}</small></section>
+</div>
+<section class="panel home-inputs"><div class="section-heading"><div><h2>入力の保存状況</h2><p class="hint">保存ありは、内容の正しさや作成可能を示す判定ではありません。</p></div><span class="save-count">{{ saved_count }}/4項目に保存あり</span></div>
+<div class="input-status-list">{% for card in cards %}<a href="{{ url_for(card.endpoint,month=month) }}"><span><strong>{{ card.title }}</strong><small>{{ card.detail }}</small></span><span class="status-badge {{ 'attention' if card.attention else ('saved' if card.saved else 'muted') }}">{{ '再確認が必要' if card.attention else ('保存あり' if card.saved else '未入力') }}</span><span aria-hidden="true">→</span></a>{% endfor %}</div>
+<p class="home-review-link"><a href="{{ url_for('input_review',month=month) }}">保存した入力をまとめて見る →</a></p></section>
+<p class="home-bottom-links"><a href="{{ url_for('help_availability',month=month) }}">ヘルプの来院予定</a><a href="{{ url_for('staff_settings',month=month) }}">スタッフ {{ staff_count }}人</a></p>
+</main></body></html>

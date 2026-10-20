@@ -1,0 +1,57 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>勤務表の手動修正</title>
+<link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='app-ui.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='schedule.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='manual_schedule.css') }}"></head>
+<body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content"><h1>勤務表の編集・印刷</h1>
+<p class="page-description">表のマスを押して修正し、まとめて確認・保存できます。保存先は未確定の下書きです。</p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}{% if request.args.get('saved') %}<p class="success" role="status">下書きを保存しました。</p>{% endif %}
+<details class="compact-help"><summary>この下書きについて</summary><p>最初に編集を始めたときの元データ：{{ base.source }}。元の自動作成結果や希望休・有給は変更しません。</p></details>{% if stale %}<p class="error">保存後に入力条件が変わっています。確認事項を見直してください。</p>{% endif %}
+{% if import_sources and not preview %}
+<details class="compact-help manual-import"><summary>再作成した表を、この下書きへ取り込む</summary>
+<p>手動下書きは再作成しても自動では変わりません。取り込む表を選び、黄色の変更マスを確認してから保存できます。保存前の下書きは履歴に残ります。</p>
+<form method="post">{% include "_manual_tokens.html" %}<div class="actions">{% if import_sources.generated is defined %}<button class="secondary" name="source" value="generated">最新の自動作成結果を確認して取り込む</button>{% endif %}{% if import_sources.draft is defined %}<button class="secondary" name="source" value="draft">直近の仮表を確認して取り込む</button>{% endif %}</div><input type="hidden" name="action" value="import"></form></details>
+{% endif %}
+{% if not base.people %}<p>まず<a href="{{ url_for('staff_settings',month=month) }}">スタッフを登録</a>してください。</p>{% endif %}
+{% if preview %}
+<section class="panel"><h2>保存前の変更確認（{{ changes|length }}件）</h2>
+<p>記号：診＝看護師の診療勤務、検＝検査技師の検査室、業＝通常業務、会＝会議、休＝休み、有＝有給。左が午前、右が午後です。</p>
+<ul>{% for c in changes %}<li>{{ c.day|date_with_weekday }} {{ c.name }}：<strong>{{ c.before|manual_pair }}</strong> → <strong>{{ c.after|manual_pair }}</strong></li>{% else %}<li>変更はありません。</li>{% endfor %}</ul>
+{% if changes %}<form method="post">{% include "_manual_tokens.html" %}<input type="hidden" name="patch" value="{{ patch }}">
+<label class="checkbox"><input type="checkbox" name="confirm" value="yes" required>変更内容と下の確認事項を見て、下書きとして保存します</label><button name="action" value="save">この内容を下書き保存</button></form>{% endif %}
+<form method="post">{% include "_manual_tokens.html" %}<input type="hidden" name="patch" value="{{ patch }}"><button name="action" value="edit" class="secondary">変更を残して編集を続ける</button></form><p><a href="{{ url_for('manual_schedule',month=month) }}">変更を破棄して戻る</a></p></section>
+{% else %}
+
+{% if base.history %}<details class="compact-help"><summary>修正前に戻したいとき</summary><form method="post">{% include "_manual_tokens.html" %}<button name="action" value="undo" class="secondary">1つ前の下書きに戻す内容を確認</button><p class="hint">直近20回分まで。確認して保存するまでは変更しません。</p></form></details>{% endif %}
+{% endif %}
+{% if preview and changes %}<p class="manual-instruction"><strong>黄色のマスが今回の変更箇所です。</strong>マスの上段が変更前、矢印の下が変更後です。まだ保存していません。</p>{% endif %}
+{% if base.updated is defined and not preview %}
+<div class="manual-print-actions">
+<strong>保存済みの下書き</strong><div class="actions"><button type="button" data-print-packet="manual-print">勤務表だけ印刷／PDF保存</button><button type="button" class="secondary" data-print-packet="manual-notes-print">不足・確認事項も一緒に印刷</button></div><span class="hint">A4横・未確定。編集中の変更は保存してから印刷できます。</span>
+</div>
+{% elif not preview %}<p class="hint">手動下書きを保存すると、印刷・PDF保存ができます。</p>{% endif %}
+{% if preview %}<h2>変更後の下書き（まだ保存していません）</h2>{% endif %}
+{% with is_draft=true, manual_editable=not preview %}{% include "_schedule_grid.html" %}{% endwith %}
+
+{% if not preview and base.people %}
+<form method="post" id="manual-form" class="manual-savebar">
+{% include "_manual_tokens.html" %}<input type="hidden" name="patch" id="manual-patch" value="{}">
+<p id="manual-status" role="status">変更はまだありません。</p><div class="manual-undo-actions"><button type="button" id="manual-local-undo" class="secondary" disabled>元に戻す</button><button type="button" id="manual-local-redo" class="secondary" disabled>やり直す</button></div>
+<button name="action" value="preview">変更内容・不足を確認する</button>
+<details><summary>変更したマスを見る</summary><ul id="manual-pending"></ul></details>
+<p id="manual-recheck" class="hint" hidden>表の変更は未保存です。変更後の不足・条件は「変更内容・不足を確認する」で再確認します。</p>
+</form>
+<dialog id="manual-dialog" aria-labelledby="manual-cell-title"><form method="dialog" id="manual-cell-form">
+<h2 id="manual-cell-title">勤務を変更</h2><p id="manual-cell-before" class="hint"></p>
+<div class="manual-fields">{% for half,label in [('am','午前'),('pm','午後')] %}<div><label for="manual-{{ half }}">{{ label }}</label><select id="manual-{{ half }}"><option value="">変更しない</option>{% for code,label in codes.items() %}<option value="{{ code }}">{{ label }}</option>{% endfor %}</select></div>{% endfor %}</div>
+<div class="actions"><button id="manual-apply">表に反映する</button><button type="button" id="manual-cancel">キャンセル</button></div>
+<p class="hint">ここではまだ保存しません。最後にまとめて確認・保存できます。</p></form></dialog>
+{% endif %}
+<section class="panel"><h2>現在の入力条件との確認</h2>
+{% if warnings %}<details {% if preview %}open{% endif %}><summary>確認事項 {{ warnings|length }}件を見る</summary><ul class="error">{% for message in warnings %}<li>{{ message }}</li>{% endfor %}</ul></details>{% endif %}
+{% if shortages %}<details {% if preview %}open{% endif %}><summary>配置・資格の不足 {{ shortages|length }}件を見る</summary><ul>{% for row in shortages %}<li>{{ row.date|date_with_weekday }} {{ row.half }}：{{ row.area }} {{ row.missing }}人不足{% if row.veteran_missing %}（うちベテラン{{ row.veteran_missing }}人）{% endif %}</li>{% endfor %}</ul></details>{% endif %}
+{% if not warnings and not shortages %}<p>現在のチェックで確認事項は見つかりませんでした。下書きのまま保存し、お母さんが最終確認してください。</p>{% endif %}
+<p class="hint">ヘルプの担当可能業務など再確認中のルールがあります。このチェックは完成・安全を保証する判定ではありません。</p>
+<p><a href="{{ url_for('input_review',month=month) }}">入力内容を確認・修正する →</a></p></section>
+{% if base.updated is defined and not preview %}
+{% with manual_print_id='manual-print', print_with_notes=false, display=display %}{% include "_manual_print.html" %}{% endwith %}
+{% with manual_print_id='manual-notes-print', print_with_notes=true, display=display %}{% include "_manual_print.html" %}{% endwith %}
+{% endif %}
+</main><script id="manual-data" type="application/json">{{ {'grid':grid,'days':base.days,'people':base.people,'pending':initial_patch}|tojson }}</script><script src="{{ url_for('static',filename='manual_schedule.js') }}"></script><script src="{{ url_for('static',filename='schedule_print.js') }}"></script></body></html>

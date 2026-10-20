@@ -10,4 +10,4 @@
 {% if proposed is not none %}<section class="panel"><h2>変更前 → 変更後</h2>
 {% for half, label in [('am','午前'), ('pm','午後')] %}<h3>{{ label }}</h3><p>{{ current[half]|join('/') or '担当医なし' }}（{{ current[half]|length }}人） → {{ proposed[half]|join('/') or '担当医なし' }}（{{ proposed[half]|length }}人）</p>{% endfor %}
 <form method="post"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="confirm"><input type="hidden" name="edit_token" value="{{ edit_token }}"><label class="checkbox"><input type="checkbox" name="confirmed" value="yes" required>変更後の担当医・人数を確認しました</label><button>この日の変更を保存</button></form></section>{% endif %}
-{% include "_page_footer.html" %}</main></body></html>
+</main></body></html>

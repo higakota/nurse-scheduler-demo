@@ -1,11 +1,17 @@
 const role = document.getElementById("role");
-const nurseFields = document.getElementById("nurse-fields");
+const employment = document.getElementById("employment");
 function updateRole() {
   const isNurse = role.value === "nurse";
-  nurseFields.hidden = !isNurse;
-  nurseFields.querySelectorAll("input, select").forEach(field => {
-    field.disabled = !isNurse;
-  });
+  const help = document.getElementById("is-help").checked;
+  if (help) employment.value = "full";
+  employment.disabled = help;
+  const veteran = document.querySelector('input[name="veteran"]');
+  veteran.disabled = !isNurse;
+  if (!isNurse) veteran.checked = false;
+  const part = !help && employment.value === "part";
+  document.getElementById("weekly-fields").hidden = !part;
 }
+document.getElementById("is-help").addEventListener("change", updateRole);
 role.addEventListener("change", updateRole);
+employment.addEventListener("change", updateRole);
 updateRole();

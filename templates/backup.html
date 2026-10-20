@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>データのバックアップ</title><link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='app-ui.css') }}"></head>
+<body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content">
+<h1>データのバックアップ</h1>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if request.args.get('restored') %}<p class="success" role="status">復元しました。開いていた他の画面は再読み込みしてください。</p>{% endif %}
+<section class="panel"><h2>入力したデータをまとめて保存</h2>
+<p>全月のスタッフ・医師予定・希望休・有給・会議・ヘルプの来院予定・保存済み勤務表を、1つのファイルで保存します。</p>
+<p><a class="button" href="{{ url_for('download_backup') }}">バックアップをダウンロード</a></p>
+<p class="hint">通常はWindowsの「ダウンロード」フォルダーに保存されます。ファイルに日付と時刻が付きます。大切なデータを変更する前に保存してください。</p>
+</section>
+<section class="panel"><h2>保存されるもの</h2>
+<p>このアプリのデータベース全体です。読み取り中も、まとまりのある状態で保存します。元のExcelファイル、印刷したPDF、アプリ本体は含みません。</p>
+</section>
+<section class="panel"><h2>バックアップから元に戻す</h2>
+<p>このアプリで保存したSQLiteファイルを選んでください。まず内容を確認し、その後に復元します。</p>
+{% if preview %}
+<h3>復元する内容</h3>
+<p>スタッフ {{ counts.get('staff',0) }}人・月別入力 {{ counts.get('monthly_settings',0) }}か月・医師予定 {{ counts.get('doctor_plans',0) }}か月・保存済み勤務表 {{ counts.get('generated_schedules',0) }}か月</p>
+<p>全月のデータを置き換えます。現在のデータは復元直前に自動退避します。Excelの読み取り・編集途中の候補は引き継がず、必要なら読み取り直してください。</p>
+<form method="post" action="{{ url_for('restore_backup',month=month) }}">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="token" value="{{ token }}">
+<label><input type="checkbox" name="confirm" value="yes" required> 全月のデータを、このバックアップの内容に戻します</label>
+<button>この内容で復元する</button>
+</form>
+<p><a href="{{ url_for('data_backup',month=month) }}">復元せず戻る</a></p>
+{% else %}
+<form method="post" action="{{ url_for('preview_restore',month=month) }}" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+<label for="restore-file">バックアップファイル（SQLite・5MB以下）</label><input id="restore-file" name="backup" type="file" accept=".sqlite3,.sqlite,.db" required>
+<button>復元する内容を確認</button></form>
+{% endif %}
+<p class="hint">自動退避したファイルは、データ保存先の「backups」フォルダーに before_restore_ で始まる名前で残ります。そのファイルもここから選んで復元できます。アプリ・Excel・PDFは復元の対象外です。</p>
+</section>
+</main></body></html>

@@ -1,0 +1,17 @@
+<section class="panel">
+{% if error and request.form.get('action') == 'excel_events' and request.form.get('event_tab') == event_tab %}<p class="error excel-event-error" role="alert">反映できませんでした：{{ error }}</p>{% endif %}
+<p>取り込む候補だけ選んでください。色だけでは休診を確定しません。会議の日付は文字枠の位置から確定できないため、Excelを見て指定してください。</p>
+{% if not preview.extras.closures and not preview.extras.meetings %}<p>読み取れる候補はありません。必要な予定はこのタブの入力欄で登録してください。</p>{% endif %}
+{% for item in preview.extras.closures %}
+<article class="panel"><label class="checkbox"><input type="checkbox" name="closure_pick_{{ item.id }}" value="yes" {% if request.form.get('closure_pick_' + item.id) == 'yes' %}checked{% endif %}>{{ item.date|date_with_weekday }}を休診日にする（{{ item.reason }}）</label>
+<select name="closure_kind_{{ item.id }}" aria-label="{{ item.date }}の休診区分"><option value="">区分を選択</option>{% for value, label in [('holiday','祝日'),('year_end','年末年始')] %}<option value="{{ value }}" {% if request.form.get('closure_kind_' + item.id) == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></article>
+{% endfor %}
+{% for item in preview.extras.meetings %}{% set prefix = 'meeting_' + item.id %}
+<details class="panel" data-excel-meeting {% if request.form.get('meeting_pick_' + item.id) == 'yes' %}open{% endif %}><summary>{{ item.title }}（日付・参加者を指定）</summary>
+<p class="hint">{{ item.source }}。午後全体の勤務として登録します。</p>
+<label class="checkbox"><input type="checkbox" name="meeting_pick_{{ item.id }}" value="yes" {% if request.form.get('meeting_pick_' + item.id) == 'yes' %}checked{% endif %}>この会議を取り込む</label><p class="hint" data-excel-meeting-status>内容を編集すると、自動で取り込み対象に選びます。反映するには日付・参加者を確認して、下の「選んだ会議を反映・保存」を押してください。</p>
+<label>会議名<input name="{{ prefix }}_title" maxlength="80" value="{{ request.form.get(prefix + '_title', item.title) }}"></label>
+<label>日付（{{ month }}）<select name="{{ prefix }}_date"><option value="">日を選択</option>{% for day in days %}<option value="{{ day }}" {% if request.form.get(prefix + '_date', '') == day.isoformat() %}selected{% endif %}>{{ day.day }}日（{{ weekdays[day.weekday()] }}）</option>{% endfor %}</select></label>
+<fieldset><legend>参加者</legend>{% for person in extra_staff %}<label class="checkbox"><input type="checkbox" name="{{ prefix }}_participants" value="{{ person.id }}" {% if person.id|string in request.form.getlist(prefix + '_participants') %}checked{% endif %}>{{ person.name }}</label>{% endfor %}</fieldset>
+</details>{% endfor %}
+<p class="hint">選択しなかった候補は反映しません。既存の休診日・会議・希望休・休日日数は維持します。保存後は「会議」タブの登録済み一覧で日付・会議名・時間・参加者を確認・編集・削除できます。</p><p class="hint">対象は日付欄の色分けと6～7行目の文字枠です。画像や別の場所の予定などは読み取れない場合があります。原本の予定がそろっているかも確認してください。</p></section>

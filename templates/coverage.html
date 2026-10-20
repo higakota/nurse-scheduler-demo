@@ -31,4 +31,4 @@
 <div class="save-bar"><p id="coverage-status" role="status"></p><p class="hint">C番は検査技師を含めた最低人数です。必要人数以上の配置は可能です。検査技師が配置される場合は看護師が1人少なくなります。配置の可否や不足人数の判定はまだ行いません。</p><button {% if not trusted %}disabled{% endif %}>検査室の必要人数を保存</button></div>
 </form>
 <p class="hint">C番1人：検査技師ありなら看護師0人／なしなら1人。C番2人：検査技師ありなら看護師1人／なしなら2人。会議の参加者は診療人数に含めません。</p>
-{% include "_page_footer.html" %}</main><script src="{{ url_for('static', filename='coverage.js') }}"></script></body></html>
+</main><script src="{{ url_for('static', filename='coverage.js') }}"></script></body></html>

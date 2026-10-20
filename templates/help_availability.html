@@ -1,0 +1,49 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ヘルプの来院予定</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='help_availability.css') }}"></head><body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content"><h1>ヘルプの来院予定</h1>
+<p class="page-description">不足の目安を見ながら、来院が決まった人・日・時間帯を登録します。</p>
+<details class="help-policy-note"><summary>ヘルプの扱い</summary><p>ヘルプの公休・週勤務日数・連勤は所属院で管理します。現在の設定では、看護師はA・B・Cの対象です。ヘルプの担当可能業務は運用を再確認してください。来院予定を保存したら、ヘルプ込みで勤務表を再作成してください。</p></details>
+
+{% if request.args.get('saved') == '1' %}<p class="success" role="status">来院予定を保存しました。</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}{% for warning in warnings %}<p class="error" role="alert">{{ warning }}</p>{% endfor %}
+
+{% macro shortage_lines(text) %}
+{% for half,items in shortages.days.get(text,[])|groupby('half') %}<span class="help-shortage-item"><strong>{{ half }}</strong><span>{{ items|map(attribute='label')|join('・') }}</span></span>{% endfor %}
+{% endmacro %}
+<section class="help-shortage-context" aria-label="不足の確認">
+{% if shortages.state == 'missing' %}<p><strong>不足はまだ計算されていません。</strong>「不足を表示・更新」で、自院の仮表を計算して表示できます。</p>
+{% elif shortages.state == 'outdated' %}<p class="error" role="alert">入力条件が変わっています。古い不足人数は表示していません。「不足を表示・更新」を押してください。</p>
+{% elif shortages.kind == 'verified' %}<p class="success"><strong>直近の検証済み勤務表では、不足はありません。</strong></p>
+{% else %}<p><strong>{{ '再作成前の仮表での不足（参考）' if shortages.state == 'reference' else '自院スタッフの仮表での不足' }}</strong></p><p class="hint">看護師・検査技師の人数を午前午後別に表示します。ベテランは看護師人数の内数です。来院予定はまだ差し引いていません。登録後、ヘルプ込みで再作成して残りの不足を確認してください。</p>
+{% if shortages.kind == 'draft_six' %}<p class="hint">6連勤まで許容した最終案を基準にした人数です。</p>{% endif %}
+{% if not shortages.days %}<p>この仮表では、不足はありません。</p>{% endif %}{% endif %}
+{% for message in get_flashed_messages(category_filter=['help-shortage-error']) %}<p class="error" role="alert">不足を更新できませんでした：{{ message }}</p>{% endfor %}
+{% if request.args.get('shortages_updated') %}<p class="success" role="status">自院の仮表を計算し、不足表示を更新しました。</p>{% endif %}
+<form method="post" action="{{ url_for('refresh_help_shortages',month=month) }}"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><button class="button-quiet" id="refresh-shortages">不足を表示・更新</button></form>
+</section>
+{% if staff %}<form method="post" id="help-calendar-form">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="changes" id="help-changes">
+<div class="help-calendar-toolbar"><div><label for="help-staff">予定を入力するヘルプ</label><select id="help-staff" name="staff">{% for person in staff %}<option value="{{ person.id }}" data-role="{{ person.role }}" {% if person.id|string == selected %}selected{% endif %}>{{ person.name }}（{{ '検査技師' if person.role == 'technician' else '看護師' }}）</option>{% endfor %}</select></div><div><strong>{{ month[:4] }}年{{ month[5:]|int }}月</strong><p class="hint">日付を押して入力できます</p></div></div><p class="help-calendar-legend"><span>茶色：仮表の不足</span><span>緑：登録した来院予定（全員分）</span><a href="{{ url_for('staff_settings',month=month) }}#staff-form">ヘルプを登録・編集する →</a></p>
+{% else %}<p>ヘルプスタッフは未登録です。来院する人が決まったら、上のリンクから登録してください。</p>{% endif %}
+<table class="leave-calendar help-visits-calendar"><caption>{{ month }}の不足と来院予定</caption><thead><tr>{% for label in '日月火水木金土' %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead><tbody>
+{% for week in weeks %}<tr>{% for day in week %}{% if day %}{% set text=day.isoformat() %}<td class="{{ 'help-has-shortage' if shortages.days.get(text) else '' }}" data-shortage-day="{{ text }}">
+{% if staff %}<details class="calendar-picker" data-help-day="{{ text }}"><summary><span class="calendar-date">{{ day.day }}{% if day.weekday() == 6 or text in closures %}<small>休診</small>{% endif %}</span>{{ shortage_lines(text) }}<span class="help-day-visits"></span><span class="calendar-badge"></span><span class="calendar-pending"></span></summary>
+
+<label hidden>来院する時間帯<select aria-label="{{ text }}の来院予定">{% for value,label in periods.items() %}<option value="{{ value }}" {% if value and (day.weekday() == 6 or text in closures) %}disabled{% endif %}>{{ label }}</option>{% endfor %}</select></label></details>
+{% else %}<div class="help-readonly-day"><span class="calendar-date">{{ day.day }}</span>{{ shortage_lines(text) }}</div>{% endif %}
+</td>{% else %}<td class="calendar-empty"></td>{% endif %}{% endfor %}</tr>{% endfor %}
+</tbody></table>
+{% if staff %}<div class="save-bar"><p id="help-status" role="status">来院が決まった日だけ選んでください。</p><button id="help-save" disabled>来院予定をまとめて保存</button></div><p class="hint">保存後、勤務表をヘルプ込みで再作成して残りの不足を確認してください。来院予定は不足表示から自動では差し引きません。</p><p><a href="{{ url_for('schedule',month=month) }}">勤務表に戻ってヘルプ込みで再作成する →</a></p><noscript><p>入力にはJavaScriptを有効にしてください。</p></noscript></form>
+<dialog id="help-visit-dialog" aria-labelledby="help-visit-title"><h2 id="help-visit-title">来院予定を入力</h2><p id="help-visit-person"></p><div id="help-visit-shortage"></div><p id="help-visit-note" class="hint"></p><div class="help-period-buttons">{% for value,label in [('full','全日来院'),('am','午前のみ'),('pm','午後のみ'),('','予定を取り消す')] %}<button type="button" data-help-period="{{ value }}">{{ label }}</button>{% endfor %}</div><p class="hint">ここでは未保存です。最後にまとめて保存してください。</p><button type="button" id="help-visit-close" class="secondary">変更せず閉じる</button></dialog>
+<script type="application/json" id="help-people">{{ staff|tojson }}</script>
+<script type="application/json" id="help-original">{{ data|tojson }}</script><script type="application/json" id="help-pending">{{ request.form.get('changes', '')|tojson }}</script>{% endif %}
+<details class="panel help-exceptions" id="technician-exceptions" {% if request.form.get('action') == 'exceptions' %}open{% endif %}><summary>検査技師のヘルプが来られない日（確認した例外だけ登録）</summary>
+<p>自院の検査技師が全日休みの場合は、原則として診療時間帯に他院の検査技師が必要です。午前のみ勤務した日の午後は、看護師だけで検査室を担当できます。休診時間帯はヘルプ不要です。</p>
+<p class="hint">他院の検査技師が来られる場合は、スタッフ設定で職種「検査技師」と「他院からのヘルプ」を指定し、上の来院予定を登録します。</p>
+<p><strong>他院の検査技師が来られないと確認した日だけ</strong>、下の例外を指定してください。自動作成が勝手に例外を有効にすることはありません。</p>
+<form method="post" id="technician-exception-form"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="action" value="exceptions">
+<table class="leave-calendar"><caption>{{ month }}：看護師のみで対応する例外</caption><thead><tr>{% for label in '日月火水木金土' %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead><tbody>
+{% for week in weeks %}<tr>{% for day in week %}{% if day %}{% set text=day.isoformat() %}{% set chosen = text in request.form.getlist('exception_dates') if request.form.get('action') == 'exceptions' else exceptions.get(text, false) %}
+<td><span class="calendar-date">{{ day.day }}</span>{% if day.weekday() != 6 and text not in closures or chosen %}<label class="checkbox"><input type="checkbox" name="exception_dates" value="{{ text }}" {% if chosen %}checked{% endif %}>看護師のみ</label>{% else %}<span class="hint">休診</span>{% endif %}</td>
+{% else %}<td class="calendar-empty"></td>{% endif %}{% endfor %}</tr>{% endfor %}
+</tbody></table><button>確認した例外を保存</button><p class="hint">チェックを外して保存すると例外を取り消します。この設定は、検査技師が全日休みの場合だけ使用します。検査室の最低人数・看護師の資格・ベテラン等の条件は維持します。</p>
+</form></details>
+</main><script src="{{ url_for('static', filename='help_availability.js') }}"></script></body></html>

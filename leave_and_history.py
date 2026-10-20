@@ -36,7 +36,7 @@ def absence_warnings(leaves, monthly, names):
             if period == "full" or wish == "full" or wish == period:
                 messages.append(label + "：通常の希望休と有給が重なっています。どちらも維持しています。区分を見直してください。")
             else:
-                messages.append(label + "：半日有給と半日通常休みの組合せです。集計方法は未確認です。")
+                messages.append(label + "：半日有給と半日通常休みの組合せは、指定休日日数に1日として数えます。")
         if date.fromisoformat(day).weekday() == 6 or day in monthly.get("closures", {}):
             messages.append(label + "：休診日と有給が重なっています。休日日数の扱いを確認してください。")
         if period in ("full", "pm"):
@@ -57,7 +57,7 @@ def register_leave_and_history(app, connect_db):
             abort(400)
         first = date(year, number, 1)
         last = date(year, number, calendar.monthrange(year, number)[1])
-        history_days = [first - timedelta(days=offset) for offset in range(5, 0, -1)]
+        history_days = [first - timedelta(days=offset) for offset in range(6, 0, -1)]
         previous_month = history_days[-1].strftime("%Y-%m")
         session.setdefault("csrf_token", secrets.token_hex(32))
         error = None
@@ -139,6 +139,8 @@ def register_leave_and_history(app, connect_db):
                     elif action == "history_save":
                         candidate = dict(data["history"])
                         for staff_id, person in people.items():
+                            if person["is_help"]:
+                                continue
                             for day in history_days:
                                 key = staff_id + "_" + day.isoformat()
                                 value = request.form.get("history_" + key, "")
@@ -170,18 +172,14 @@ def register_leave_and_history(app, connect_db):
             warnings = absence_warnings(data["leaves"], monthly, names)
             for key, value in data["history"].items():
                 staff_id, history_day = key.split("_", 1)
+                if staff_id in people and people[staff_id]["is_help"]:
+                    continue
                 if history_day in fixed_days and value not in ("", "rest"):
                     warnings.append(history_day + " " + names.get(staff_id, "未登録スタッフ") + "：登録済みの前月末勤務と休診指定が重なっています。入力の見直しが必要です。")
-            leave_rows = []
-            totals = {key: 0 for key in people}
-            for key, period in sorted(data["leaves"].items(), key=lambda entry: entry[0].split("_", 1)[1]):
-                staff_id, day = key.split("_", 1)
-                leave_rows.append({"key": key, "staff": staff_id, "name": names.get(staff_id, "未登録スタッフ"),
-                                   "day": day, "period": period})
-                if staff_id in totals:
-                    totals[staff_id] += 1 if period == "full" else 0.5
             history_rows = []
             for person in staff:
+                if person["is_help"]:
+                    continue
                 slots = []
                 for day in history_days:
                     key = str(person["id"]) + "_" + day.isoformat()
@@ -190,9 +188,7 @@ def register_leave_and_history(app, connect_db):
                 history_rows.append({"person": person, "slots": slots, "tail": trailing_full_days([slot["value"] for slot in slots])})
         finally:
             db.close()
-        calendar_weeks = [[day if day.month == number else None for day in week]
-                          for week in calendar.Calendar(firstweekday=6).monthdatescalendar(year, number)]
-        return render_template("leave_history.html", calendar_weeks=calendar_weeks, month=month, first=first, last=last, staff=staff, names=names,
-                               data=data, fingerprint=fingerprint, error=error, warnings=warnings, values=values,
-                               periods=PERIODS, history_options=HISTORY, leaves=leave_rows, totals=totals,
-                               history_rows=history_rows, saved=request.args.get("saved") == "1")
+        return render_template("leave_history.html", month=month, staff=staff,
+                               fingerprint=fingerprint, error=error, warnings=warnings,
+                               history_options=HISTORY, history_rows=history_rows,
+                               saved=request.args.get("saved") == "1")

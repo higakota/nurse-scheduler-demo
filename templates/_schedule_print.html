@@ -1,0 +1,32 @@
+<section id="{{ print_id }}" class="print-packet" aria-hidden="true">
+<section class="print-sheet">
+<header class="print-heading"><h1>{{ month }}　{{ 'ヘルプ相談用の仮勤務表' if is_draft else '保存済み勤務表' }}</h1><p>{{ '仮表・未確定／相談用' if is_draft else ('以前の条件の結果・要再作成' if stale else '保存済みの作成結果') }}</p></header>
+
+{% if stale and not is_draft %}<p class="print-warning">保存後に入力が変わっています。この用紙は以前の結果で、最新の条件を反映していません。</p>{% endif %}
+{% if not is_draft and print_runs %}<p>6連勤：{% for run in print_runs %}{{ run.name }} {{ run.start }}～{{ run.end }} {% endfor %}</p>{% endif %}
+{% with display=print_display %}{% include "_schedule_grid.html" %}{% endwith %}
+</section>
+{% if is_draft %}
+<section class="print-sheet print-new-page">
+<header class="print-heading"><h2>{{ month }}　ヘルプ相談用・不足の詳しい一覧</h2><p>仮表・未確定</p></header>
+<p>この仮配置での不足です。最小人数や、この日のヘルプが必須であることは保証しません。看護師のABC担当は未定です。検査技師ヘルプをC番に数えたうえで、残りの看護師不足を表示します。ベテランは看護師人数の内数です。</p>
+{% if print_shortages %}<table class="print-shortages"><thead><tr><th>日付</th><th>時間帯</th><th>配置・条件</th><th>最低人数</th><th>配置済み</th><th>不足</th><th>相談・対応メモ</th></tr></thead><tbody>
+{% for row in print_shortages %}<tr><td>{{ row.date|date_with_weekday }}</td><td>{{ row.half }}</td><td>{{ row.area }}{% if row.note %} <small>（{{ row.note }}）</small>{% endif %}</td><td>{{ row.required if row.required is not none else '—' }}</td><td>{{ row.available if row.available is not none else '—' }}</td><td>{% if row.veteran_missing and not row.missing %}人数は充足{% else %}{{ row.missing }}人{% endif %}</td><td class="print-memo-cell"></td></tr>{% endfor %}
+</tbody></table>{% else %}<p>この仮配置では不足はありません。</p>{% endif %}
+</section>
+<section class="print-sheet print-new-page">
+<header class="print-heading"><h2>{{ month }}　お母さんへの確認メモ</h2><p>仮表・未確定</p></header>
+<h3>1．全日勤務の連勤上限</h3>
+<p>確認済み：6連勤の回避を優先し、原則5連勤以内とし、公休・希望休・有給等から必須の場合は本人の6連勤を許容します。不足する場合はヘルプを先に検討し、確保が難しい場合の最終案だけ6連勤まで許容します。7連勤以上は禁止です。</p>
+<p>6連勤になるスタッフ・期間を確認してください。</p>
+{% if print_runs %}<h4>今回の仮表で6連勤になる人・期間</h4>
+<ul>{% for run in print_runs %}<li>{{ run.name }}：{{ run.start|date_with_weekday }} ～ {{ run.end|date_with_weekday }}</li>{% else %}<li>この仮表では全日6連勤はありません。</li>{% endfor %}</ul>{% endif %}
+<h3>2．勤務・会議・休みの確認</h3>
+<p>□ 希望休・有給が合っている　　□ 会議の日付・参加者が合っている<br>□ 金曜午後の通常業務が実際の運用に合っている　　□ 公休日数・非常勤の週上限が合っている</p>
+<h3>3．不足日への対応</h3>
+<p>□ 自院の勤務を調整できるか　　□ 他院へ相談する日・午前午後・人数<br>□ 検査技師のヘルプが来られるか（来られない場合は看護師のみ対応を確認）</p>
+<p>ヘルプの必要人数は今回の仮配置による目安です。外部への連絡は自動では行いません。</p>
+<div class="print-writing-lines"><p>確認したこと・変更すること：</p><hr><hr><hr></div>
+</section>
+{% endif %}
+</section>

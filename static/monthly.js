@@ -1,103 +1,79 @@
-const form = document.querySelector(".monthly-form");
-let dirty = false;
-document.querySelectorAll(".wish-select").forEach(select => {
-  select.addEventListener("change", () => { select.dataset.wish = select.value; });
-});
-function markDirty(event) {
-  if (event?.target?.dataset.uiOnly) return;
-  dirty = true;
-  document.getElementById("settings-status").textContent = "変更あり・未保存です。「入力内容を保存」を押してください。";
+(() => {
+const main=document.getElementById("main-content");
+if(!main)return;
+const settings=document.querySelector(".monthly-form");
+const tabs=[...document.querySelectorAll("[data-month-tab]")];
+const labels={wishes:"希望休・有給",targets:"休日日数・週上限",closures:"休診日",meetings:"会議"};
+const forms=[...main.querySelectorAll("form")];
+const controls=form=>[...form.querySelectorAll("input,select,textarea")].filter(input=>
+input.type!=="hidden"&&input.type!=="submit"&&input.type!=="button"&&!input.dataset.uiOnly&&input.id!=="absence-staff");
+const value=input=>input.type==="checkbox"||input.type==="radio"?String(input.checked):input.value;
+const initial=new Map(forms.map(form=>[form,new Map(controls(form).map(input=>[input,value(input)]))]));
+window.monthlySubmitting=false;
+function isDirty(form){
+if(form.id==="absence-form")return !document.getElementById("absence-save").disabled;
+return controls(form).some(input=>value(input)!==initial.get(form)?.get(input));
 }
-form.addEventListener("input", markDirty);
-form.addEventListener("change", markDirty);
-form.addEventListener("submit", () => { dirty = false; });
-window.addEventListener("beforeunload", event => {
-  if (dirty) { event.preventDefault(); event.returnValue = ""; }
-});
-
-const monthTabs = [...document.querySelectorAll("[data-month-tab]")];
-function showMonthPanel(name) {
-  document.querySelectorAll("[data-month-panel]").forEach(panel => { panel.hidden = panel.dataset.monthPanel !== name; });
-  monthTabs.forEach(tab => tab.setAttribute("aria-selected", String(tab.dataset.monthTab === name)));
-  document.querySelectorAll("[data-month-save]").forEach(bar => { bar.hidden = name === "meetings"; });
+function dirtyPanels(){
+const names=new Set();
+for(const form of forms){
+if(form.id==="absence-form"){if(isDirty(form))names.add("wishes");continue;}
+for(const input of controls(form))if(value(input)!==initial.get(form)?.get(input)){
+const panel=input.closest("[data-month-panel]");if(panel)names.add(panel.dataset.monthPanel);
+}}
+return names;
 }
-monthTabs.forEach(tab => tab.addEventListener("click", event => {
-  event.preventDefault();
-  showMonthPanel(tab.dataset.monthTab);
-  history.replaceState(null, "", "#" + tab.dataset.monthTab);
+function showPanel(name){
+document.getElementById("settings-tab").value=name;
+document.querySelectorAll("[data-month-panel]").forEach(panel=>panel.hidden=panel.dataset.monthPanel!==name);
+tabs.forEach(tab=>tab.setAttribute("aria-selected",String(tab.dataset.monthTab===name)));
+document.querySelectorAll("[data-month-save]").forEach(bar=>bar.hidden=name==="meetings"||name==="wishes");
+}
+const banner=document.createElement("p");banner.id="monthly-unsaved";banner.className="month-unsaved";banner.setAttribute("role","status");banner.hidden=true;
+document.querySelector(".month-tabs")?.before(banner);
+function updateStatus(){
+const pending=dirtyPanels();
+banner.hidden=!pending.size;
+banner.textContent="未保存："+[...pending].map(name=>labels[name]).join("・")+"。タブを切り替えても入力は残ります。各項目で保存してください。";
+tabs.forEach(tab=>{tab.classList.toggle("has-unsaved",pending.has(tab.dataset.monthTab));});
+const status=document.getElementById("settings-status");
+if(status)status.textContent=settings&&isDirty(settings)?"変更あり・未保存です。「入力内容を保存」を押してください。":"変更はありません。";
+}
+main.addEventListener("input",updateStatus);
+main.addEventListener("change",updateStatus);
+document.addEventListener("monthly-input-state",updateStatus);
+main.addEventListener("submit",event=>{
+const other=forms.filter(form=>form!==event.target&&isDirty(form));
+if(other.length&&!window.confirm("別の項目に未保存の変更があります。この内容だけ保存して移動すると、ほかの未保存の変更は失われます。続けますか？")){
+event.preventDefault();event.stopImmediatePropagation();return;
+}
+window.monthlySubmitting=true;
+},true);
+window.addEventListener("beforeunload",event=>{
+if(!window.monthlySubmitting&&forms.some(isDirty)){event.preventDefault();event.returnValue="";}
+});
+tabs.forEach(tab=>tab.addEventListener("click",event=>{
+event.preventDefault();showPanel(tab.dataset.monthTab);history.replaceState(null,"","#"+tab.dataset.monthTab);
 }));
-if (monthTabs.length) {
-  const fragment = window.location.hash.slice(1);
-  showMonthPanel(monthTabs.some(tab => tab.dataset.monthTab === fragment) ? fragment : "wishes");
-}
-
-const wishesTable = document.querySelector(".wishes-table");
-if (wishesTable && wishesTable.tBodies[0]) {
-  const records = [...wishesTable.tBodies[0].rows].map(row => ({
-    name: row.querySelector("th").textContent.trim(),
-    inputs: [...row.querySelectorAll("select")].map(input => ({input, cell: input.parentElement}))
-  }));
-  if (records.length) {
-    const wrapper = wishesTable.closest(".table-wrap");
-    const host = document.createElement("div");
-    host.className = "wish-calendar";
-    const label = document.createElement("label");
-    label.htmlFor = "wish-person-picker";
-    label.textContent = "希望休を入力するスタッフ";
-    const picker = document.createElement("select");
-    picker.id = "wish-person-picker";
-    picker.dataset.uiOnly = "true";
-    records.forEach((record, index) => {
-      const option = document.createElement("option");
-      option.value = index;
-      option.textContent = record.name;
-      picker.append(option);
-    });
-    const calendar = document.createElement("table");
-    calendar.className = "leave-calendar";
-    const head = document.createElement("thead");
-    const heading = document.createElement("tr");
-    [..."日月火水木金土"].forEach(day => { const th = document.createElement("th"); th.scope = "col"; th.textContent = day; heading.append(th); });
-    head.append(heading);
-    const body = document.createElement("tbody");
-    calendar.append(head, body);
-    host.append(label, picker, calendar);
-    wrapper.before(host);
-    wrapper.hidden = true;
-    function paintWishes() {
-      records.forEach(record => record.inputs.forEach(({input,cell}) => cell.append(input)));
-      body.replaceChildren();
-      const record = records[Number(picker.value)];
-      const [year, month] = document.getElementById("nav-month").value.split("-").map(Number);
-      const start = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
-      const count = record.inputs.length;
-      const length = Math.ceil((start + count) / 7) * 7;
-      for (let index = 0; index < length; index++) {
-        if (index % 7 === 0) body.append(document.createElement("tr"));
-        const td = document.createElement("td");
-        const day = index - start + 1;
-        if (day >= 1 && day <= count) {
-          const number = document.createElement("span");
-          number.className = "calendar-date";
-          number.textContent = day;
-          const input = record.inputs[day - 1].input;
-          input.options[0].textContent = "—";
-          input.setAttribute("aria-label", record.name + " " + month + "月" + day + "日の希望休");
-          td.append(number, input);
-        } else td.className = "calendar-empty";
-        body.lastElementChild.append(td);
-      }
-    }
-    picker.addEventListener("change", paintWishes);
-    paintWishes();
-  }
-}
-let invalidPanel = null;
-document.querySelector(".monthly-form")?.addEventListener("invalid", event => {
-  const panel = event.target.closest("[data-month-panel]");
-  if (panel && !invalidPanel) {
-    invalidPanel = panel;
-    showMonthPanel(panel.dataset.monthPanel);
-    setTimeout(() => { invalidPanel = null; }, 0);
-  }
-}, true);
+if(tabs.length){const fragment=location.hash.slice(1);showPanel(tabs.some(tab=>tab.dataset.monthTab===fragment)?fragment:"wishes");}
+let invalidPanel=null;
+settings?.addEventListener("invalid",event=>{
+const panel=event.target.closest("[data-month-panel]");
+if(panel&&!invalidPanel){invalidPanel=panel;showPanel(panel.dataset.monthPanel);setTimeout(()=>{invalidPanel=null;},0);}
+},true);
+const meetingError=document.querySelector('#meetings .error[role="alert"]');
+if(meetingError){showPanel("meetings");meetingError.scrollIntoView({block:"center"});}
+document.querySelectorAll("[data-excel-meeting]").forEach(candidate=>{
+const pick=candidate.querySelector('input[name^="meeting_pick_"]'),status=candidate.querySelector("[data-excel-meeting-status]");
+const selectCandidate=event=>{
+if(event.target===pick||!event.target.matches("input,select,textarea"))return;
+pick.checked=true;
+if(status)status.textContent="取り込み対象に選択しました。まだ未保存です。日付・参加者を確認して、下の「選んだ会議を反映・保存」を押してください。";
+updateStatus();
+};
+candidate.addEventListener("input",selectCandidate);candidate.addEventListener("change",selectCandidate);
+});
+const excelError=document.querySelector(".excel-event-error");
+if(excelError){const panel=excelError.closest("[data-month-panel]");if(panel)showPanel(panel.dataset.monthPanel);excelError.scrollIntoView({block:"center"});}
+updateStatus();
+})();
