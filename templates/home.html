@@ -1,11 +1,8 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ホーム | 看護師勤務表</title><link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='app-ui.css') }}"></head>
-<body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content">
-<div class="home-heading"><div><p class="eyebrow">勤務表づくり</p><h1>{{ ui_month_label }}の勤務表</h1><p class="page-description">今月の準備と、作成した勤務表をここから開けます。</p></div><span class="month-chip">{{ month_days }}日間</span></div>
+<body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content" data-home-dashboard>
+<div class="home-heading"><div><p class="eyebrow">勤務表づくり</p><h1>{{ ui_month_label }}の勤務表</h1><p class="page-description">次の操作から進めるか、下の一覧で入力・勤務表を開いてください。</p></div><span class="month-chip">{{ month_days }}日間</span></div>
 {% if not staff_count %}<div class="setup-notice"><strong>はじめにスタッフを登録してください。</strong><a class="button-link" href="{{ url_for('staff_settings',month=month) }}">スタッフを登録する</a></div>{% endif %}
-<section class="month-overview" aria-label="この月の状態">
-<div><a href="{{ url_for('manual_schedule',month=month) }}"><span>調整した勤務表</span><strong>{{ '入力変更あり・要確認' if manual_stale else '編集・印刷を続ける' if manual_saved else 'まだありません' }}</strong></a></div>
-<div><a href="{{ url_for('schedule',month=month,phase='plan') }}"><span>不足の確認</span><strong>{{ shortage_days|string ~ '日で不足あり' if shortage_days else '直近の確認では不足なし' if shortage_days==0 else 'まだ確認していません' }}</strong></a></div>
-<div><a href="{{ url_for('help_availability',month=month) }}"><span>依頼済みヘルプ</span><strong>{{ requested_visits }}件 登録</strong><small>事前登録の勤務可能日は別に{{ advance_visits }}件</small></a></div></section>
+
 {% if staff_count %}<section class="workflow-callout" aria-label="次の操作"><div><p class="eyebrow">次の操作</p>
 {% if cards|selectattr('attention')|list %}<strong>変更した医師予定を確認する</strong><p class="hint">赤字の休みや午前午後を確認して保存してください。</p></div><a class="button-link" href="{{ url_for('doctor_import',month=month) }}">医師予定を確認 →</a>
 {% elif needs_help_build %}<strong>依頼したヘルプを勤務表に反映する</strong><p class="hint">来院OKの予定を登録済みです。次はヘルプ込みで作成します。</p></div><a class="button-link" href="{{ url_for('schedule',month=month,phase='build') }}">ヘルプを反映する →</a>
@@ -17,9 +14,21 @@
 {% elif saved_count == 4 %}<strong>事前登録のヘルプも使って不足を確認する</strong><p class="hint">まず仮作成して、不足する日と時間帯を確認できます。</p></div><a class="button-link" href="{{ url_for('schedule',month=month) }}">勤務表を作成 →</a>
 {% else %}<strong>今月の入力を準備する</strong><p class="hint">次の確認：{{ next_card.title }}</p></div><a class="button-link" href="{{ url_for(next_card.endpoint,month=month) }}">入力を続ける →</a>{% endif %}
 </section>{% endif %}
-<div class="process-explainer"><strong>基本の進め方</strong><p>事前登録のヘルプも使って仮作成 → 不足を見てヘルプを相談 → 来院OKの予定を登録 → ヘルプ込みで作成 → 残る不足を調整・印刷</p><small>ヘルプの相談・依頼は電話など、アプリ外で行います。</small></div>
-<section class="panel home-inputs"><div class="section-heading"><div><h2>今月の入力</h2><p class="hint">入力内容を確認・変更する場合はこちら。</p></div><span class="save-count">{{ saved_count }}/4項目に入力あり</span></div>
+<section class="month-overview" aria-label="この月の状態">
+<div><a href="{{ url_for('manual_schedule',month=month) }}"><span>調整した勤務表</span><strong>{{ '入力変更あり・要確認' if manual_stale else '編集・印刷を続ける' if manual_saved else 'まだありません' }}</strong></a></div>
+<div><a href="{{ url_for('schedule',month=month,phase='plan') }}"><span>不足の確認</span><strong>{{ shortage_days|string ~ '日で不足あり' if shortage_days else '直近の確認では不足なし' if shortage_days==0 else 'まだ確認していません' }}</strong></a></div>
+<div><a href="{{ url_for('help_availability',month=month) }}"><span>依頼済みヘルプ</span><strong>{{ requested_visits }}件 登録</strong><small>事前登録の勤務可能日は別に{{ advance_visits }}件</small></a></div></section>
+
+<div class="home-workspace"><section class="panel home-inputs"><div class="section-heading"><div><h2>今月の入力</h2><p class="hint">入力内容を確認・変更する場合はこちら。</p></div><span class="save-count">{{ saved_count }}/4項目に入力あり</span></div>
 <div class="input-status-list">{% for card in cards %}<a href="{{ url_for(card.endpoint,month=month) }}"><span><strong>{{ card.title }}</strong><small>{{ card.detail }}</small></span><span class="status-badge {{ 'attention' if card.attention else ('saved' if card.saved else 'muted') }}">{{ '再確認が必要' if card.attention else ('入力あり' if card.saved else '未入力') }}</span><span aria-hidden="true">→</span></a>{% endfor %}</div>
 <p class="home-review-link"><a href="{{ url_for('input_review',month=month) }}">入力をまとめて確認 →</a></p></section>
+<aside class="panel home-shortcuts" aria-label="勤務表とヘルプ"><h2>勤務表とヘルプ</h2>
+<p class="hint">確認したい画面を直接開けます。</p>
+<a class="home-shortcut" href="{{ url_for('manual_schedule',month=month) }}"><span><strong>勤務表を編集・印刷</strong><small>{{ '入力変更あり。内容を確認してください' if manual_stale else '保存した表の確認・修正・印刷' if manual_saved else '反映した勤務表をここで仕上げます' }}</small></span><span aria-hidden="true">→</span></a>
+<a class="home-shortcut" href="{{ url_for('schedule',month=month,resume='1') }}"><span><strong>仮表・作成結果を確認</strong><small>不足する職種・時間帯・人数を見る</small></span><span aria-hidden="true">→</span></a>
+<a class="home-shortcut" href="{{ url_for('help_availability',month=month) }}"><span><strong>ヘルプの来院予定</strong><small>依頼後、来院OKの日と時間を登録</small></span><span aria-hidden="true">→</span></a>
+<a class="home-shortcut" href="{{ url_for('monthly_settings',month=month,_anchor='availability') }}"><span><strong>事前ヘルプの勤務可能日</strong><small>依頼前から来られる日が分かる人はこちら</small></span><span aria-hidden="true">→</span></a>
+</aside></div>
+<details class="home-flow"><summary>初めて使うとき：勤務表を作る流れ</summary><ol><li>医師予定・希望休・有給・会議と、事前ヘルプの勤務可能日を入力</li><li>事前ヘルプも使って仮作成し、不足を確認</li><li>電話などでヘルプを依頼し、来院OKの予定を登録</li><li>ヘルプ込みで勤務表を作成</li><li>残る不足を追加ヘルプや本人了承の休み変更で調整し、印刷</li></ol></details>
 <details class="compact-help"><summary>勤務表の確認について</summary><p>確定機能は未実装です。作成・修正した表は、運用前に確認してください。</p></details><p class="home-bottom-links"><a href="{{ url_for('help_availability',month=month) }}">ヘルプの来院予定</a><a href="{{ url_for('staff_settings',month=month) }}">スタッフ {{ staff_count }}人</a></p>
 </main></body></html>
