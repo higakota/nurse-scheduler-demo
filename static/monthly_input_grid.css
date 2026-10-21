@@ -71,8 +71,8 @@
 
 /* 事前ヘルプの入力表はフォーム共通の幅制限を受けず、利用可能な横幅を使う。 */
 #advance-availability-form{width:100%;max-width:none}
-#advance-availability-form .input-sheet-wrap{width:100%;overflow-x:auto}
-#advance-availability-form .advance-input-sheet{width:100%;min-width:calc(128px + var(--input-sheet-days)*32px);max-width:none}
-#advance-availability-form .input-sheet-name{width:128px}
-#advance-availability-form thead th{white-space:nowrap;overflow-wrap:normal;font-size:12px}
-#advance-availability-form .advance-day-cell{white-space:nowrap;overflow-wrap:normal}
+#advance-availability-form .input-sheet-wrap{width:100%;min-width:0;overflow:visible}
+#advance-availability-form .advance-input-sheet{width:100%;min-width:0;max-width:100%;table-layout:fixed}
+#advance-availability-form .input-sheet-name{width:clamp(60px,9vw,128px)}
+#advance-availability-form thead th{white-space:nowrap;overflow-wrap:normal;font-size:clamp(7px,.85vw,12px)}
+#advance-availability-form .advance-day-cell{white-space:nowrap;overflow-wrap:normal;font-size:clamp(6px,.8vw,12px);padding:3px 0}
