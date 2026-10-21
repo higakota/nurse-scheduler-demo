@@ -121,3 +121,27 @@ class HomeWorkflowTest(unittest.TestCase):
         self.assertNotIn("調整した勤務表の続きを開く",callout)
         self.assertIn("作成した表を確認して仕上げる",callout)
         db.close()
+
+class AdjacentMonthNavigationTest(unittest.TestCase):
+    setUp = HomeTest.setUp
+    tearDown = HomeTest.tearDown
+
+    def test_month_navigation_crosses_year_and_stays_on_same_screen(self):
+        page=self.client.get("/staff?month=2026-12").get_data(as_text=True)
+        self.assertIn('/staff?month=2026-11',page)
+        self.assertIn('/staff?month=2027-01',page)
+        self.assertIn('aria-label="翌月へ"',page)
+        self.assertNotIn('month=1899-12',self.client.get("/?month=1900-01").get_data(as_text=True))
+        self.assertNotIn('month=9999-01',self.client.get("/?month=9998-12").get_data(as_text=True))
+
+    def test_status_shortcuts_visible_and_navigation_read_only(self):
+        self.client.get("/?month=2026-10")
+        db=connect_db()
+        before=list(db.iterdump())
+        page=self.client.get("/?month=2026-11").get_data(as_text=True)
+        status=page.split('class="month-overview"',1)[1].split("</section>",1)[0]
+        self.assertEqual(status.count("<a "),3)
+        self.assertIn('/help?month=2026-11',status)
+        self.client.get("/?month=2026-12")
+        self.assertEqual(before,list(db.iterdump()))
+        db.close()

@@ -58,7 +58,12 @@ def register_ui(app):
         group = "inputs" if active in input_endpoints else ("schedules" if active in ("schedule","manual_schedule") else active)
         tabs = INPUT_TABS if group=="inputs" else (SCHEDULE_TABS if group=="schedules" else [])
         year, number = map(int, month.split("-"))
-        return dict(ui_month=month, ui_month_label=f"{year}年{number}月",
+        month_index = year * 12 + number - 1
+        def adjacent(offset):
+            y, m = divmod(month_index + offset, 12)
+            return f"{y:04}-{m+1:02}" if 1900 <= y <= 9998 else None
+        return dict(ui_previous_month=adjacent(-1), ui_next_month=adjacent(1),
+                    ui_month=month, ui_month_label=f"{year}年{number}月",
                     ui_active=active, ui_group=group, ui_tabs=tabs, ui_month_endpoint=active,
                     ui_title=PAGES.get(active, PAGES["index"])[0],
                     ui_description=PAGES.get(active, PAGES["index"])[1])

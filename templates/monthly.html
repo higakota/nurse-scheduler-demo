@@ -20,17 +20,17 @@
 <h2>スタッフ別の休日日数</h2>
 <p class="hint">空欄は未設定です。有給単独はこの日数に含めません。非常勤・ヘルプは月の休日日数の指定対象外です。非常勤の週上限は下で変更できます。</p>
 {% if not staff %}<p><a href="{{ url_for('staff_settings') }}">先にスタッフを登録してください。</a></p>{% endif %}
-{% for person in staff if not person.is_help and person.employment != 'part' %}
+<div class="staff-number-grid">{% for person in staff if not person.is_help and person.employment != 'part' %}<div class="staff-number-field">
 <label for="target_{{ person.id }}">{{ person.name }}（日）</label>
 <input id="target_{{ person.id }}" type="number" name="target_{{ person.id }}" value="{{ data.targets.get(person.id|string, '') }}" min="0" max="{{ days|length }}" step="0.5">
-{% endfor %}
+</div>{% else %}<p class="hint">対象の常勤スタッフはいません。</p>{% endfor %}</div>
 <h2>非常勤の週の勤務上限</h2>
 <p class="hint">月曜～日曜の上限です。半日勤務は0.5日、有給は含めません。できるだけ上限の日数に近づけますが、常勤の公休を優先します。</p>
 <p class="hint">この設定は全月共通です。変更するとスタッフ設定にも反映されます。空欄は未設定です。</p>
-{% for person in staff if not person.is_help and person.employment == 'part' %}
+<div class="staff-number-grid">{% for person in staff if not person.is_help and person.employment == 'part' %}<div class="staff-number-field">
 <label for="weekly_limit_{{ person.id }}">{{ person.name }}（日／週）</label>
 <input id="weekly_limit_{{ person.id }}" type="number" name="weekly_limit_{{ person.id }}" value="{{ request.form.get('weekly_limit_' ~ person.id, (person.weekly_limit_units / 2) if person.weekly_limit_units is not none else '') }}" min="0" max="7" step="0.5">
-{% else %}<p class="hint">非常勤スタッフは登録されていません。</p>{% endfor %}
+</div>{% else %}<p class="hint">非常勤スタッフは登録されていません。</p>{% endfor %}</div>
 <p><a href="{{ url_for('weekly_settings', month=month) }}">月をまたぐ週の勤務を確認・入力する</a></p>
 </section>
 <section class="panel" id="closures" data-month-panel="closures">
