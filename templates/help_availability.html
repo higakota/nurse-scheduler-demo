@@ -40,7 +40,7 @@
 <script type="application/json" id="help-people">{{ staff|tojson }}</script>
 <script type="application/json" id="help-original">{{ data|tojson }}</script><script type="application/json" id="help-pending">{{ request.form.get('changes', '')|tojson }}</script>{% endif %}
 <details class="panel help-exceptions" id="technician-exceptions" {% if request.form.get('action') == 'exceptions' %}open{% endif %}><summary>検査技師のヘルプが来られない日（確認した例外だけ登録）</summary>
-<p>自院の検査技師が全日休みの場合は、原則として診療時間帯に他院の検査技師が必要です。午前のみ勤務した日の午後は、看護師だけで検査室を担当できます。休診時間帯はヘルプ不要です。</p>
+<p>自院の検査技師がいない診療時間帯は、他院の検査技師が必要です。午前のみ勤務した日の午後も対象です。休診時間帯はヘルプ不要です。</p>
 <p class="hint">他院の検査技師が来られる場合は、スタッフ設定で職種「検査技師」と「他院からのヘルプ」を指定し、上の来院予定を登録します。</p>
 <p><strong>他院の検査技師が来られないと確認した日だけ</strong>、下の例外を指定してください。自動作成が勝手に例外を有効にすることはありません。</p>
 <form method="post" id="technician-exception-form"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="action" value="exceptions">
@@ -48,6 +48,6 @@
 {% for week in weeks %}<tr>{% for day in week %}{% if day %}{% set text=day.isoformat() %}{% set chosen = text in request.form.getlist('exception_dates') if request.form.get('action') == 'exceptions' else exceptions.get(text, false) %}
 <td><span class="calendar-date">{{ day.day }}</span>{% if day.weekday() != 6 and text not in closures or chosen %}<label class="checkbox"><input type="checkbox" name="exception_dates" value="{{ text }}" {% if chosen %}checked{% endif %}>看護師のみ</label>{% else %}<span class="hint">休診</span>{% endif %}</td>
 {% else %}<td class="calendar-empty"></td>{% endif %}{% endfor %}</tr>{% endfor %}
-</tbody></table><button>確認した例外を保存</button><p class="hint">チェックを外して保存すると例外を取り消します。この設定は、検査技師が全日休みの場合だけ使用します。検査室の最低人数・看護師の資格・ベテラン等の条件は維持します。</p>
+</tbody></table><button>確認した例外を保存</button><p class="hint">チェックを外して保存すると例外を取り消します。この設定は、検査技師が不在の診療時間帯に使用します。検査室の最低人数・看護師の資格・ベテラン等の条件は維持します。</p>
 </form></details>
 </main><script src="{{ url_for('static', filename='help_availability.js') }}"></script></body></html>

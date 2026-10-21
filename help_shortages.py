@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 
 def conditions_hash(snapshot):
     values={key:value for key,value in snapshot.items() if key!="help_availability"}
+    if values.get("rules_version")==20:
+        values["rules_version"]=19
     values["staff"]=[{key:value for key,value in p.items() if key!="advance_help"} for p in snapshot["staff"] if not p["is_help"]]
     return hashlib.sha256(json.dumps(values,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
 
@@ -26,7 +28,7 @@ def included_helper_visits(people, days, grid):
 
 def write_reference(db, snapshot, fingerprint, rows, kind="draft", source_kind=None, source_raw=None):
     db.execute("CREATE TABLE IF NOT EXISTS help_shortage_previews(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
-    value=dict(input_hash=fingerprint,conditions_hash=conditions_hash(snapshot),rows=rows,
+    value=dict(input_hash=fingerprint,conditions_hash=conditions_hash(snapshot),rules_version=snapshot.get("rules_version"),rows=rows,
                kind=kind,created=datetime.now(timezone.utc).isoformat())
     if kind == "verified":
         previous=db.execute("SELECT data FROM help_shortage_previews WHERE month=?",(snapshot["month"],)).fetchone()
@@ -90,7 +92,7 @@ def load_reference(db, month):
     snapshot,fp,_=read_snapshot(db,month)
     source_changed = bool(reference.get("source_hash")) and reference["source_hash"] != hashlib.sha256(
         source_data(db, month, reference["source_kind"]).encode()).hexdigest()
-    if source_changed or reference["conditions_hash"]!=conditions_hash(snapshot) or (
+    if (reference.get("rules_version",19) != snapshot.get("rules_version",19)) or source_changed or reference["conditions_hash"]!=conditions_hash(snapshot) or (
         reference["kind"]=="verified" and reference["input_hash"]!=fp
     ):
         return dict(state="outdated",days={},kind=reference["kind"],created=reference["created"])
@@ -109,7 +111,7 @@ def load_reference(db, month):
         elif item["area"] == "検査室を担当できる看護師":
             label=f"看護師{count}人（検査室を担当できる人）"
         elif "検査技師" in item["area"]:
-            label=f"検査技師{count}人（C番）"
+            label=f"他院の検査技師{count}人"
         else:
             label=f"看護師{count}人"
         days.setdefault(item["date"],[]).append(dict(half=item["half"],label=label))

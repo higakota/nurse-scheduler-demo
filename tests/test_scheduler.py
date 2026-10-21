@@ -131,6 +131,8 @@ class SchedulerEngineTest(unittest.TestCase):
             data["monthly_settings"]["targets"][key]="8"
         data["monthly_settings"]["meetings"]=[{"id":"a","date":"2026-02-06","title":"会議","participants":["1"],"start":"13:15","end":"14:00"},
                                                {"id":"b","date":"2026-02-06","title":"会議2","participants":["1"],"start":"14:00","end":"15:00"}]
+        # この月間勤務・会議テストでは、技師不在日の看護師対応を明示承認する。
+        data["technician_exceptions"]={day:True for day in data["doctor_plans"]}
         outcome=generate(data,seconds=3)
         self.assertEqual(outcome["status"],"success",outcome["messages"])
         self.assertEqual(verify(outcome["problem"],outcome["grid"]),[])
@@ -226,6 +228,8 @@ class SchedulerEngineTest(unittest.TestCase):
         data["doctor_raw"]=json.dumps(data["doctor_plans"],ensure_ascii=False)
         data["doctor_plan_reviews"]["data"]=data["doctor_raw"]
         data["monthly_settings"]["meetings"]=[{"id":str(d),"date":date(2026,2,d).isoformat(),"title":"会議","participants":[str(p["id"]) for p in data["staff"]],"start":"13:30","end":"14:30"} for d in range(1,29) if date(2026,2,d).weekday()==4]
+        # この月間勤務・会議テストでは、技師不在日の看護師対応を明示承認する。
+        data["technician_exceptions"]={day:True for day in data["doctor_plans"]}
         outcome=generate(data,seconds=3)
         self.assertEqual(outcome["status"],"success",outcome["messages"])
         self.assertEqual(verify(outcome["problem"],outcome["grid"]),[])

@@ -108,7 +108,7 @@ def monthly_display(days, people, grid, monthly=None, targets=None, shortages=No
             labels = []
             for item in items:
                 area = item["area"]
-                short = "看護師" if area == "診療の看護師合計" else ("ベテラン" if "ベテラン" in area else ("検査技師" if "検査技師" in area else area.split("（")[0]))
+                short = "看護師" if area == "診療の看護師合計" else ("ベテラン" if "ベテラン" in area else ("他院の検査技師" if "検査技師" in area else area.split("（")[0]))
                 if item.get("veteran_missing"):
                     count = item["veteran_missing"]
                     labels.append(("看護師" + str(item["missing"]) + "人（うちベテラン" + str(count) + "人）")
@@ -198,9 +198,10 @@ def concise_shortages(rows):
     for row in rows:
         area = row["area"]
         label = {
-            "他院の検査技師（全日休みの代替）": "検査技師",
-            "検査技師（C番として計上）": "検査技師",
-            "他院の検査技師（C番として計上）": "検査技師",
+            "他院の検査技師（全日休みの代替）": "他院の検査技師",
+            "他院の検査技師（不在時間帯の代替）": "他院の検査技師",
+            "検査技師（C番として計上）": "他院の検査技師",
+            "他院の検査技師（C番として計上）": "他院の検査技師",
             "全配置の看護師合計": "看護師",
             "診療の看護師合計": "看護師",
         }.get(area, area)

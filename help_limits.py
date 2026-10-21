@@ -10,12 +10,11 @@ def helper_count(people, rows):
 def helper_demand_roles(problem, d, rows):
     """役割の重複を除いて、自院の不足を埋めるヘルプ人数の下限を求める。"""
     nurses, technicians = 0, 0
-    absent = not any(any(c in "ABCDMO" for c in rows[i]) for i in problem["local_tech"])
     for half, (a, b, c) in enumerate(problem["requirements"][d]):
         if not a:
             continue
         tech = sum(p["role"] == "technician" and row[half] == "C" for p,row in zip(problem["people"],rows))
-        replacement = int(absent and problem["days"][d] not in problem["technician_exceptions"] and
+        replacement = int(not any(rows[i][half] in "CW" for i in problem["local_tech"]) and problem["days"][d] not in problem["technician_exceptions"] and
                           not any(rows[i][half] == "C" for i in problem["helper_tech"]))
         nurses_present = [p for p,row in zip(problem["people"],rows) if p["role"] == "nurse" and row[half] in "ABCD"]
         c_need = max(0, c-int(tech)-replacement)

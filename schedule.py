@@ -17,7 +17,7 @@ def digest(value):
 
 def read_snapshot(db, month):
     tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    snapshot = {"rules_version": 19, "month": month, "staff": [dict(row) for row in db.execute("SELECT * FROM staff ORDER BY id")]}
+    snapshot = {"rules_version": 20, "month": month, "staff": [dict(row) for row in db.execute("SELECT * FROM staff ORDER BY id")]}
     raw = {}
     for table in ("monthly_settings","doctor_plans","coverage_settings","leave_history","help_availability","technician_exceptions","weekly_work_boundaries"):
         row = db.execute(f"SELECT data FROM {table} WHERE month=?", (month,)).fetchone() if table in tables else None

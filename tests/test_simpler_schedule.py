@@ -61,7 +61,7 @@ class SimplerScheduleTest(unittest.TestCase):
         ids={g["period"]:{p["id"] for day in g["days"] for p in day["people"]} for g in result["groups"]}
         self.assertNotIn(6,ids["am"])
         self.assertNotIn(6,ids["full"])
-        self.assertIn(6,ids["pm"])
+        self.assertNotIn(6,ids["pm"])
 
     def test_meeting_days_excluded_from_all_leave_periods(self):
         data=fixtures.sample(regular_count=5)

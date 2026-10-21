@@ -58,14 +58,26 @@ class TechnicianPolicyTest(unittest.TestCase):
         data["monthly_settings"]["targets"]["1"]="28"
         self.assertEqual(generate(data,seconds=2)["status"],"infeasible")
 
-    def test_morning_only_technician_allows_nurse_afternoon_without_exception(self):
+    def test_morning_only_technician_requires_external_afternoon_technician(self):
+        from scheduler_engine import generate_draft,allocate
+        from schedule_display import grouped_shortages,concise_shortages
         data=sample()
         data["monthly_settings"]["wishes"]["5_2026-02-02"]="pm"
         data["monthly_settings"]["targets"]["5"]="27.5"
         result=generate(data,seconds=2)
+        self.assertEqual(result["status"],"infeasible")
+        draft=generate_draft(data,seconds=2)
+        p=draft["problem"]
+        rows=grouped_shortages(draft["shortages"],p,draft["grid"])
+        self.assertEqual(concise_shortages(rows),[{"date":"2026-02-02","items":["午後：他院の検査技師1人不足"]}])
+        self.assertIsNone(allocate(p,1,["WW"]*4+["WR"]))
+        self.assertTrue(any("他院の検査技師" in e for e in verify(p,draft["grid"])))
+        data["staff"].append(dict(id=9,name="検査ヘルプ仮名",role="technician",employment="",veteran=0,is_help=1,allowed_areas="C"))
+        data["help_availability"]={"9_2026-02-02":"full"}
+        result=generate(data,True,seconds=2)
         self.assertEqual(result["status"],"success",result["messages"])
         self.assertEqual(result["grid"][1][4],"CR")
-        self.assertTrue(sum(row[1]=="D" for row in result["grid"][1][:4]) == 4)
+        self.assertEqual(result["grid"][1][-1],"CC")
         self.assertEqual(verify(result["problem"],result["grid"]),[])
 
     def test_closed_hours_need_no_technician_help(self):
@@ -101,6 +113,7 @@ class TechnicianPolicyTest(unittest.TestCase):
 
     def test_nurse_helper_available_only_after_nurse_free_attempt_fails(self):
         data=sample(regular_count=3)
+        data["technician_exceptions"]={"2026-02-02":True}
         data["monthly_settings"]["wishes"]["4_2026-02-02"]="pm"
         data["monthly_settings"]["targets"]["4"]="27.5"
         data["staff"].append(dict(id=9,name="看護ヘルプ",role="nurse",employment="full",veteran=1,is_help=1,allowed_areas="ABC"))
@@ -167,6 +180,18 @@ class TechnicianExceptionRouteTest(unittest.TestCase):
             self.assertNotEqual(before,after)
         finally:
             db.close()
+
+    def test_old_half_day_policy_shortage_preview_is_not_reused(self):
+        from schedule import read_snapshot
+        from help_shortages import write_reference,load_reference,conditions_hash
+        db=connect_db()
+        current,_,_=read_snapshot(db,"2026-02")
+        previous=dict(current,rules_version=19)
+        self.assertEqual(conditions_hash(previous),conditions_hash(current))
+        write_reference(db,previous,"old-input",[])
+        db.commit()
+        self.assertEqual(load_reference(db,"2026-02")["state"],"outdated")
+        db.close()
 
     def test_old_rule_result_is_shown_as_stale_even_without_new_exception(self):
         from schedule import digest, read_snapshot

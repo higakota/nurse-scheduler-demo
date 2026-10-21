@@ -191,11 +191,11 @@ def prepare(snapshot, use_help=False, allow_nurse_help=True):
                 errors.append(day_text + " " + person["name"] + "：許可された勤務区分がありません。")
             choices.append(tuple(possible))
         options.append(tuple(choices))
-        forced_absence = local_tech and not any(any(any(code in ("W", "M", "O") for code in pair) for pair in choices[i]) for i in local_tech)
-        if forced_absence and day_text not in exceptions:
-            for h, half in enumerate(("午前", "午後")):
-                if req[h][0] and not any(any(pair[h] == "W" for pair in choices[i]) for i in helper_tech):
-                    shortages.append(dict(date=day_text, half=half, area="他院の検査技師（全日休みの代替）", required=1, available=0, missing=1))
+        if day_text not in exceptions:
+            for h,half in enumerate(("午前","午後")):
+                forced_absence=not any(any(pair[h]=="W" for pair in choices[i]) for i in local_tech)
+                if req[h][0] and forced_absence and not any(any(pair[h]=="W" for pair in choices[i]) for i in helper_tech):
+                    shortages.append(dict(date=day_text,half=half,area="他院の検査技師（不在時間帯の代替）",required=1,available=0,missing=1))
         for h, half in enumerate(("午前", "午後")):
             if not req[h][0]:
                 continue
@@ -275,10 +275,10 @@ def compulsory_six_runs(problem):
 def allocate(problem, day_index, pairs, partial=False):
     people = problem["people"]
     grid = [[a, b] for a, b in pairs]
-    absent = not any(any(code in ("W", "M", "O") for code in pairs[i]) for i in problem["local_tech"])
-    if not partial and absent and problem["days"][day_index] not in problem["technician_exceptions"]:
+    if not partial and problem["days"][day_index] not in problem["technician_exceptions"]:
         for half in (0, 1):
-            if problem["requirements"][day_index][half][0] and not any(pairs[i][half] == "W" for i in problem["helper_tech"]):
+            if (problem["requirements"][day_index][half][0] and not any(pairs[i][half] == "W" for i in problem["local_tech"])
+                and not any(pairs[i][half] == "W" for i in problem["helper_tech"])):
                 return None
     for half in (0, 1):
         a, b, c = problem["requirements"][day_index][half]
@@ -347,11 +347,11 @@ def verify(problem, grid, allow_shortages=False, max_full_days=6):
             if not full_run_allowed(problem,i,d,runs[i],max_full_days):
                 effective=limit if runs[i]>limit else 5
                 errors.append("前月末を含む全日勤務が" + str(effective) + "連勤を超えています。")
-        absent = not any(any(code in WORK for code in rows[i]) for i in problem["local_tech"])
-        if not allow_shortages and absent and problem["days"][d] not in problem["technician_exceptions"]:
+        if not allow_shortages and problem["days"][d] not in problem["technician_exceptions"]:
             for half in (0,1):
-                if problem["requirements"][d][half][0] and not any(rows[i][half] == "C" for i in problem["helper_tech"]):
-                    errors.append(problem["days"][d] + "：自院の検査技師が全日休みですが、他院の検査技師を配置していません。看護師のみの例外は未承認です。")
+                if (problem["requirements"][d][half][0] and not any(rows[i][half]=="C" for i in problem["local_tech"])
+                    and not any(rows[i][half] == "C" for i in problem["helper_tech"])):
+                    errors.append(problem["days"][d] + (" 午前" if half==0 else " 午後") + "：他院の検査技師1人不足です。看護師のみの例外は未承認です。")
         for half in (0, 1):
             need_a, need_b, need_c = problem["requirements"][d][half]
             codes = [row[half] for row in rows]
@@ -388,7 +388,6 @@ def daily_shortages_from_options(problem, d):
     rows=[]
     people=problem["people"]
     choices=problem["options"][d]
-    absent=not any(any(any(c in "WMO" for c in pair) for pair in choices[i]) for i in problem["local_tech"])
     def add(half,area,required,available):
         if required>available:
             rows.append(dict(date=problem["days"][d],half=half,area=area,
@@ -405,7 +404,7 @@ def daily_shortages_from_options(problem, d):
             sum("C" in people[i].get("allowed_areas","ABC") for i in nurses))
         add(label,"診療側のベテラン看護師（看護師人数の内数）",1,
             int(any(people[i]["veteran"] for i in nurses)))
-        if absent and problem["days"][d] not in problem["technician_exceptions"]:
+        if not any(any(pair[h]=="W" for pair in choices[i]) for i in problem["local_tech"]) and problem["days"][d] not in problem["technician_exceptions"]:
             add(label,"他院の検査技師（C番として計上）",1,
                 int(any(i in possible for i in problem["helper_tech"])))
     from schedule_display import grouped_shortages
@@ -656,7 +655,7 @@ def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, parti
         approved = [problem["days"][d] for d,rows in enumerate(answer)
                     if problem["days"][d] in problem["technician_exceptions"]
                     and any(problem["requirements"][d][h][0] for h in (0,1))
-                    and not any(any(code in WORK for code in rows[i]) for i in problem["local_tech"])
+                    and any(problem["requirements"][d][h][0] and not any(rows[i][h]=="C" for i in problem["local_tech"]) for h in (0,1))
                     and any(problem["requirements"][d][h][0] and not any(rows[i][h] == "C" for i in problem["helper_tech"]) for h in (0,1))]
         notes = ["希望休・休日日数・最低人数・ベテラン・会議・来院予定と、自院スタッフの全日" + str(draft_max_full_days) + "連勤上限を再検証しました。", "本人が希望していない半休の分散を避け、丸1日の休みを優先しています。希望した半休は維持し、全日休みの最大化は保証しません。"]
         notes.append("半日勤務を含む6連勤以内を優先して探索しますが、最適性は保証しません。月境界の半日勤務を含む連続出勤の希望評価は、履歴が直前6日分のため限定的です。")
@@ -757,7 +756,6 @@ def draft_shortages(problem, d, rows):
     """仮配置から不足と資格条件を再計算する。"""
     result = []
     people = problem["people"]
-    absent = not any(any(code in WORK for code in rows[i]) for i in problem["local_tech"])
     for half, label in enumerate(("午前", "午後")):
         need = problem["requirements"][d][half]
         if not need[0]:
@@ -774,7 +772,7 @@ def draft_shortages(problem, d, rows):
             sum(p["role"] == "nurse" and row[half] in "ABCD" and "C" in p.get("allowed_areas", "ABC") for p,row in zip(people,rows)))
         add("診療側のベテラン看護師（看護師人数の内数）", 1,
             int(any(p["role"] == "nurse" and p["veteran"] and row[half] in "ABCD" for p,row in zip(people,rows))))
-        if absent and problem["days"][d] not in problem["technician_exceptions"]:
+        if not any(rows[i][half]=="C" for i in problem["local_tech"]) and problem["days"][d] not in problem["technician_exceptions"]:
             add("他院の検査技師（C番として計上）", 1,
                 int(any(rows[i][half] == "C" for i in problem["helper_tech"])))
     return result

@@ -143,7 +143,7 @@ class AgreedCalendarTest(unittest.TestCase):
             text=self.client.get("/schedule/agreed-change?month=2026-02").get_data(as_text=True)
         cell=re.search(r'<td data-agreed-date="2026-02-02".*?</td>',text,re.S)[0]
         self.assertIn("has-shortage",cell)
-        self.assertIn("午前・午後：検査技師1人不足",cell)
+        self.assertIn("午前・午後：他院の検査技師1人不足",cell)
         self.assertNotIn('textarea id="agreed-reason"',text)
         self.assertIn("休みを自動で探します",text)
 
@@ -188,7 +188,7 @@ class AgreedCalendarTest(unittest.TestCase):
         _,fp,_=read_snapshot(db,"2026-02")
         db.close()
         return URLSafeSerializer(app.secret_key,salt="agreed-shortage-days").dumps(dict(
-            month="2026-02",fingerprint=fp,days=[dict(date=day,items=["午前・午後：検査技師1人不足"])]))
+            month="2026-02",fingerprint=fp,days=[dict(date=day,items=["午前・午後：他院の検査技師1人不足"])]))
 
     def test_result_shortage_scope_only_allows_listed_dates(self):
         self.setup_roster()
@@ -201,7 +201,7 @@ class AgreedCalendarTest(unittest.TestCase):
         text=self.client.get("/schedule/agreed-change",query_string=dict(month="2026-02",scope=scope)).get_data(as_text=True)
         active=re.findall(r'data-agreed-staff="[^"]+" data-agreed-day="([^"]+)"',text)
         self.assertEqual(set(active),{"2026-02-02"})
-        self.assertIn("午前・午後：検査技師1人不足",text)
+        self.assertIn("午前・午後：他院の検査技師1人不足",text)
         fields=dict(self.fields(),scope=scope,staff="1",day="2026-02-03",swap="")
         response=self.post(fields,"preview").get_data(as_text=True)
         self.assertIn("不足一覧に表示された日を選んでください",response)

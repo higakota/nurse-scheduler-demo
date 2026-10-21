@@ -80,11 +80,14 @@ class PartTimeEngineTest(unittest.TestCase):
         self.assertEqual(result["status"],"success",result["messages"])
         self.assertEqual(result["grid"][1][1],"RR")
 
-    def test_part_time_technician_morning_work_allows_nurse_afternoon(self):
+    def test_part_time_technician_morning_work_requires_afternoon_technician(self):
         data=part_time(schedule_helpers.sample(),person=4,limit=1)
         result=generate(data,seconds=2)
+        self.assertEqual(result["status"],"infeasible")
+        data["technician_exceptions"]={"2026-02-02":True}
+        result=generate(data,seconds=2)
         self.assertEqual(result["status"],"success",result["messages"])
-        self.assertEqual(result["grid"][1][4],"CR")
+        self.assertLessEqual(work_units(result["grid"][1][4]),1)
         self.assertEqual(verify(result["problem"],result["grid"]),[])
 
     def test_monthly_target_for_part_time_is_ignored_and_exact_week_not_required(self):
@@ -145,6 +148,7 @@ class PartTimeEngineTest(unittest.TestCase):
         for index in (4,5):
             part_time(data,person=index,limit=6)
         part_time(data,person=6,limit=8)
+        data["technician_exceptions"]={date(2026,2,d).isoformat():True for d in opens}
         data["monthly_settings"]["meetings"]=[{"id":str(d),"date":date(2026,2,d).isoformat(),"title":"会議","participants":[str(p["id"]) for p in data["staff"]],"start":"13:30","end":"14:30"} for d in range(1,29) if date(2026,2,d).weekday()==4]
         result=generate(data,seconds=4)
         self.assertEqual(result["status"],"success",result["messages"])
