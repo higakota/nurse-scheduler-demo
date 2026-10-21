@@ -439,6 +439,21 @@ def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, parti
                     # 来院OKの全日を使う。余剰人数を理由に半日だけには切り詰めない。
                     choices[i] = tuple(pair for pair in choices[i] if pair in full or not any(code in ("W", "M", "O") for code in pair))
             problem["options"][d] = tuple(choices)
+    commitments=snapshot.get("fixed_help_commitments",{})
+    if commitments:
+        for d,day in enumerate(problem["days"]):
+            choices=list(problem["options"][d])
+            for i,person in enumerate(problem["people"]):
+                key=str(person["id"])+"_"+day
+                if not person["is_help"] or key not in commitments:
+                    continue
+                pair=commitments[key]
+                abstract="".join("W" if code in "ABCD" else code for code in pair)
+                if abstract not in choices[i]:
+                    return dict(base,status="input_error",messages=[
+                        day+" "+person["name"]+"：依頼済みの勤務と現在の来院予定・職種等が一致しません。ヘルプの予定を確認してください。"])
+                choices[i]=(abstract,)
+            problem["options"][d]=tuple(choices)
     if fixed_regular is not None:
         for d, day in enumerate(problem["days"]):
             choices = list(problem["options"][d])
@@ -691,6 +706,11 @@ def generate(snapshot, use_help=False, seconds=10, allow_six=False):
         stages.append((True,False))
         if any(p["is_help"] and p["role"]=="nurse" for p in snapshot["staff"]):
             stages.append((True,True))
+    fixed=snapshot.get("fixed_help_commitments",{})
+    locked_ids={key.partition("_")[0] for key,pair in fixed.items() if any(c in WORK for c in pair)}
+    locked_nurse=any(str(p["id"]) in locked_ids and p["role"]=="nurse" for p in snapshot["staff"])
+    if locked_ids:
+        stages=[stage for stage in stages if stage[0] and (stage[1] or not locked_nurse)]
     result=None
     for limit in ((5,6) if allow_six else (5,)):
         best=None

@@ -79,7 +79,17 @@ def register_schedule(app, connect_db):
                 outcome = {"status":"input_error","messages":["保存済み結果を置き換えることを確認してください。"],"shortages":[]}
             else:
                 use_help = request.form.get("mode") in ("help","help_draft","rebalance_draft","rebalance","six")
-                if request.form.get("mode") == "advance_draft":
+                planning_snapshot=snapshot
+                if request.form.get("mode") in ("rebalance","rebalance_draft"):
+                    from help_commitments import lock_requested_help
+                    try:
+                        planning_snapshot=lock_requested_help(snapshot,source_raw)
+                    except ValueError as exc:
+                        outcome=dict(status="input_error",messages=[str(exc)],shortages=[])
+
+                if outcome is not None:
+                    pass
+                elif request.form.get("mode") == "advance_draft":
                     from advance_help import generate_advance_draft
                     outcome=generate_advance_draft(snapshot,seconds=app.config.get("SCHEDULER_SECONDS",10))
                 elif request.form.get("mode") in ("help","help_draft") and not source_checked:
@@ -89,16 +99,16 @@ def register_schedule(app, connect_db):
                     outcome = generate_fixed_help(snapshot, source_raw, seconds=app.config.get("SCHEDULER_SECONDS",10), source_name=source_name, partial=request.form.get("mode")=="help_draft")
                 elif request.form.get("mode") in ("help_draft","rebalance_draft"):
                     from scheduler_engine import prefer_five
-                    outcome=prefer_five(snapshot,use_help=True,partial=True,seconds=app.config.get("SCHEDULER_SECONDS",10))
+                    outcome=prefer_five(planning_snapshot,use_help=True,partial=True,seconds=app.config.get("SCHEDULER_SECONDS",10))
                     outcome["included_help"]=True
                     if request.form.get("mode")=="rebalance_draft":
                         outcome["rebalanced"]=True
-                        outcome["messages"].append("了承出勤・希望休・有給・公休・来院予定を守り、6連勤を避けるため自院全体を調整した仮表です。編集画面へ取り込む前に変更内容を確認してください。")
+                        outcome["messages"].append("依頼済みヘルプの勤務を固定し、了承出勤・希望休・有給・公休を守って自院と事前登録ヘルプを調整した仮表です。編集画面へ取り込む前に変更内容を確認してください。")
                 else:
                     outcome = (generate_draft(snapshot, seconds=app.config.get("SCHEDULER_SECONDS",10), allow_six=request.form.get("mode") == "draft_six")
                            if request.form.get("mode") in ("draft","draft_six") else
                            (generate(snapshot, use_help, seconds=app.config.get("SCHEDULER_SECONDS",10), allow_six=True)
-                            if request.form.get("mode")=="six" else generate(snapshot, use_help, seconds=app.config.get("SCHEDULER_SECONDS",10))))
+                            if request.form.get("mode")=="six" else generate(planning_snapshot, use_help, seconds=app.config.get("SCHEDULER_SECONDS",10))))
                 if request.form.get("mode") == "rebalance":
                     outcome["messages"].append("了承出勤・希望休・有給・会議・来院OKの時間帯を守り、自院全体の勤務を組み直しました。" if outcome["status"]=="success" else "自院全体も調整して探索しました。自院だけの仮作成を繰り返しても、不足が解消するとは限りません。")
                 if outcome["status"] == "success":
