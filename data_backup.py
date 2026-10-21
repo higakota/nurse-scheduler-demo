@@ -79,6 +79,9 @@ def validated_backup(payload):
             clean.execute("CREATE TABLE " + table + SCHEMAS[table])
             expected = [r[1] for r in clean.execute("PRAGMA table_info(" + table + ")")]
             actual = [r[1] for r in source.execute("PRAGMA table_info(" + table + ")")]
+            if table=="staff" and actual==[name for name in expected if name!="advance_help"]:
+                source.execute("ALTER TABLE staff ADD COLUMN advance_help INTEGER NOT NULL DEFAULT 0 CHECK(advance_help IN (0,1))")
+                actual = [r[1] for r in source.execute("PRAGMA table_info(staff)")]
             if actual != expected:
                 raise ValueError("このバージョンと項目が異なるため復元できません。")
             rows = source.execute("SELECT * FROM " + table).fetchall()

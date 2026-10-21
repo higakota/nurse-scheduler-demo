@@ -45,3 +45,13 @@ def nurse_helper_excess(people, rows):
     count=sum(p["is_help"] and p["role"] == "nurse" and any(c in "ABCDWMO" for c in pair)
               for p,pair in zip(people,rows))
     return max(0,count-1)
+
+
+def planned_helper_roles(problem,d,rows):
+    """事前配置した人と、追加相談が必要な人数を合わせて比較する。"""
+    nurses,techs=helper_demand_roles(problem,d,rows)
+    nurses+=sum(p["is_help"] and p["role"]=="nurse" and any(c in "ABCDWMO" for c in pair)
+                for p,pair in zip(problem["people"],rows))
+    techs+=sum(p["is_help"] and p["role"]=="technician" and any(c in "ABCDWMO" for c in pair)
+               for p,pair in zip(problem["people"],rows))
+    return nurses,techs

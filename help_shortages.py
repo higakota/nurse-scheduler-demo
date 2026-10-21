@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 def conditions_hash(snapshot):
     values={key:value for key,value in snapshot.items() if key!="help_availability"}
-    values["staff"]=[p for p in snapshot["staff"] if not p["is_help"]]
+    values["staff"]=[{key:value for key,value in p.items() if key!="advance_help"} for p in snapshot["staff"] if not p["is_help"]]
     return hashlib.sha256(json.dumps(values,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
 
 
@@ -101,10 +101,13 @@ def shortages_from_source(snapshot, raw):
     source = json.loads(raw)
     if source.get("conditions_hash") not in (None, conditions_hash(snapshot)):
         raise ValueError("元の勤務表の保存後に条件が変わっています。編集画面で確認・保存してから不足を更新してください。")
-    problem = prepare(snapshot, use_help=False)
+    source_ids={str(p["id"]) for p in source["people"]}
+    advance={str(p["id"]) for p in snapshot["staff"] if p["is_help"] and p.get("advance_help") and str(p["id"]) in source_ids}
+    inputs=dict(snapshot,staff=[p for p in snapshot["staff"] if not p["is_help"] or str(p["id"]) in advance])
+    problem = prepare(inputs, use_help=bool(advance))
     if problem["errors"]:
         raise ValueError(problem["errors"][0])
-    positions = {str(p["id"]): i for i, p in enumerate(source["people"]) if not p["is_help"]}
+    positions = {str(p["id"]): i for i, p in enumerate(source["people"]) if not p["is_help"] or str(p["id"]) in advance}
     if set(positions) != {str(p["id"]) for p in problem["people"]} or source["days"] != problem["days"]:
         raise ValueError("自院スタッフ・対象日が変わっています。編集画面で元の勤務表を確認してください。")
     grid = [[rows[positions[str(p["id"])]] for p in problem["people"]] for rows in source["grid"]]

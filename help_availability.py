@@ -185,7 +185,11 @@ def register_help_availability(app, connect_db):
             except ValueError as exc:
                 flash(str(exc),"help-shortage-error")
             return redirect(url_for("help_availability",month=month),code=303)
-        outcome=generate_draft(snapshot,seconds=app.config.get("SCHEDULER_SECONDS",10))
+        if any(p["is_help"] and p.get("advance_help") for p in snapshot["staff"]):
+            from advance_help import generate_advance_draft
+            outcome=generate_advance_draft(snapshot,seconds=app.config.get("SCHEDULER_SECONDS",10))
+        else:
+            outcome=generate_draft(snapshot,seconds=app.config.get("SCHEDULER_SECONDS",10))
         if outcome["status"]=="draft":
             rows=grouped_shortages(outcome["shortages"],outcome["problem"],outcome["grid"])
             if publish_reference(connect_db,snapshot,fp,rows,outcome=outcome):

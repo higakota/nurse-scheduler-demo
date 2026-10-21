@@ -36,7 +36,7 @@ def staff_settings():
     if "csrf_token" not in session:
         session["csrf_token"] = secrets.token_hex(32)
     error = None
-    values = {"name": "", "role": "nurse", "employment": "full", "veteran": False, "is_help": False, "allowed_areas": "ABC"}
+    values = {"name": "", "role": "nurse", "employment": "full", "veteran": False, "is_help": False, "allowed_areas": "ABC", "advance_help": False}
     edit_id = request.args.get("edit", type=int)
     db = connect_db()
     try:
@@ -56,6 +56,7 @@ def staff_settings():
                 "veteran": request.form.get("veteran") == "1",
                 "is_help": request.form.get("is_help") == "1",
                 "allowed_areas": "ABC",
+                "advance_help": request.form.get("advance_help")=="1" and request.form.get("is_help")=="1",
             }
             if not values["name"] or len(values["name"]) > 50:
                 error = "名前は1～50文字で入力してください。"
@@ -74,14 +75,14 @@ def staff_settings():
             ).fetchone() is None:
                 abort(404)
             if error is None:
-                data = (values["name"], values["role"], values["employment"], int(values["veteran"]), int(values["is_help"]), values["allowed_areas"])
+                data = (values["name"], values["role"], values["employment"], int(values["veteran"]), int(values["is_help"]), values["allowed_areas"], int(values["advance_help"]))
                 if edit_id is None:
                     from staff_deletion import next_staff_id
                     db.execute("BEGIN IMMEDIATE")
                     new_id = next_staff_id(db)
-                    db.execute("INSERT INTO staff (id, name, role, employment, veteran, is_help, allowed_areas) VALUES (?, ?, ?, ?, ?, ?, ?)", (new_id,) + data)
+                    db.execute("INSERT INTO staff (id, name, role, employment, veteran, is_help, allowed_areas, advance_help) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (new_id,) + data)
                 else:
-                    db.execute("UPDATE staff SET name=?, role=?, employment=?, veteran=?, is_help=?, allowed_areas=? WHERE id=?", data + (edit_id,))
+                    db.execute("UPDATE staff SET name=?, role=?, employment=?, veteran=?, is_help=?, allowed_areas=?, advance_help=? WHERE id=?", data + (edit_id,))
                 db.commit()
                 return redirect(url_for("staff_settings", saved="1"))
         elif edit_id is not None:

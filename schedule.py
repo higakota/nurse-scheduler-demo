@@ -69,17 +69,20 @@ def register_schedule(app, connect_db):
         if request.method == "POST":
             if not secrets.compare_digest(session["csrf_token"].encode(), request.form.get("csrf_token","").encode()):
                 abort(400)
-            if request.form.get("mode") not in ("self","help","rebalance","six","draft","draft_six"):
+            if request.form.get("mode") not in ("self","help","rebalance","six","draft","advance_draft","draft_six"):
                 abort(400)
             if not secrets.compare_digest(fingerprint.encode(), request.form.get("fingerprint","").encode()) or not secrets.compare_digest(digest(original).encode(), request.form.get("result_token","").encode()):
                 outcome = {"status":"input_error","messages":["別の画面で入力または作成結果が変更されました。最新の内容を確認して作成してください。"],"shortages":[]}
             elif request.form.get("mode") in ("help","rebalance") and (seed_raw or manual_raw) and request.form.get("seed_token", "") != source_token:
                 outcome = {"status":"input_error","messages":["別の画面で自院の仮表が変更されました。画面を開き直してください。"],"shortages":[]}
-            elif original and request.form.get("mode") not in ("draft","draft_six") and request.form.get("replace") != "yes":
+            elif original and request.form.get("mode") not in ("draft","advance_draft","draft_six") and request.form.get("replace") != "yes":
                 outcome = {"status":"input_error","messages":["保存済み結果を置き換えることを確認してください。"],"shortages":[]}
             else:
                 use_help = request.form.get("mode") in ("help","rebalance","six")
-                if request.form.get("mode") == "help" and not source_checked:
+                if request.form.get("mode") == "advance_draft":
+                    from advance_help import generate_advance_draft
+                    outcome=generate_advance_draft(snapshot,seconds=app.config.get("SCHEDULER_SECONDS",10))
+                elif request.form.get("mode") == "help" and not source_checked:
                     outcome = {"status":"input_error", "messages":["自院の勤務を変更した後の不足が未確認です。ヘルプ画面で「不足を表示・更新」を押してから作成してください。"], "shortages":[]}
                 elif request.form.get("mode") == "help" and source_raw:
                     from fixed_help import generate_fixed_help
@@ -165,7 +168,7 @@ def register_schedule(app, connect_db):
         from itsdangerous import URLSafeSerializer
         shortage_scope = URLSafeSerializer(app.secret_key, salt="agreed-shortage-days").dumps(
             dict(month=month,fingerprint=fingerprint,days=concise_shortages(shortage_rows),
-                 source_kind=help_source,source_hash=digest(source_raw) if source_raw else "",include_help=request.form.get("mode") in ("help","rebalance","six"))) if shortage_rows else ""
-        return render_template("schedule.html", shortage_scope=shortage_scope, paid_candidates=paid_candidates, edit_revision=edit_revision, seed_token=source_token, fixed_help_base=bool(source_raw), help_source=help_source, has_seed=bool(seed_raw), has_manual=bool(manual_raw), source_name=source_name, month=month, fingerprint=fingerprint, result_token=digest(original),
+                 source_kind=help_source,source_hash=digest(source_raw) if source_raw else "",include_help=request.form.get("mode") in ("help","rebalance","six","advance_draft"))) if shortage_rows else ""
+        return render_template("schedule.html", advance_help_count=sum(1 for p in snapshot["staff"] if p["is_help"] and p.get("advance_help")), shortage_scope=shortage_scope, paid_candidates=paid_candidates, edit_revision=edit_revision, seed_token=source_token, fixed_help_base=bool(source_raw), help_source=help_source, has_seed=bool(seed_raw), has_manual=bool(manual_raw), source_name=source_name, month=month, fingerprint=fingerprint, result_token=digest(original),
                                outcome=outcome, result=saved, stale=stale, draft_display=draft_display, saved_display=saved_display, shortage_rows=shortage_rows, shortage_summary=concise_shortages(shortage_rows),
                                help_count=help_count)

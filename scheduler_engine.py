@@ -865,6 +865,7 @@ def _draft_by_person(problem, seconds, max_full_days=5):
                         return (int(run >= 5 and all(code in ("W","M","O") for code in pair)),
                                 int(attendance >= 6 and work_units(pair) > 0),
                                 int(automatic_half_rest(problem,d,i,pair)), -benefit,
+                                work_units(pair) if people[i]["is_help"] else 0,
                                 (rests-(minimum+desired*(maximum-minimum)))**2 if remaining is not None else 0,
                                 -work_units(pair))
                     for pair in sorted(choices[d], key=rank):

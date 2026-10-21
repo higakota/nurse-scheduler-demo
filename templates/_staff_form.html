@@ -12,6 +12,8 @@
         <option value="technician" {% if values.role == 'technician' %}selected{% endif %}>検査技師</option>
       </select>
       <label class="checkbox"><input id="is-help" type="checkbox" name="is_help" value="1" {% if values.is_help %}checked{% endif %}>他院からのヘルプ</label>
+      <label class="checkbox" id="advance-help-field"><input type="checkbox" name="advance_help" value="1" {% if values.advance_help|default(false) %}checked{% endif %}>勤務可能日が先に分かり、依頼前から配置してよい</label>
+      <p class="hint">対象の人は、ヘルプのカレンダーに登録した日を最初の仮作成から使えます。</p>
       <p class="hint">ヘルプの看護師は全員A（受付）・B（診察室）・C（検査室）を担当でき、勤務時間は常勤と同じです。配置の選択は不要です。</p>
       <div id="nurse-fields">
         <label for="employment">勤務区分</label>

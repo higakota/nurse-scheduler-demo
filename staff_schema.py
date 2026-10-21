@@ -8,6 +8,7 @@ SCHEMA = """(
     is_help INTEGER NOT NULL DEFAULT 0 CHECK(is_help IN (0,1)),
     allowed_areas TEXT NOT NULL DEFAULT 'ABC',
     weekly_limit_units INTEGER CHECK(weekly_limit_units IS NULL OR (typeof(weekly_limit_units)='integer' AND weekly_limit_units BETWEEN 0 AND 14)),
+    advance_help INTEGER NOT NULL DEFAULT 0 CHECK(advance_help IN (0,1)),
     CHECK((role='nurse' AND employment IN ('full','part')) OR (role='technician' AND employment IN ('','full','part') AND veteran=0))
 )"""
 
@@ -37,6 +38,10 @@ def ensure_staff_schema(db):
         except Exception:
             db.rollback()
             raise
+    columns = {row["name"] for row in db.execute("PRAGMA table_info(staff)")}
+    if "advance_help" not in columns:
+        db.execute("ALTER TABLE staff ADD COLUMN advance_help INTEGER NOT NULL DEFAULT 0 CHECK(advance_help IN (0,1))")
+        db.commit()
     if db.execute("SELECT 1 FROM staff WHERE is_help=1 AND role='nurse' AND allowed_areas!='ABC' LIMIT 1").fetchone():
         db.execute("UPDATE staff SET allowed_areas='ABC' WHERE is_help=1 AND role='nurse' AND allowed_areas!='ABC'")
         db.commit()

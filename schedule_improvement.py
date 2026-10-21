@@ -1,7 +1,7 @@
 """既存の勤務を複数スタッフで交換する。入力条件・未承諾ヘルプは変更しない。"""
 import itertools
 import time
-from help_limits import helper_demand, helper_demand_roles, PREFERRED_DAILY_HELPERS
+from help_limits import helper_demand, planned_helper_roles, PREFERRED_DAILY_HELPERS
 
 
 def improve_jointly(problem, grid, allow_shortages=False, max_full_days=6, seconds=1):
@@ -51,7 +51,7 @@ def improve_jointly(problem, grid, allow_shortages=False, max_full_days=6, secon
         improved=False
         scores={d:deficits(d,rows) for d,rows in enumerate(result)}
         halves={d:half_score(d,rows) for d,rows in enumerate(result)}
-        demand_roles={d:helper_demand_roles(problem,d,rows) for d,rows in enumerate(result)}
+        demand_roles={d:planned_helper_roles(problem,d,rows) for d,rows in enumerate(result)}
         priority=sorted(days,key=lambda d:(-max(0,demand_roles[d][0]-1),-sum(scores[d]),-halves[d],d))
         original_runs=len(six_day_runs(problem,result))
         for position,d in enumerate(priority):
@@ -84,7 +84,7 @@ def improve_jointly(problem, grid, allow_shortages=False, max_full_days=6, secon
                         new_half=half_score(d,new_left)+half_score(e,new_right)
                         if any(x>y for x,y in zip(new_def,old_def)) or new_half>old_half:
                             continue
-                        new_roles=[helper_demand_roles(problem,day,rows) for day,rows in ((d,new_left),(e,new_right))]
+                        new_roles=[planned_helper_roles(problem,day,rows) for day,rows in ((d,new_left),(e,new_right))]
                         new_demand=[sum(role) for role in new_roles]
                         new_cap=(sum(max(0,nurses-1) for nurses,tech in new_roles),
                                  sum(max(0,n-PREFERRED_DAILY_HELPERS) for n in new_demand),max(new_demand))
