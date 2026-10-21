@@ -478,7 +478,7 @@ def register_negotiated_leave(app, connect_db):
                     db.commit()
                     session.pop("agreed_change_confirmation", None)
                     forget("agreed_change")
-                    return redirect(url_for("agreed_wish_change",month=month,saved="1",_anchor="agreed-day-"+values["day"]),code=303)
+                    return redirect(url_for("manual_schedule",month=month,saved="1",agreed="changed"),code=303)
                 else:
                     abort(400)
             staff = [p for p in snapshot["staff"] if not p["is_help"]]

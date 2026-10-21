@@ -2,7 +2,7 @@
 <link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='app-ui.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='schedule.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='manual_schedule.css') }}"></head>
 <body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content"><div class="editor-heading"><div><p class="eyebrow">{{ ui_month_label }} ／ 表を見ながら仕上げる</p><h1>勤務表の編集・印刷</h1></div><span class="status-badge muted">{{ '修正内容を保存済み' if base.updated is defined else '編集中の勤務表' }}</span></div>
 <p class="page-description">マスを押して修正し、下の「変更内容・不足を確認する」から保存します。希望休を出勤へ変えるときは「本人了承の変更」を使います。</p>
-{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}{% if request.args.get('saved') %}<p class="success" role="status">勤務表の修正を保存しました。</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}{% if request.args.get('saved') %}<p class="success" role="status">{{ '了承出勤を取り消した勤務表を表示しています。' if request.args.get('agreed')=='cancelled' else '了承済みの変更を勤務表に反映しました。' if request.args.get('agreed')=='changed' else '勤務表の修正を保存しました。' }}</p>{% endif %}
 {% if stale %}<p class="workflow-notice">入力条件が変更されています。表と確認事項を見直し、下書きを保存してください。</p>{% endif %}
 {% if not preview %}<div class="editor-actionbar manual-print-actions">
 {% if base.updated is defined %}<button type="button" class="secondary" data-print-packet="manual-print">勤務表だけ印刷／PDF保存</button><form method="post" action="{{ url_for('refresh_help_shortages',month=month) }}"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><button class="secondary">この表の不足を確認してヘルプを追加 →</button></form>{% endif %}

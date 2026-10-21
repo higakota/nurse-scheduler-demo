@@ -157,7 +157,7 @@ def register_agreed_record_changes(app,connect_db):
                     db.commit()
                     session.pop("agreed_record_confirmation",None)
                     forget("agreed_record")
-                    return redirect(url_for("agreed_wish_change",month=month,saved="1",_anchor="agreed-day-"+record["date"]),code=303)
+                    return redirect(url_for("manual_schedule",month=month,saved="1",agreed="cancelled" if operation=="delete" else "changed"),code=303)
                 else:
                     abort(400)
         except ValueError as exc:

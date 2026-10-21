@@ -38,7 +38,7 @@
 {% if shortages %}<details><summary>変更後の不足</summary>{% for day in shortage_summary %}<p><strong>{{ day.date|date_with_weekday }}</strong><br>{% for item in day['items'] %}{{ item }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>{% endfor %}</details>{% else %}<p>変更後の人数不足はありません。</p>{% endif %}
 {% if audit.paid_changes %}<p>編集した表の有給も登録に反映します。</p><ul>{% for item in audit.paid_changes %}<li>{{ item.date|date_with_weekday }} {{ item.name }}：{{ {'full':'全日有給','am':'午前有給','pm':'午後有給'}.get(item.after,'有給取消') }}</li>{% endfor %}</ul>{% endif %}
 {% if audit.boundary_changes %}<p>翌月側の勤務記録も、了承した出勤に合わせて更新します。</p>{% endif %}
-<p class="hint">保存先は未確定の手動下書きです。不足や公休日数の不一致があれば、保存後に調整してください。</p>
+<p class="hint">保存すると、変更を反映した月間勤務表を表示します。</p>
 <form method="post"><input type="hidden" name="plan_token" value="{{ session.get('agreed_change_plan','') }}"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="revision" value="{{ revision }}">
 {% for key,value in values.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
 <label class="checkbox"><input type="checkbox" name="consent" value="yes" required>本人から出勤の了承を得て、表示した希望休・勤務の変更を保存します</label><button name="action" value="save">了承済みの変更を保存</button></form>

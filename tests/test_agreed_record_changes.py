@@ -40,7 +40,9 @@ class AgreedRecordChangesTest(unittest.TestCase):
 
     def test_record_stays_in_calendar_after_shortage_is_resolved(self):
         response=self.create_record()
-        self.assertIn("/schedule/agreed-change?",response.location)
+        self.assertIn("/schedule/manual?",response.location)
+        reflected=self.client.get(response.location).get_data(as_text=True)
+        self.assertIn("了承済みの変更を勤務表に反映しました",reflected)
         text=self.client.get("/schedule/agreed-change?month=2026-02").get_data(as_text=True)
         cell=re.search(r'<td data-agreed-date="2026-02-02".*?</td>',text,re.S)[0]
         self.assertIn("了承出勤（全日）",cell)
