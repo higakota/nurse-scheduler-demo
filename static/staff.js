@@ -4,6 +4,7 @@ function updateRole() {
   const isNurse = role.value === "nurse";
   const help = document.getElementById("is-help").checked;
   if (help) employment.value = "full";
+  else if(!isNurse)employment.value="part";
   employment.disabled = help;
   const veteran = document.querySelector('input[name="veteran"]');
   veteran.disabled = !isNurse;

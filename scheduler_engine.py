@@ -11,7 +11,7 @@ from leave_and_history import trailing_full_days
 from meeting_rules import checked_times, check_meeting_overlap
 from weekly_rules import build_weekly, work_units, weekly_summary
 
-WORK = {"A", "B", "C", "D", "M", "O"}
+WORK = {"A", "B", "C", "D", "M", "O", "T"}
 
 
 def split_rest(pair):
@@ -55,6 +55,8 @@ def prepare(snapshot, use_help=False, allow_nurse_help=True):
     leaves = history.get("leaves", {})
     wishes = monthly.get("wishes", {})
     closures = monthly.get("closures", {})
+    summer = monthly.get("summer", {})
+    support = monthly.get("support", {})
     staff = snapshot["staff"]
     people = [p for p in staff if not p["is_help"] or (use_help and (allow_nurse_help or p["role"] == "technician"))]
     regular = [i for i, p in enumerate(people) if not p["is_help"] and p["employment"] != "part"]
@@ -86,6 +88,13 @@ def prepare(snapshot, use_help=False, allow_nurse_help=True):
     meetings = monthly.get("meetings", [])
     ids = {str(p["id"]) for p in staff}
     meeting_people = {}
+    def attending(meeting):
+        active=[]
+        for pid in meeting["participants"]:
+            key=str(pid)+"_"+meeting["date"]
+            if not any(values.get(key) in ("full","pm") for values in (wishes,leaves,summer,support)):
+                active.append(pid)
+        return dict(meeting,participants=active)
     for index, meeting in enumerate(meetings):
         day = meeting["date"]
         if day not in days or date.fromisoformat(day).weekday() == 6 or day in closures:
@@ -99,12 +108,12 @@ def prepare(snapshot, use_help=False, allow_nurse_help=True):
         try:
             checked_times(meeting.get("start", ""), meeting.get("end", ""))
             for old in meetings[:index]:
-                check_meeting_overlap([old], meeting)
+                check_meeting_overlap([attending(old)], attending(meeting))
         except ValueError as exc:
             errors.append(day + "：" + str(exc))
         if meeting.get("start") and meeting.get("end"):
             for person in staff:
-                if str(person["id"]) not in meeting["participants"]:
+                if str(person["id"]) not in attending(meeting)["participants"]:
                     continue
                 if person["role"] == "technician":
                     earliest, latest = "13:00", "16:40"
@@ -154,10 +163,20 @@ def prepare(snapshot, use_help=False, allow_nurse_help=True):
                 on_paid = paid in ("full", half)
                 meeting = participant and half == "pm"
                 can_visit = not person["is_help"] or visit in ("full", half)
-                if meeting and (wanted or on_paid or closed or not can_visit):
+                special_rest = summer.get(key) in ("full",half)
+                away = support.get(key) in ("full",half)
+                if sum((bool(wanted),bool(on_paid),bool(special_rest),bool(away)))>1:
+                    errors.append(day_text+" "+person["name"]+"：希望休・有給・夏季休暇・あおば支援が同じ時間帯に重なっています。")
+                if away and (closed or person["is_help"]):
+                    errors.append(day_text+"：あおば支援の日・スタッフを見直してください。")
+                if meeting and not (wanted or on_paid or special_rest or away) and (closed or not can_visit):
                     errors.append(day_text + " " + person["name"] + "：会議と希望休・有給・休診日・来院予定が矛盾しています。")
                 if closed:
                     halves.append(("R",))
+                elif special_rest:
+                    halves.append(("S",))
+                elif away:
+                    halves.append(("T",))
                 elif on_paid:
                     halves.append(("P",))
                 elif wanted:
@@ -174,10 +193,10 @@ def prepare(snapshot, use_help=False, allow_nurse_help=True):
                     halves.append(("R",))
             possible = []
             for a, b in itertools.product(*halves):
-                if person["role"] == "technician" and b in ("W", "M", "O") and a not in ("W", "M", "O"):
+                if person["role"] == "technician" and b in ("W", "M", "O", "T") and a not in ("W", "M", "O", "T"):
                     continue
                 pair = a + b
-                if any(pair[h] not in ("W","M","O") for h in agreed_work.get(key,())):
+                if any(pair[h] not in ("W","M","O","T") for h in agreed_work.get(key,())):
                     continue
                 if (day_index,person_index) in weekly["fixed"] and work_units(pair) != weekly["fixed"][(day_index,person_index)]:
                     continue
@@ -230,7 +249,7 @@ def prepare(snapshot, use_help=False, allow_nurse_help=True):
                 code = {0:"rest",1:"am",2:"full"}[weekly["prefix"][key]]
             vals.append("rest" if fixed else code)
         tail = trailing_full_days(vals)
-        full_possible = any(pair[0] in ("W","M","O") and pair[1] in ("W","M","O") for pair in options[0][i])
+        full_possible = any(pair[0] in ("W","M","O","T") and pair[1] in ("W","M","O","T") for pair in options[0][i])
         if tail is None and full_possible:
             errors.append(person["name"] + "：月初の全日勤務を判定するため、前月末勤務を補完してください。")
         tails.append(tail or 0)
@@ -263,7 +282,7 @@ def compulsory_six_runs(problem):
         run=problem["tails"][i]
         for d,options in enumerate(choices):
             possible=[pair for pair in options if rest_units(pair)<=minimum[d]+slack]
-            forced=bool(possible) and all(all(c in ("W","M","O") for c in pair) for pair in possible)
+            forced=bool(possible) and all(all(c in ("W","M","O","T") for c in pair) for pair in possible)
             run=run+1 if forced else 0
             if run==6:
                 end=date.fromisoformat(problem["days"][d])
@@ -324,7 +343,7 @@ def verify(problem, grid, allow_shortages=False, max_full_days=6):
         if len(rows) != len(problem["people"]):
             return ["作成結果のスタッフ数が一致しません。"]
         for i, row in enumerate(rows):
-            if len(row) != 2 or any(code not in "ABCDMORP" for code in row):
+            if len(row) != 2 or any(code not in "ABCDMORPST" for code in row):
                 return ["作成結果の勤務記号が不正です。"]
             abstract = "".join("W" if code in "ABCD" else code for code in row)
             person = problem["people"][i]
@@ -338,10 +357,7 @@ def verify(problem, grid, allow_shortages=False, max_full_days=6):
             if person["role"] == "nurse" and "C" not in person.get("allowed_areas", "ABC") and "C" in row:
                 errors.append(person["name"] + "：検査室を担当できないスタッフに検査室を指定しています。")
             # 休みと有給の算入は、勤務表の記号から再計算する。
-            if "P" in row:
-                rest[i] += 2 if "R" in row else 0
-            else:
-                rest[i] += sum(code == "R" for code in row)
+            rest[i] += rest_units(row)
             runs[i] = runs[i] + 1 if not person["is_help"] and all(code in WORK for code in row) else 0
             limit=min(max_full_days,problem.get("full_day_limits",[max_full_days]*len(problem["people"]))[i])
             if not full_run_allowed(problem,i,d,runs[i],max_full_days):
@@ -433,10 +449,10 @@ def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, parti
             for i, person in enumerate(problem["people"]):
                 if not person["is_help"] or snapshot.get("help_availability", {}).get(str(person["id"]) + "_" + day) != "full":
                     continue
-                full = tuple(pair for pair in choices[i] if all(code in ("W", "M", "O") for code in pair))
+                full = tuple(pair for pair in choices[i] if all(code in ("W", "M", "O", "T") for code in pair))
                 if full:
                     # 来院OKの全日を使う。余剰人数を理由に半日だけには切り詰めない。
-                    choices[i] = tuple(pair for pair in choices[i] if pair in full or not any(code in ("W", "M", "O") for code in pair))
+                    choices[i] = tuple(pair for pair in choices[i] if pair in full or not any(code in ("W", "M", "O", "T") for code in pair))
             problem["options"][d] = tuple(choices)
     commitments=snapshot.get("fixed_help_commitments",{})
     if commitments:
@@ -506,12 +522,12 @@ def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, parti
                     if grid is None:
                         continue
                     rests = tuple(rest_units(pair) for pair in pairs)
-                    full = tuple(all(code in ("W","M","O") for code in pair) for pair in pairs)
-                    attend = tuple(any(code in ("W","M","O") for code in pair) for pair in pairs)
+                    full = tuple(all(code in ("W","M","O","T") for code in pair) for pair in pairs)
+                    attend = tuple(any(code in ("W","M","O","T") for code in pair) for pair in pairs)
                     help_used = (
                         max(0,planned_helper_roles(problem,d,grid)[0]-1) if partial else nurse_helper_excess(problem['people'],pairs),
-                        sum(sum(code in ("W","M","O") for code in pairs[i]) for i,p in enumerate(problem["people"]) if p["is_help"] and p["role"] == "nurse"),
-                        sum(sum(code in ("W","M","O") for code in pairs[i]) for i,p in enumerate(problem["people"]) if p["is_help"]))
+                        sum(sum(code in ("W","M","O","T") for code in pairs[i]) for i,p in enumerate(problem["people"]) if p["is_help"] and p["role"] == "nurse"),
+                        sum(sum(code in ("W","M","O","T") for code in pairs[i]) for i,p in enumerate(problem["people"]) if p["is_help"]))
                     candidate = (grid, tuple(rests[i] for i in problem["regular"]), full, attend, help_used,
                                        tuple(work_units(pairs[i]) for i in problem["weekly"]["parts"]),
                                        sum(r["missing"] for r in draft_shortages(problem, d, grid)) if partial else 0)
@@ -880,14 +896,14 @@ def _draft_by_person(problem, seconds, max_full_days=5):
                         rests = rest_units(pair)
                         minimum = min(rest_units(v) for v in choices[d])
                         maximum = max(rest_units(v) for v in choices[d])
-                        return (int(run >= 5 and all(code in ("W","M","O") for code in pair)),
+                        return (int(run >= 5 and all(code in ("W","M","O","T") for code in pair)),
                                 int(attendance >= 6 and work_units(pair) > 0),
                                 int(automatic_half_rest(problem,d,i,pair)), -benefit,
                                 work_units(pair) if people[i]["is_help"] else 0,
                                 (rests-(minimum+desired*(maximum-minimum)))**2 if remaining is not None else 0,
                                 -work_units(pair))
                     for pair in sorted(choices[d], key=rank):
-                        full = all(code in ("W", "M", "O") for code in pair)
+                        full = all(code in ("W", "M", "O", "T") for code in pair)
                         new_run = run+1 if full and not people[i]["is_help"] else 0
                         new_attendance = attendance+1 if work_units(pair) and not people[i]["is_help"] else 0
                         if not full_run_allowed(problem,i,d,new_run,max_full_days) or (strict and new_attendance > 6):
@@ -918,7 +934,7 @@ def _draft_by_person(problem, seconds, max_full_days=5):
                     for d in range(len(days)):
                         minimum = min(rest_units(pair) for pair in choices[d])
                         possible = [pair for pair in choices[d] if rest_units(pair) <= minimum+slack]
-                        forced_full = possible and all(all(code in ("W", "M", "O") for code in pair) for pair in possible)
+                        forced_full = possible and all(all(code in ("W", "M", "O", "T") for code in pair) for pair in possible)
                         forced_run = forced_run+1 if forced_full else 0
                         if forced_run > max_full_days:
                             return dict(base, status="infeasible", messages=[
@@ -984,7 +1000,7 @@ def consolidate_rest_days(problem, grid, allow_shortages=False, max_full_days=5,
                         continue
                     if time.monotonic() >= deadline:
                         return result
-                    full_options = [pair for pair in problem["options"][work][i] if all(code in ("W","M","O") for code in pair)]
+                    full_options = [pair for pair in problem["options"][work][i] if all(code in ("W","M","O","T") for code in pair)]
                     if not full_options:
                         continue
                     original_score = [a+b for a,b in zip(deficit_score(off,result[off]),deficit_score(work,result[work]))] if allow_shortages else None

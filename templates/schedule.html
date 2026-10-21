@@ -3,7 +3,7 @@
 {% if request.args.get('help_saved')=='1' %}<p class="success" role="status">来院予定を登録しました。下のボタンで勤務表に反映してください。</p>{% endif %}
 
 {% if request.args.get('saved') == '1' %}<p class="success" role="status">勤務表を作成しました。内容を確認し、必要なら編集へ進んでください。</p>{% endif %}
-{% if stale %}<p class="workflow-notice" role="status"><strong>入力変更を反映して作り直せます。</strong> 最新の条件で勤務表を作成できます。下の作成ボタンから進んでください。</p>{% endif %}
+{% if stale %}<p class="workflow-notice" role="status"><strong>入力変更を反映して作り直せます。</strong> {% if has_manual %}<a href="{{ url_for('manual_schedule',month=month) }}">編集画面で、変更箇所を今の勤務表に反映する →</a>{% else %}最新の条件で勤務表を作成できます。下の作成ボタンから進んでください。{% endif %}</p>{% endif %}
 {% include "_schedule_outcome.html" %}
 {% set show_result = result and not stale and not (outcome and outcome.status == 'draft') and request.args.get('phase')!='plan' %}
 {% set collapse_creation = (show_result and not outcome and request.args.get('phase')!='build' and not request.args.get('help_source')) or (outcome and outcome.status=='draft') %}
@@ -16,6 +16,7 @@
 </section>{% endif %}
 {% if collapse_creation %}<details class="compact-help recreate-controls" id="schedule-recreate"><summary>作成をやり直す・ほかの作成方法</summary>{% include "_schedule_creation.html" %}</details>{% endif %}
 {% if outcome and outcome.status == 'draft' %}
+<section class="panel">{% include "_leave_candidates.html" %}</section>
 {% with print_id='draft-print', print_display=draft_display, is_draft=true, experimental=outcome.experimental, print_shortages=shortage_rows, print_runs=outcome.six_day_runs %}{% include "_schedule_print.html" %}{% endwith %}
 {% endif %}
 {% if result and not stale and not (outcome and outcome.status == 'draft') %}{% with print_id='saved-print', print_display=saved_display, is_draft=false, experimental=false, print_shortages=[], print_runs=result.get('six_day_runs', []) %}{% include "_schedule_print.html" %}{% endwith %}{% endif %}

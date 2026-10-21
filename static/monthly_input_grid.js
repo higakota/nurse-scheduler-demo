@@ -56,7 +56,11 @@ if(attendanceDialog){
 
 
 /* Keep the selected staff and date easy to follow, including keyboard editing. */
-document.querySelectorAll(".input-sheet").forEach(table=>{
+document.querySelectorAll(".input-sheet").forEach((table,index)=>{
+ const wrapper=table.parentElement,key="meeting-scroll:"+location.pathname+":"+(new URLSearchParams(location.search).get("month")||"")+":"+index;
+ try{const saved=JSON.parse(sessionStorage.getItem(key)||"null");if(saved)requestAnimationFrame(()=>{wrapper.scrollLeft=saved.left;});}catch{}
+ wrapper.addEventListener("scroll",()=>{try{sessionStorage.setItem(key,JSON.stringify({left:wrapper.scrollLeft}));}catch{}},{passive:true});
+
  let highlighted=[];
  function clear(){for(const el of highlighted)el.classList.remove("input-active-date","input-active-row");highlighted=[];}
  function highlight(cell){

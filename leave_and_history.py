@@ -42,7 +42,13 @@ def absence_warnings(leaves, monthly, names):
         if period in ("full", "pm"):
             for meeting in monthly.get("meetings", []):
                 if meeting["date"] == day and staff_id in meeting["participants"]:
-                    messages.append(label + "：有給と午後の会議参加が重なっています。入力の見直しが必要です。")
+                    messages.append(label + "：有給と午後の会議参加が重なっています。有給を優先し、この時間帯は会議に出席しません。")
+    for kind,label in (("summer","夏季休暇"),("support","あおば支援")):
+        for key,period in monthly.get(kind,{}).items():
+            staff_id,day=key.split("_",1)
+            for meeting in monthly.get("meetings",[]):
+                if meeting["date"]==day and staff_id in meeting["participants"] and period in ("full","pm"):
+                    messages.append(day+" "+names.get(staff_id,"未登録スタッフ")+"："+label+"を優先し、会議には出席しません。")
     return messages
 
 

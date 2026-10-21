@@ -28,11 +28,12 @@ def deletion_preview(db, staff_id):
                     del data["targets"][target]
                     counts["targets"] += 1
                     changed = True
-                keys = [key for key in data.get("wishes", {}) if key.startswith(prefix)]
-                for key in keys:
-                    del data["wishes"][key]
-                counts["wishes"] += len(keys)
-                changed |= bool(keys)
+                for section in ("wishes","summer","support"):
+                    keys = [key for key in data.get(section, {}) if key.startswith(prefix)]
+                    for key in keys:
+                        del data[section][key]
+                    counts["wishes"] += len(keys)
+                    changed |= bool(keys)
                 for meeting in data.get("meetings", []):
                     if any(str(value) == target for value in meeting["participants"]):
                         meeting["participants"] = [value for value in meeting["participants"] if str(value) != target]

@@ -76,3 +76,5 @@
 #advance-availability-form .input-sheet-name{width:clamp(60px,9vw,128px)}
 #advance-availability-form thead th{white-space:nowrap;overflow-wrap:normal;font-size:clamp(7px,.85vw,12px)}
 #advance-availability-form .advance-day-cell{white-space:nowrap;overflow-wrap:normal;font-size:clamp(6px,.8vw,12px);padding:3px 0}
+
+.input-absence-cell.has-summer{background:#eee9f8;color:#5c4579}.input-absence-cell.has-support{background:#e4effa;color:#285a81}#input-absence-dialog{max-height:85vh;overflow:auto}

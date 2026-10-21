@@ -46,7 +46,7 @@ def improve_jointly(problem, grid, allow_shortages=False, max_full_days=6, secon
         return pairs
 
     def automatic_requested(pair):
-        return pair.count("R")==1 and any(c in "WMO" for c in pair)
+        return pair.count("R")==1 and any(c in "WMOT" for c in pair)
 
     # 不足がある日・自動半休がある日から、別の日への休み移動を探す。
     while time.monotonic()<deadline:

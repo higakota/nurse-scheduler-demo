@@ -240,7 +240,7 @@ def register_monthly(app, connect_db):
                     warnings.append(meeting["date"] + "：休診日に会議があります。入力の見直しが必要です。")
                 for person_id in meeting["participants"]:
                     if data["wishes"].get(person_id + "_" + meeting["date"]) in ("full", "pm"):
-                        warnings.append(meeting["date"] + " " + names.get(person_id, "未登録スタッフ") + "：希望休と会議が重なっています。希望休を維持しています。入力の見直しが必要です。")
+                        warnings.append(meeting["date"] + " " + names.get(person_id, "未登録スタッフ") + "：希望休と会議が重なっています。希望休を優先し、この時間帯は会議に出席しません。")
             if db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='leave_history'").fetchone():
                 leave_row = db.execute("SELECT data FROM leave_history WHERE month=?", (month,)).fetchone()
                 if leave_row:

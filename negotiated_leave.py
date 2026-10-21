@@ -32,7 +32,7 @@ def approved_help_preview(snapshot, base):
         for i in helpers:
             allowed=problem["options"][d][i]
             if snapshot.get("help_availability",{}).get(str(people[i]["id"])+"_"+day)=="full":
-                allowed=[pair for pair in allowed if all(c in "WMO" for c in pair) or not any(c in "WMO" for c in pair)]
+                allowed=[pair for pair in allowed if all(c in "WMOT" for c in pair) or not any(c in "WMOT" for c in pair)]
             choices.append(allowed)
         best=None
         for count,pairs in enumerate(product(*choices)):
@@ -206,15 +206,25 @@ def change_plan(snapshot, base, person_id, day, period, swap, reason):
     wishes = settings.setdefault("wishes", {})
     key = person_id + "_" + day
     original = wishes.get(key)
-    requested = {"full": {0, 1}, "am": {0}, "pm": {1}}.get(original, set())
+    original = original or ""
+    paid = snapshot.get("leave_history",{}).get("leaves",{}).get(key,"")
+    periods = {"full":{0,1},"am":{0},"pm":{1},"":set()}
+    requested = periods[original]
+    paid_requested = periods[paid]
     agreed = {"full": {0, 1}, "am": {0}, "pm": {1}}[period]
-    if not requested & agreed:
-        raise ValueError("選択した時間帯には希望休がありません。通常の勤務修正は編集・印刷で行ってください。")
+    if not (requested | paid_requested) & agreed:
+        raise ValueError("選択した時間帯には希望休・有給がありません。通常の勤務修正は編集・印刷で行ってください。")
     if date.fromisoformat(day).weekday() == 6 or day in settings.get("closures", {}):
         raise ValueError("日曜・全日休診日は出勤へ変更できません。")
     paid = snapshot.get("leave_history", {}).get("leaves", {}).get(key)
-    if any(paid in ("full", ("am", "pm")[h]) for h in agreed):
-        raise ValueError("有給と重なっています。この操作では有給を取り消しません。")
+    paid_left = paid_requested-agreed
+    remaining_paid = "full" if paid_left=={0,1} else "am" if paid_left=={0} else "pm" if paid_left=={1} else ""
+    if paid != remaining_paid:
+        snapshot=copy.deepcopy(snapshot)
+        leaves=snapshot.setdefault("leave_history",{}).setdefault("leaves",{})
+        if remaining_paid:leaves[key]=remaining_paid
+        else:leaves.pop(key,None)
+        paid_changes.append(dict(key=key,date=day,name=person["name"],before=paid,after=remaining_paid))
     remaining = requested - agreed
     after = "full" if remaining == {0, 1} else "am" if remaining == {0} else "pm" if remaining == {1} else ""
     if after:
@@ -226,8 +236,6 @@ def change_plan(snapshot, base, person_id, day, period, swap, reason):
     d = days.index(day)
     pair = list(grid[d][i])
     for h in agreed:
-        if pair[h] == "P":
-            raise ValueError("下書きに有給が指定されています。有給は変更しません。")
         meeting = h == 1 and any(m["date"] == day and person_id in m["participants"] for m in settings.get("meetings", []))
         pair[h] = "M" if meeting else "O" if h == 1 and date.fromisoformat(day).weekday() == 4 else "C" if person["role"] == "technician" else "D"
     grid[d][i] = "".join(pair)
@@ -288,7 +296,7 @@ def change_plan(snapshot, base, person_id, day, period, swap, reason):
                 boundary_changes.append(dict(month=neighbor,key=boundary_key,before=entries[boundary_key],after=units/2))
                 entries[boundary_key]=units/2
     snapshot=dict(snapshot,weekly_neighbor_boundaries=neighbor_boundaries)
-    audit = dict(global_adjustment=global_adjustment,paid_changes=paid_changes,boundary_changes=boundary_changes,automatic_rest_dates=[change["day"] for change in automatic_changes],rest_before=sum(rest_units(row[i]) for row in base["grid"])/2,
+    audit = dict(original_paid=paid,remaining_paid=remaining_paid,global_adjustment=global_adjustment,paid_changes=paid_changes,boundary_changes=boundary_changes,automatic_rest_dates=[change["day"] for change in automatic_changes],rest_before=sum(rest_units(row[i]) for row in base["grid"])/2,
                  rest_after=sum(rest_units(row[i]) for row in grid)/2,
                  rest_target=settings.get("targets", {}).get(person_id), staff_id=person_id, date=day, original_wish=original, remaining_wish=after,
                  work_period=period, replacement_date=swap, prior_replacement_wish=prior_replacement_wish, reason=reason.strip(),
@@ -322,7 +330,7 @@ def calendar_context(snapshot, base, days):
             if not (wish or paid or record):
                 continue
             entries[day].append(dict(staff=str(person["id"]),name=person["name"],wish=wish or "",
-                wish_label=labels.get(wish,""),paid_label=labels.get(paid,""),
+                paid=paid or "",wish_label=labels.get(wish,""),paid_label=labels.get(paid,""),
                 records=active_records.get((str(person["id"]),day),[]),amended=bool(record),original_label=labels.get(record.get("original_wish"),"") if record else ""))
     positions={str(p["id"]):i for i,p in enumerate(base["people"])}
     replacements={}

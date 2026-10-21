@@ -20,11 +20,12 @@
     }
   });
   const original = JSON.parse(document.getElementById("absence-original").textContent);
-  let changes = {wishes: {}, leaves: {}};
+  let changes = {wishes: {}, leaves: {}, summer:{}, support:{}};
   try {
     const pending = JSON.parse(JSON.parse(document.getElementById("absence-pending").textContent));
     if (pending && typeof pending.wishes === "object" && pending.wishes && typeof pending.leaves === "object" && pending.leaves) changes = pending;
   } catch {}
+  for(const kind of ["summer","support"]){changes[kind] ||= {};original[kind] ||= {};}
   const staff = document.getElementById("absence-staff");
   const days = [...document.querySelectorAll("[data-absence-day]")];
   const labels = {full: "全日", am: "午前", pm: "午後"};
@@ -36,9 +37,14 @@
       const key=cell.dataset.inputPerson+"_"+cell.dataset.inputDay;
       const wish=value("wishes",key),paid=value("leaves",key);
       cell.textContent=!wish&&!paid?"":wish==="full"&&!paid?"休":paid==="full"&&!wish?"有休":["am","pm"].map(half=>[(wish==="full"||wish===half)?"休":"",(paid==="full"||paid===half)?"有":""].join("")||"—").join("/");
-      cell.title=[wish?labels[wish]+"希望休":"",paid?labels[paid]+"有給":""].filter(Boolean).join("／");
+      const summer=value("summer",key),support=value("support",key);
+      if(summer||support)cell.textContent=["am","pm"].map(half=>(value("summer",key)==="full"||value("summer",key)===half)?"夏":(value("support",key)==="full"||value("support",key)===half)?"支":(paid==="full"||paid===half)?"有":(wish==="full"||wish===half)?"休":"—").join("/");
+      if(summer==="full"&&!wish&&!paid&&!support)cell.textContent="夏休";
+      if(support==="full"&&!wish&&!paid&&!summer)cell.textContent="支援";
+      cell.classList.toggle("has-summer",Boolean(summer));cell.classList.toggle("has-support",Boolean(support));
+      cell.title=[summer?labels[summer]+"夏季休暇":"",support?labels[support]+"あおば支援":"",wish?labels[wish]+"希望休":"",paid?labels[paid]+"有給":""].filter(Boolean).join("／");
       cell.classList.toggle("has-wish",Boolean(wish));cell.classList.toggle("has-paid",Boolean(paid));
-      cell.classList.toggle("is-dirty",["wishes","leaves"].some(kind=>Object.hasOwn(changes[kind],key)));
+      cell.classList.toggle("is-dirty",["wishes","leaves","summer","support"].some(kind=>Object.hasOwn(changes[kind],key)));
     }
     if(selectedGrid){
       const key=selectedGrid.dataset.inputPerson+"_"+selectedGrid.dataset.inputDay;
@@ -71,7 +77,7 @@
       const paid = value("leaves", key);
       const pending = ["wishes", "leaves"].some(kind => Object.hasOwn(changes[kind], key));
       picker.querySelector(".calendar-badge").textContent = [
-        wish ? labels[wish] + "希望休" : "", paid ? labels[paid] + "有給" : ""
+        wish ? labels[wish] + "希望休" : "", paid ? labels[paid] + "有給" : "", value("summer",key)?labels[value("summer",key)]+"夏季休暇":"",value("support",key)?labels[value("support",key)]+"あおば支援":""
       ].filter(Boolean).join("／");
       const halfRest = (wish === "am" && paid === "pm") || (wish === "pm" && paid === "am");
       picker.querySelector(".calendar-pending").textContent = [halfRest ? "休日日数：1日" : "", pending ? "未保存" : ""].filter(Boolean).join("・");

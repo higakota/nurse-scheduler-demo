@@ -1,6 +1,13 @@
 """保存した勤務表から全日・半日有給の候補を個別に再検証する。"""
 from copy import deepcopy
-from scheduler_engine import prepare, verify, WORK
+from scheduler_engine import prepare, verify, WORK, draft_shortages
+import hashlib,json
+
+def source_token(source):
+    return hashlib.sha256(json.dumps(source,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+
+def deficit_map(problem,grid):
+    return {(d,r["half"],r["area"]):r["missing"] for d,row in enumerate(grid) for r in draft_shortages(problem,d,row)}
 
 
 def leave_candidates(snapshot, source, fingerprint):
@@ -15,7 +22,8 @@ def leave_candidates(snapshot, source, fingerprint):
         return blocked
     grid = [[row[indexes[str(p["id"])]] if str(p["id"]) in indexes else "RR"
              for p in problem["people"]] for row in source["grid"]]
-    issues=verify(problem,grid,max_full_days=6)
+    issues=verify(problem,grid,allow_shortages=True,max_full_days=6)
+    before=deficit_map(problem,grid)
     if issues:
         return dict(blocked,message="勤務表と入力の不一致を直すと、有給候補を確認できます。",reasons=issues[:3])
     groups = [{"period":period,"label":label,"days":[]} for period,label in
@@ -42,9 +50,9 @@ def leave_candidates(snapshot, source, fingerprint):
                 for h in halves:
                     changed[h]="P"
                 trial[d][i]="".join(changed)
-                if not trial_problem["errors"] and not verify(trial_problem, trial, max_full_days=6):
+                if not trial_problem["errors"] and not verify(trial_problem, trial, allow_shortages=True,max_full_days=6) and all(count<=before.get(key,0) for key,count in deficit_map(trial_problem,trial).items()):
                     names[period].append({"id": person["id"], "name": person["name"]})
         for group in groups:
             if names[group["period"]]:
                 group["days"].append({"date": day, "people": names[group["period"]]})
-    return {"days": groups[0]["days"], "groups":groups, "message": ""}
+    return {"days": groups[0]["days"], "groups":groups, "message": "", "fingerprint":fingerprint, "source_token":source_token(source)}

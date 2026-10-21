@@ -69,7 +69,18 @@ def staff_settings():
             elif values["role"] == "nurse":
                 values["allowed_areas"] = "AB" if request.form.get("no_c") == "1" else "ABC"
             if values["role"] == "technician":
-                values.update(employment="part" if values["employment"] == "part" else "", veteran=False, allowed_areas="C")
+                values.update(employment="full" if values["is_help"] else "part", veteran=False, allowed_areas="C")
+            weekly_limit=None
+            update_weekly="weekly_limit_days" in request.form and not values["is_help"] and values["employment"]=="part"
+            if update_weekly:
+                from decimal import Decimal,InvalidOperation
+                try:
+                    raw=request.form.get("weekly_limit_days","").strip()
+                    value=Decimal(raw) if raw else None
+                    if value is not None and (not value.is_finite() or value<0 or value>7 or value*2!=(value*2).to_integral_value()):raise ValueError()
+                    weekly_limit=int(value*2) if value is not None else None
+                except (ValueError,InvalidOperation):
+                    error="週上限は0～7日、0.5日単位で入力してください。"
             if edit_id is not None and db.execute(
                 "SELECT id FROM staff WHERE id = ?", (edit_id,)
             ).fetchone() is None:
@@ -83,6 +94,8 @@ def staff_settings():
                     db.execute("INSERT INTO staff (id, name, role, employment, veteran, is_help, allowed_areas, advance_help) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (new_id,) + data)
                 else:
                     db.execute("UPDATE staff SET name=?, role=?, employment=?, veteran=?, is_help=?, allowed_areas=?, advance_help=? WHERE id=?", data + (edit_id,))
+                if update_weekly:
+                    db.execute("UPDATE staff SET weekly_limit_units=? WHERE id=?",(weekly_limit,new_id if edit_id is None else edit_id))
                 db.commit()
                 return redirect(url_for("staff_settings", saved="1"))
         elif edit_id is not None:
@@ -154,6 +167,9 @@ register_negotiated_leave(app, connect_db)
 
 register_ui(app)
 
+
+from candidate_leave_apply import register_candidate_leave
+register_candidate_leave(app, connect_db)
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", debug=False)

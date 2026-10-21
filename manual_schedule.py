@@ -10,7 +10,7 @@ from schedule import read_snapshot, digest
 from schedule_display import monthly_display, grouped_shortages
 from scheduler_engine import prepare, verify, draft_shortages, six_day_runs
 
-CODES = {"R":"休み", "D":"診療勤務（看護師）", "C":"検査室（検査技師）",
+CODES = {"S":"夏季休暇", "T":"あおば支援", "R":"休み", "D":"診療勤務（看護師）", "C":"検査室（検査技師）",
          "O":"通常業務", "M":"会議", "P":"有給", "A":"診療勤務（旧A）", "B":"診療勤務（旧B）"}
 
 
@@ -126,7 +126,7 @@ def diagnostics(snapshot, base, grid):
 
 
 
-def synchronize_paid_inputs(snapshot, base, grid):
+def synchronize_paid_inputs(snapshot, base, grid, changed_only=False):
     """表で指定した有給と、その表で明示的に取り消した有給を入力へ反映する案。"""
     from copy import deepcopy
     updated=deepcopy(snapshot)
@@ -138,7 +138,15 @@ def synchronize_paid_inputs(snapshot, base, grid):
             if person["is_help"]:
                 continue
             pair=grid[d][i]
+            if changed_only and pair==base["grid"][d][i]:continue
             key=str(person["id"])+"_"+day
+            for kind,code in (("summer","S"),("support","T")):
+                target=updated.setdefault("monthly_settings",{}).setdefault(kind,{})
+                current=periods.get(frozenset(h for h,c in enumerate(pair) if c==code),"")
+                if pair!=base["grid"][d][i] and current!=target.get(key,""):
+                    changes.append(dict(key=key,date=day,name=person["name"],kind=kind,before=target.get(key,""),after=current))
+                    if current:target[key]=current
+                    else:target.pop(key,None)
             paid=periods.get(frozenset(h for h,c in enumerate(pair) if c=="P"),"")
             old=leaves.get(key,"")
             if paid and paid!=old or not paid and old and "P" in base["grid"][d][i] and pair!=base["grid"][d][i]:
@@ -151,6 +159,12 @@ def synchronize_paid_inputs(snapshot, base, grid):
 
 
 def save_paid_inputs(db, snapshot):
+    table=db.execute("SELECT name FROM sqlite_master WHERE name='monthly_settings'").fetchone()
+    row=db.execute("SELECT data FROM monthly_settings WHERE month=?",(snapshot["month"],)).fetchone() if table else None
+    original=json.loads(row[0]) if row else {}
+    if any(original.get(k,{})!=snapshot["monthly_settings"].get(k,{}) for k in ("summer","support")):
+        db.execute("CREATE TABLE IF NOT EXISTS monthly_settings(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
+        db.execute("INSERT INTO monthly_settings VALUES (?,?) ON CONFLICT(month) DO UPDATE SET data=excluded.data",(snapshot["month"],json.dumps(snapshot["monthly_settings"],ensure_ascii=False)))
     db.execute("CREATE TABLE IF NOT EXISTS leave_history(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
     db.execute("INSERT INTO leave_history VALUES (?,?) ON CONFLICT(month) DO UPDATE SET data=excluded.data",
                (snapshot["month"],json.dumps(snapshot["leave_history"],ensure_ascii=False)))
@@ -169,7 +183,7 @@ def synchronize_help_inputs(snapshot, base, grid):
         for i,person in enumerate(base["people"]):
             if not person["is_help"]:
                 continue
-            needed={h for h,c in enumerate(grid[d][i]) if c in "ABCDMO"}
+            needed={h for h,c in enumerate(grid[d][i]) if c in "ABCDMOT"}
             key=str(person["id"])+"_"+day
             before=visits.get(key,"")
             missing=needed-periods.get(before,set())
@@ -189,7 +203,7 @@ def save_help_inputs(db,snapshot):
 def register_manual_schedule(app, connect_db):
     @app.template_filter("manual_pair")
     def manual_pair(pair):
-        labels={"R":"休","D":"診","C":"検","O":"業","M":"会","P":"有","A":"診","B":"診"}
+        labels={"S":"夏","T":"支","R":"休","D":"診","C":"検","O":"業","M":"会","P":"有","A":"診","B":"診"}
         return "／".join(labels.get(c,c) for c in pair)
 
     @app.route("/schedule/manual",methods=["GET","POST"])
@@ -241,6 +255,10 @@ def register_manual_schedule(app, connect_db):
                             raise ValueError("取り込み元の日付が対象月と一致しません。")
                         patch=json.dumps({f"{d}_{i}":source["grid"][source_days[day]][source_people[str(person["id"])]] if str(person["id"]) in source_people else "RR"
                                           for d,day in enumerate(base["days"]) for i,person in enumerate(base["people"])})
+                    input_priority = request.form.get("input_priority")=="yes" or action=="reflect_inputs"
+                    if action=="reflect_inputs":
+                        from input_reflection import reflection_patch
+                        patch=reflection_patch(snapshot,base)
                     if action=="undo":
                         if not base.get("history"):
                             raise ValueError("戻せる修正履歴がありません。")
@@ -248,10 +266,10 @@ def register_manual_schedule(app, connect_db):
                         patch=json.dumps({str(d)+"_"+str(i):pair for d,row in enumerate(previous) for i,pair in enumerate(row)})
                     grid,changes=checked_patch(base,patch)
                     if action!="edit":
-                        snapshot,paid_changes=synchronize_paid_inputs(snapshot,base,grid)
+                        snapshot,paid_changes=synchronize_paid_inputs(snapshot,base,grid,changed_only=input_priority)
                         snapshot,help_changes=synchronize_help_inputs(snapshot,base,grid)
-                    signature=digest(json.dumps([month,fp,token,patch]))
-                    if action in ("preview","undo","import"):
+                    signature=digest(json.dumps([month,fp,token,patch,input_priority]))
+                    if action in ("preview","undo","import","reflect_inputs"):
                         preview=True
                         session["manual_confirmation"]=signature
                     elif action=="edit":
@@ -294,7 +312,7 @@ def register_manual_schedule(app, connect_db):
         warnings,shortages=diagnostics(snapshot,base,grid)
         checks_incomplete=any("全体チェックは未完了" in m or "全体チェックはできません" in m for m in warnings)
         display=monthly_display(base["days"],base["people"],grid,snapshot["monthly_settings"],
-                                shortages=shortages,comparison_inputs={"wishes":snapshot["monthly_settings"].get("wishes",{}),"leaves":snapshot["leave_history"].get("leaves",{})},
+                                shortages=shortages,comparison_inputs={"summer":snapshot["monthly_settings"].get("summer",{}),"support":snapshot["monthly_settings"].get("support",{}),"wishes":snapshot["monthly_settings"].get("wishes",{}),"leaves":snapshot["leave_history"].get("leaves",{})},
                                 doctor_plans=snapshot["doctor_plans"])
         if preview:
             for i, row in enumerate(display["rows"]):
@@ -311,6 +329,7 @@ def register_manual_schedule(app, connect_db):
         paid_candidates = (leave_candidates(snapshot,base if "updated" in base else None,fp)
                            if not preview and not error else
                            dict(days=[],groups=[],message="編集内容を確認・保存してから、有給候補を確認してください。"))
+        paid_candidates["source_kind"]="manual"
         return render_template("manual_schedule.html",help_changes=help_changes,paid_changes=paid_changes,paid_candidates=paid_candidates,month=month,base=base,grid=grid,display=display,
-                               fingerprint=fp,revision=token,error=error,preview=preview,changes=changes,patch=patch,initial_patch=initial_patch,
+                               input_priority=bool(request.form.get("input_priority")=="yes" or request.form.get("action")=="reflect_inputs"),fingerprint=fp,revision=token,error=error,preview=preview,changes=changes,patch=patch,initial_patch=initial_patch,
                                warnings=warnings,shortages=shortages,codes=CODES,import_sources=import_sources,checks_incomplete=checks_incomplete,stale=base["input_hash"]!=fp)

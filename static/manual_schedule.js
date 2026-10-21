@@ -5,8 +5,8 @@ const modal=document.getElementById("manual-dialog"),am=document.getElementById(
 const patch={...(data.pending||{})},field=document.getElementById("manual-patch"),list=document.getElementById("manual-pending");
 const buttons=[...document.querySelectorAll(".manual-cell")];
 const sheet=buttons[0]?.closest(".paper-schedule");
-const labels={R:"休",D:"日",C:"日",O:"日",M:"会",P:"有休",A:"日",B:"日"};
-const details={R:"休み",D:"診療勤務",C:"検査室",O:"通常業務",M:"会議",P:"有給",A:"診療勤務（旧A）",B:"診療勤務（旧B）"};
+const labels={S:"夏休",T:"支援",R:"休",D:"日",C:"日",O:"日",M:"会",P:"有休",A:"日",B:"日"};
+const details={S:"夏季休暇",T:"あおば支援",R:"休み",D:"診療勤務",C:"検査室",O:"通常業務",M:"会議",P:"有給",A:"診療勤務（旧A）",B:"診療勤務（旧B）"};
 const pairLabel=p=>p[0]===p[1]?labels[p[0]]:labels[p[0]]+"/"+labels[p[1]];
 const cellLabel=(p,i)=>data.people[i].is_help?(p==="RR"?"":p[1]==="R"&&"ABCDMO".includes(p[0])?"午前":p[0]==="R"&&"ABCDMO".includes(p[1])?"午後":pairLabel(p)):pairLabel(p);
 const originalTotals=[...(sheet?.querySelectorAll(".paper-duty-row .paper-total")||[])].map(el=>el.textContent);

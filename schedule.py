@@ -124,7 +124,7 @@ def register_schedule(app, connect_db):
                         outcome.update(status="unknown", messages=validation)
                     else:
                         problem = outcome["problem"]
-                        saved = dict(rebalanced=request.form.get("mode")=="rebalance", max_full_days=outcome.get("max_full_days",5), six_day_runs=outcome.get("six_day_runs", []), doctor_plans=snapshot.get("doctor_plans", {}), monthly_context=snapshot.get("monthly_settings", {}), comparison_inputs={"wishes": snapshot.get("monthly_settings", {}).get("wishes", {}), "leaves": snapshot.get("leave_history", {}).get("leaves", {})}, weekly_summary=weekly_summary(problem,outcome["grid"]), input_hash=fingerprint, mode="help" if use_help else "self", days=problem["days"],
+                        saved = dict(rebalanced=request.form.get("mode")=="rebalance", max_full_days=outcome.get("max_full_days",5), six_day_runs=outcome.get("six_day_runs", []), doctor_plans=snapshot.get("doctor_plans", {}), monthly_context=snapshot.get("monthly_settings", {}), comparison_inputs={"wishes": snapshot.get("monthly_settings", {}).get("wishes", {}), "leaves": snapshot.get("leave_history", {}).get("leaves", {}), "summer":snapshot.get("monthly_settings",{}).get("summer",{}), "support":snapshot.get("monthly_settings",{}).get("support",{})}, weekly_summary=weekly_summary(problem,outcome["grid"]), input_hash=fingerprint, mode="help" if use_help else "self", days=problem["days"],
                                      people=problem["people"], grid=outcome["grid"], notes=outcome["messages"],
                                      created=datetime.now(timezone.utc).isoformat(), targets={str(problem["people"][i]["id"]):problem["targets"][k]/2 for k,i in enumerate(problem["regular"])})
                         db = connect_db()
@@ -174,7 +174,7 @@ def register_schedule(app, connect_db):
             if outcome:
                 shortage_rows=grouped_shortages(outcome["shortages"],outcome["problem"],outcome["grid"])
                 source_raw=seed_raw
-        current_comparison = {"wishes": snapshot.get("monthly_settings", {}).get("wishes", {}),
+        current_comparison = {"summer":snapshot.get("monthly_settings",{}).get("summer",{}),"support":snapshot.get("monthly_settings",{}).get("support",{}),"wishes": snapshot.get("monthly_settings", {}).get("wishes", {}),
                               "leaves": snapshot.get("leave_history", {}).get("leaves", {})}
         draft_display = None
         if outcome and outcome.get("status") == "draft":
@@ -202,7 +202,16 @@ def register_schedule(app, connect_db):
         finally:
             db.close()
         from leave_candidates import leave_candidates
-        paid_candidates = leave_candidates(snapshot, saved, fingerprint)
+        candidate_source = (dict(days=outcome["problem"]["days"],people=outcome["problem"]["people"],grid=outcome["grid"],input_hash=fingerprint) if outcome and outcome.get("grid") and outcome.get("status")=="draft" else saved)
+        if outcome and outcome.get("status")=="draft":
+            from help_shortages import source_data
+            db=connect_db()
+            try:
+                raw_candidate=source_data(db,month,"draft")
+                candidate_source=json.loads(raw_candidate) if raw_candidate else candidate_source
+            finally:db.close()
+        paid_candidates = leave_candidates(snapshot, candidate_source, fingerprint)
+        paid_candidates["source_kind"]="draft" if outcome and outcome.get("status")=="draft" else "generated"
         from itsdangerous import URLSafeSerializer
         shortage_scope = URLSafeSerializer(app.secret_key, salt="agreed-shortage-days").dumps(
             dict(month=month,fingerprint=fingerprint,days=concise_shortages(shortage_rows),

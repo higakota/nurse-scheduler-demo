@@ -1,9 +1,10 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>勤務表の手動修正</title>
 <link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='app-ui.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='schedule.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='manual_schedule.css') }}"></head>
-<body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content"><div class="editor-heading"><div><p class="eyebrow">{{ ui_month_label }} ／ 表を見ながら仕上げる</p><h1>勤務表の編集・印刷</h1></div><span class="status-badge muted">{{ '変更反映済み' if base.updated is defined else '編集中の勤務表' }}</span></div>
+<body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content"><div class="editor-heading"><div><p class="eyebrow">{{ ui_month_label }} ／ 表を見ながら仕上げる</p>{% for message in get_flashed_messages(category_filter=['candidate-leave']) %}<p role="status">{{ message }}</p>{% endfor %}<h1>勤務表の編集・印刷</h1></div><span class="status-badge muted">{{ '変更反映済み' if base.updated is defined else '編集中の勤務表' }}</span></div>
 <p class="page-description">この表が編集・印刷の対象です。マスで修正したら、変更内容を確認して反映します。希望休からの出勤は「本人了承の変更」で入力します。</p>
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}{% if request.args.get('saved') %}<p class="success" role="status">{{ '了承出勤を取り消した勤務表を表示しています。' if request.args.get('agreed')=='cancelled' else '了承済みの変更を勤務表に反映しました。' if request.args.get('agreed')=='changed' else '勤務表の修正を保存しました。' }}</p>{% endif %}
 {% if stale %}<p class="workflow-notice">入力条件が変更されています。表と確認事項を見直し、下書きを保存してください。</p>{% endif %}
+{% if not preview and stale %}<section class="panel"><h2>入力の変更をこの表に反映</h2><p>希望休・有給・会議などの変更だけ反映し、条件に合う勤務と依頼済みヘルプは維持します。変更内容を確認してから保存します。</p><form method="post">{% include "_manual_tokens.html" %}<button name="action" value="reflect_inputs">変更箇所を確認する</button></form></section>{% endif %}
 {% if not preview %}<div class="editor-actionbar manual-print-actions">
 {% if base.updated is defined %}<button type="button" class="secondary" data-print-packet="manual-print">勤務表だけ印刷／PDF保存</button><form method="post" action="{{ url_for('refresh_help_shortages',month=month) }}"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><button class="secondary">この表の不足を確認してヘルプを追加 →</button></form>{% endif %}
 <a href="{{ url_for('agreed_wish_change',month=month) }}">本人の了承を得て、希望休を出勤へ変更する →</a>
@@ -19,11 +20,11 @@
 <section class="panel"><h2>保存前の変更確認（{{ changes|length }}件）</h2>
 <p>記号：診＝看護師の診療勤務、検＝検査技師の検査室、業＝通常業務、会＝会議、休＝休み、有＝有給。左が午前、右が午後です。</p>
 <ul>{% for c in changes %}<li>{{ c.day|date_with_weekday }} {{ c.name }}：<strong>{{ c.before|manual_pair }}</strong> → <strong>{{ c.after|manual_pair }}</strong></li>{% else %}<li>変更はありません。</li>{% endfor %}</ul>
-{% if paid_changes %}<p>表の有給を登録にも反映します。</p><ul>{% for item in paid_changes %}<li>{{ item.date|date_with_weekday }} {{ item.name }}：{{ {'full':'全日有給','am':'午前有給','pm':'午後有給'}.get(item.after,'有給取消') }}</li>{% endfor %}</ul>{% endif %}
-<form method="post">{% include "_manual_tokens.html" %}<input type="hidden" name="patch" value="{{ patch }}">
+{% if paid_changes %}<p>表で変更した有給・夏季休暇・あおば支援を入力にも反映します。</p><ul>{% for item in paid_changes %}<li>{{ item.date|date_with_weekday }} {{ item.name }}：{{ ('夏季休暇' if item.kind|default('')=='summer' else 'あおば支援' if item.kind|default('')=='support' else '有給') ~ '：' ~ {'full':'全日','am':'午前','pm':'午後','':'取消'}.get(item.after,item.after) }}</li>{% endfor %}</ul>{% endif %}
+<form method="post">{% include "_manual_tokens.html" %}<input type="hidden" name="input_priority" value="{{ 'yes' if input_priority else 'no' }}"><input type="hidden" name="patch" value="{{ patch }}">
 {% if help_changes %}<p>表のヘルプ出勤を来院予定にも反映します。</p><ul>{% for item in help_changes %}<li>{{ item.date|date_with_weekday }} {{ item.name }}：{{ {'full':'全日','am':'午前のみ','pm':'午後のみ'}[item.after] }}</li>{% endfor %}</ul><label class="checkbox"><input type="checkbox" name="help_consent" value="yes" required>表示したヘルプの来院OKを確認し、来院予定にも反映します</label>{% endif %}
 <label class="checkbox"><input type="checkbox" name="confirm" value="yes" required>変更内容と下の確認事項を見て、下書きとして保存します</label><button name="action" value="save">この変更を勤務表に反映</button></form>
-<form method="post">{% include "_manual_tokens.html" %}<input type="hidden" name="patch" value="{{ patch }}"><button name="action" value="edit" class="secondary">変更を残して編集を続ける</button></form><p><a href="{{ url_for('manual_schedule',month=month) }}">変更を破棄して戻る</a></p></section>
+<form method="post">{% include "_manual_tokens.html" %}<input type="hidden" name="input_priority" value="{{ 'yes' if input_priority else 'no' }}"><input type="hidden" name="patch" value="{{ patch }}"><button name="action" value="edit" class="secondary">変更を残して編集を続ける</button></form><p><a href="{{ url_for('manual_schedule',month=month) }}">変更を破棄して戻る</a></p></section>
 {% endif %}
 {% if preview and changes %}<p class="manual-instruction"><strong>黄色のマスが今回の変更箇所です。</strong>マスの上段が変更前、矢印の下が変更後です。まだ保存していません。</p>{% endif %}
 {% if preview %}<h2>変更後の下書き（まだ保存していません）</h2>{% endif %}

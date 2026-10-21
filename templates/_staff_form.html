@@ -21,7 +21,7 @@
           <option value="full" {% if values.employment in ('full','') %}selected{% endif %}>常勤</option>
           <option value="part" {% if values.employment == 'part' %}selected{% endif %}>非常勤</option>
         </select>
-        <p id="weekly-fields" class="hint">非常勤の週上限は、登録後に<a href="{{ url_for('monthly_settings', month=ui_month, _anchor='targets') }}">休日日数・週上限</a>で設定してください。</p>
+        <div id="weekly-fields"><label for="weekly-limit-days">週の勤務上限（日）</label><input type="number" id="weekly-limit-days" name="weekly_limit_days" min="0" max="7" step="0.5" value="{{ request.form.get('weekly_limit_days', values.weekly_limit_units / 2 if values.weekly_limit_units|default(none) is not none else '') }}"><p class="hint">非常勤の週上限は、登録後に<a href="{{ url_for('monthly_settings', month=ui_month, _anchor='targets') }}">休日日数・週上限</a>でも変更できます。</p></div>
         <label class="checkbox"><input type="checkbox" name="veteran" value="1" {% if values.veteran %}checked{% endif %}> ベテラン看護師として数える</label>
         <fieldset id="no-c-field">
           <legend>担当できる場所</legend>

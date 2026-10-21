@@ -56,7 +56,7 @@ class StaffSettingsTest(unittest.TestCase):
     def test_technician_cannot_count_as_veteran(self):
         self.save(name="検査 花子", role="technician", employment="full", veteran="1")
         row = self.rows()[0]
-        self.assertEqual((row["employment"], row["veteran"]), ("", 0))
+        self.assertEqual((row["employment"], row["veteran"]), ("part", 0))
         self.assertIn("検査室のみ", self.client.get("/staff").get_data(as_text=True))
 
     def test_invalid_input_does_not_write(self):

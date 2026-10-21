@@ -47,7 +47,7 @@ class MonthlyTest(unittest.TestCase):
     def test_meeting_preserves_wish_and_warns(self):
         self.post(action="settings", **{"wish_1_2026-10-20": "pm"})
         self.assertEqual(self.post(action="meeting_add", meeting_date="2026-10-20", title="院内会議", participants="1").status_code, 302)
-        self.assertIn("入力の見直しが必要", self.client.get("/monthly?month=2026-10").get_data(as_text=True))
+        self.assertIn("希望休を優先し", self.client.get("/monthly?month=2026-10").get_data(as_text=True))
         self.assertEqual(self.stored()["wishes"]["1_2026-10-20"], "pm")
         meeting = self.stored()["meetings"][0]
         self.post(action="meeting_delete", meeting_id=meeting["id"])

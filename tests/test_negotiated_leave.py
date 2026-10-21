@@ -121,7 +121,7 @@ class NegotiatedLeaveTest(unittest.TestCase):
         db.commit();db.close()
         before=self.dump()
         text=self.post(self.fields(),"preview").get_data(as_text=True)
-        self.assertIn("有給と重なっています",text)
+        self.assertIn("不足一覧に表示された日",text)
         self.assertEqual(before,self.dump())
 
     def test_stale_form_and_tampered_reason_do_not_apply(self):
@@ -146,7 +146,7 @@ class NegotiatedLeaveTest(unittest.TestCase):
         text=self.post(dict(fields,day="2026-03-02"),"preview").get_data(as_text=True)
         self.assertIn("対象月の出勤日",text)
         text=self.post(dict(fields,staff="1"),"preview").get_data(as_text=True)
-        self.assertIn("希望休がありません",text)
+        self.assertIn("希望休・有給がありません",text)
         self.assertEqual(before,self.dump())
 
     def test_helpers_added_after_draft_do_not_block_agreed_change(self):

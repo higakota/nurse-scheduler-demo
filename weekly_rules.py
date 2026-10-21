@@ -6,7 +6,7 @@ HISTORY_UNITS = {"full":2, "am":1, "pm":1, "rest":0, "paid":0, "am_paid":1, "pm_
 
 
 def work_units(pair):
-    return sum(code in "ABCDMWO" for code in pair)
+    return sum(code in "ABCDMWOT" for code in pair)
 
 
 def boundary_dates(month):

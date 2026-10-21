@@ -6,7 +6,7 @@ const editor=document.getElementById("agreed-editor"),content=document.getElemen
 const pickSwap=document.getElementById("agreed-pick-swap");
 let swapMode=false,dirty=Boolean(reason.value.trim()),submitting=false;
 const label=value=>{const d=new Date(value+"T12:00:00");return value+"（"+"日月火水木金土"[d.getDay()]+"）";};
-function entry(){return data.editable_days.includes(day.value)?(data.entries[day.value]||[]).find(item=>item.staff===staff.value&&item.wish):undefined;}
+function entry(){return data.editable_days.includes(day.value)?(data.entries[day.value]||[]).find(item=>item.staff===staff.value&&(item.wish||item.paid)):undefined;}
 function render(){
  const selected=entry();content.hidden=!selected;empty.hidden=Boolean(selected);
  document.querySelectorAll("[data-agreed-fallback]").forEach(el=>el.hidden=true);
@@ -24,7 +24,7 @@ function render(){
   button.closest("td").classList.toggle("is-swap-candidate",swapMode&&!button.disabled);
  });
  document.getElementById("agreed-selection").textContent=selected?label(day.value)+" "+selected.name:"変更する希望休";
- document.getElementById("agreed-selection-note").textContent=selected?selected.wish_label+"希望休です。本人が了承した出勤時間帯を選んでください。":"";
+ document.getElementById("agreed-selection-note").textContent=selected?(selected.wish_label?selected.wish_label+"希望休":selected.paid_label+"有給")+"です。本人が了承した出勤時間帯を選んでください。":"";
  document.getElementById("agreed-swap-status").textContent=swap.value?"代わりの全日希望休："+label(swap.value):"指定なし：公休日数を守るための休みを自動調整します。";
  document.getElementById("agreed-clear-swap").hidden=!swap.value;
  pickSwap.textContent=swapMode?"日付選択をやめる":"カレンダーで選ぶ";

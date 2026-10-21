@@ -2,8 +2,8 @@
 from datetime import date
 from scheduler_engine import rest_units
 
-LABELS = {"D": "日", "A": "日", "B": "日", "C": "日", "O": "日", "M": "会", "R": "休", "P": "有休"}
-DETAILS = {"D": "診療（ABC担当は未定）", "A": "A（受付）", "B": "B（診察室）", "C": "C（検査室）", "O": "業（通常業務）", "M": "会（会議）", "R": "休", "P": "有休"}
+LABELS = {"S":"夏休", "T":"支援", "D": "日", "A": "日", "B": "日", "C": "日", "O": "日", "M": "会", "R": "休", "P": "有休"}
+DETAILS = {"S":"夏季休暇（公休・有給の対象外）", "T":"あおば支援（みどりの人数に含めない）", "D": "診療（ABC担当は未定）", "A": "A（受付）", "B": "B（診察室）", "C": "C（検査室）", "O": "業（通常業務）", "M": "会（会議）", "R": "休", "P": "有休"}
 
 
 def monthly_display(days, people, grid, monthly=None, targets=None, shortages=None, comparison_inputs=None, doctor_plans=None):
@@ -19,7 +19,8 @@ def monthly_display(days, people, grid, monthly=None, targets=None, shortages=No
                             doctors_am=([] if parsed.weekday() == 6 or day in monthly.get("closures", {}) else (doctor_plans or {}).get(day, {}).get("am")),
                             doctors_pm=([] if parsed.weekday() in (4,6) or day in monthly.get("closures", {}) else (doctor_plans or {}).get(day, {}).get("pm"))))
     comparison_wishes = dict(comparison_inputs.get("wishes", {})) if comparison_inputs is not None else {}
-    original_wishes, agreed_changes, replacement_changes = {}, {}, {}
+    comparison_paid = dict(comparison_inputs.get("leaves",{})) if comparison_inputs is not None else {}
+    original_wishes, agreed_changes, replacement_changes, original_paid = {}, {}, {}, {}
     if comparison_inputs is not None:
         # 作成条件の wishes は変更後のまま。比較欄だけ元の希望を復元する。
         for record in monthly.get("agreed_wish_changes", []):
@@ -27,11 +28,13 @@ def monthly_display(days, people, grid, monthly=None, targets=None, shortages=No
                 continue
             key = str(record["staff_id"]) + "_" + record["date"]
             original_wishes.setdefault(key, record["original_wish"])
+            if record.get("original_paid"):original_paid.setdefault(key,record["original_paid"])
             agreed_changes.setdefault(key, []).append(record)
             if record.get("replacement_date"):
                 replacement = str(record["staff_id"]) + "_" + record["replacement_date"]
                 replacement_changes.setdefault(replacement, []).append(record)
         comparison_wishes.update(original_wishes)
+        comparison_paid.update(original_paid)
     rows = []
     for i, person in enumerate(people):
         cells = []
@@ -42,7 +45,7 @@ def monthly_display(days, people, grid, monthly=None, targets=None, shortages=No
             labels = [("—" if person["is_help"] and code == "R" else LABELS[code]) for code in pair]
             label = labels[0] if labels[0] == labels[1] else "/".join(labels)
             if person["is_help"]:
-                label = "" if pair=="RR" else "午前" if pair[1]=="R" and pair[0] in "ABCDMO" else "午後" if pair[0]=="R" and pair[1] in "ABCDMO" else label
+                label = "" if pair=="RR" else "午前" if pair[1]=="R" and pair[0] in "ABCDMOT" else "午後" if pair[0]=="R" and pair[1] in "ABCDMOT" else label
             detail_codes = [("診" if code in "ABD" or (code == "C" and person.get("role") == "nurse") else code) for code in pair]
             detail = "/".join(detail_codes) if detail_codes[0] != detail_codes[1] else detail_codes[0]
             if person["is_help"]:
@@ -55,7 +58,7 @@ def monthly_display(days, people, grid, monthly=None, targets=None, shortages=No
             key = str(person["id"]) + "_" + day
             if comparison_inputs is not None:
                 wish = comparison_wishes.get(key, "")
-                paid = comparison_inputs.get("leaves", {}).get(key, "")
+                paid = comparison_paid.get(key, "")
                 if wish in ("full", "am", "pm"):
                     requests.append(dict(kind="wish", label={"full":"希望休", "am":"午前休", "pm":"午後休"}[wish],
                                          hint="希望休：" + {"full":"全日", "am":"午前", "pm":"午後"}[wish]))
@@ -66,7 +69,7 @@ def monthly_display(days, people, grid, monthly=None, targets=None, shortages=No
             records = agreed_changes.get(key, [])
             replacements = replacement_changes.get(key, [])
             if records:
-                adjustment_label = "了承出勤" if any(code in "ABCDMO" for code in pair) else "了承変更"
+                adjustment_label = "了承出勤" if any(code in "ABCDMOT" for code in pair) else "了承変更"
                 periods = {"full":"全日", "am":"午前", "pm":"午後"}
                 adjustment_hint = "元の希望休を残して表示。本人了承で出勤へ変更：" + "、".join(
                     periods.get(record["work_period"], record["work_period"]) for record in records)
@@ -79,10 +82,13 @@ def monthly_display(days, people, grid, monthly=None, targets=None, shortages=No
                 requests.append(dict(kind="agreed", label=adjustment_label, hint=adjustment_hint))
             request_halves = []
             for half in ("am", "pm"):
-                paid_here = comparison_inputs is not None and comparison_inputs.get("leaves", {}).get(key, "") in ("full", half)
+                paid_here = comparison_inputs is not None and comparison_paid.get(key, "") in ("full", half)
                 wish_here = comparison_inputs is not None and comparison_wishes.get(key, "") in ("full", half)
-                request_halves.append(dict(label="有休" if paid_here else ("休" if wish_here else "—"),
-                                           kind="paid" if paid_here else ("wish" if wish_here else "empty")))
+                summer_here = comparison_inputs is not None and comparison_inputs.get("summer",{}).get(key,"") in ("full",half)
+                support_here = comparison_inputs is not None and comparison_inputs.get("support",{}).get(key,"") in ("full",half)
+                if summer_here or support_here:requests.append(dict(kind="special",label="夏休" if summer_here else "支援",hint="夏季休暇" if summer_here else "あおば支援"))
+                request_halves.append(dict(label="夏休" if summer_here else "支援" if support_here else "有休" if paid_here else ("休" if wish_here else "—"),
+                                           kind="paid" if paid_here else ("wish" if wish_here else "special" if summer_here or support_here else "empty")))
             request_segments = []
             if requests:
                 request_segments = [request_halves[0]] if request_halves[0] == request_halves[1] else request_halves

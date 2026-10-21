@@ -29,7 +29,7 @@ class ManualPaidSyncTest(unittest.TestCase):
         patch=json.dumps({"2_0":"PP"})
         before=list(db.iterdump())
         preview=self.client.post("/schedule/manual?month=2026-02",data=dict(fields,action="preview",patch=patch)).get_data(as_text=True)
-        self.assertIn("表の有給を登録にも反映します",preview)
+        self.assertIn("表で変更した有給・夏季休暇・あおば支援を入力にも反映します",preview)
         self.assertEqual(before,list(db.iterdump()))
         response=self.client.post("/schedule/manual?month=2026-02",data=dict(fields,action="save",patch=patch,confirm="yes"))
         self.assertEqual(response.status_code,303)

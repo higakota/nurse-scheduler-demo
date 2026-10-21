@@ -27,12 +27,12 @@ def save_absences(db, month, form):
         changes = json.loads(form.get("absence_changes", ""))
     except (ValueError, TypeError):
         raise ValueError("カレンダーの選択内容を読み取れません。")
-    if not isinstance(changes, dict) or set(changes) != {"wishes", "leaves"}:
+    if not isinstance(changes, dict) or not {"wishes", "leaves"} <= set(changes) or set(changes)-{"wishes","leaves","summer","support"}:
         raise ValueError("希望休・有給の入力内容が正しくありません。")
     ids = {str(person["id"]) for person in staff}
     year, number = map(int, month.split("-"))
-    for kind, target in (("wishes", monthly["wishes"]), ("leaves", history["leaves"])):
-        patch = changes[kind]
+    for kind, target in (("wishes", monthly["wishes"]), ("leaves", history["leaves"]), ("summer",monthly.setdefault("summer",{})), ("support",monthly.setdefault("support",{}))):
+        patch = changes.get(kind,{})
         if not isinstance(patch, dict) or len(patch) > len(ids) * calendar.monthrange(year, number)[1]:
             raise ValueError("希望休・有給の入力件数が正しくありません。")
         for key, period in patch.items():

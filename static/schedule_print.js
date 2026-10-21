@@ -44,6 +44,7 @@ function preparePrint(packet) {
   selectedPacket = packet;
   document.body.classList.toggle("schedule-printing", Boolean(packet));
   if (packet) {
+    packet.querySelectorAll(".paper-schedule").forEach(table=>table.classList.add("comparison-enabled"));
     const heading = packet.querySelector("h1");
     document.title = heading ? heading.textContent.trim() : originalTitle;
   }

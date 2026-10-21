@@ -27,7 +27,7 @@ class ScheduleComparisonTest(unittest.TestCase):
         db = connect_db()
         row = db.execute("SELECT data FROM generated_schedules WHERE month='2026-02'").fetchone()
         saved = json.loads(row[0])
-        self.assertEqual(saved["comparison_inputs"], {"wishes": {}, "leaves": {}})
+        self.assertEqual(saved["comparison_inputs"], {"wishes": {}, "leaves": {}, "summer":{}, "support":{}})
         self.assertTrue(saved["doctor_plans"])
         self.assertIn("meetings", saved["monthly_context"])
         monthly = json.loads(db.execute("SELECT data FROM monthly_settings WHERE month='2026-02'").fetchone()[0])

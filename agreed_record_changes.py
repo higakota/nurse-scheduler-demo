@@ -62,6 +62,15 @@ def cancellation_plan(snapshot,base,index):
             wishes[replacement]=record["prior_replacement_wish"]
         else:
             wishes.pop(replacement,None)
+    paid_changes=[]
+    if "original_paid" in record:
+        leaves=updated.setdefault("leave_history",{}).setdefault("leaves",{})
+        if leaves.get(key,"")!=record.get("remaining_paid",""):
+            raise ValueError("有給が後から変更されています。先に入力内容を確認してください。")
+        old=leaves.get(key,"")
+        if record["original_paid"]:leaves[key]=record["original_paid"]
+        else:leaves.pop(key,None)
+        if old!=record["original_paid"]:paid_changes.append(dict(key=key,date=record["date"],name=base["people"][next(j for j,p in enumerate(base["people"]) if str(p["id"])==pid)]["name"],before=old,after=record["original_paid"]))
     now=datetime.now(timezone.utc).isoformat()
     record.update(cancelled=True,cancelled_at=now)
     boundaries=[]
@@ -71,7 +80,7 @@ def cancellation_plan(snapshot,base,index):
             raise ValueError("前後月の勤務記録が後から変更されています。")
         entries[change["key"]]=change["before"]
         boundaries.append(dict(change,after=change["before"],before=change["after"]))
-    audit=dict(created=now,boundary_changes=boundaries,paid_changes=[],automatic_rest_dates=[])
+    audit=dict(created=now,boundary_changes=boundaries,paid_changes=paid_changes,automatic_rest_dates=[])
     return updated,grid,delta,audit
 
 

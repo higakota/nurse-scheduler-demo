@@ -122,3 +122,7 @@
 .home-main-actions>a>span:last-child{align-self:flex-end;color:var(--teal);margin-top:auto}
 .home-simple-links{display:flex;flex-wrap:wrap;gap:16px 28px;margin-top:24px;font-size:14px}
 @media(max-width:1000px){.home-main-actions{grid-template-columns:1fr}.home-main-actions>a{gap:8px;padding:20px}.home-main-actions>a>span:last-child{margin-top:-24px}.home-main-actions strong{font-size:18px}}
+
+.leave-candidate-action{display:inline;margin:0}.leave-candidate-action button{padding:4px 8px;font-size:13px}
+
+.input-more{position:relative;align-self:center;font-size:13px;color:var(--muted)}.input-more summary{cursor:pointer;padding:8px 13px}.input-more>div{position:absolute;right:0;z-index:20;background:white;border:1px solid var(--line);border-radius:8px;min-width:180px;padding:6px}.input-more a{display:block}

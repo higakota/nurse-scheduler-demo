@@ -3,7 +3,7 @@ PREFERRED_DAILY_HELPERS = 2
 
 
 def helper_count(people, rows):
-    return sum(bool(p["is_help"]) and any(c in "ABCDWMO" for c in pair)
+    return sum(bool(p["is_help"]) and any(c in "ABCDWMOT" for c in pair)
                for p, pair in zip(people, rows))
 
 
@@ -48,7 +48,7 @@ def helper_demand(problem, d, rows):
 
 def nurse_helper_excess(people, rows):
     """同じ日に来る看護師ヘルプが2人以上となる人数分。必須制限ではない。"""
-    count=sum(p["is_help"] and p["role"] == "nurse" and any(c in "ABCDWMO" for c in pair)
+    count=sum(p["is_help"] and p["role"] == "nurse" and any(c in "ABCDWMOT" for c in pair)
               for p,pair in zip(people,rows))
     return max(0,count-1)
 
@@ -56,8 +56,8 @@ def nurse_helper_excess(people, rows):
 def planned_helper_roles(problem,d,rows):
     """事前配置した人と、追加相談が必要な人数を合わせて比較する。"""
     nurses,techs=helper_demand_roles(problem,d,rows,prefer_technicians=True)
-    nurses+=sum(p["is_help"] and p["role"]=="nurse" and any(c in "ABCDWMO" for c in pair)
+    nurses+=sum(p["is_help"] and p["role"]=="nurse" and any(c in "ABCDWMOT" for c in pair)
                 for p,pair in zip(problem["people"],rows))
-    techs+=sum(p["is_help"] and p["role"]=="technician" and any(c in "ABCDWMO" for c in pair)
+    techs+=sum(p["is_help"] and p["role"]=="technician" and any(c in "ABCDWMOT" for c in pair)
                for p,pair in zip(problem["people"],rows))
     return nurses,techs
