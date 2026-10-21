@@ -125,6 +125,34 @@ def monthly_display(days, people, grid, monthly=None, targets=None, shortages=No
     return dict(days=headers, rows=rows, deficits=deficit_rows, has_shortages=bool(shortages), comparison_available=comparison_inputs is not None, doctors_available=doctor_plans is not None)
 
 
+
+def annotate_technician_alternatives(rows, problem, grid):
+    """同じ表の人数から、検査技師でも補える不足を表示する。保存済み表示にも使う。"""
+    if not grid:
+        return rows
+    tech_keys = {(r["date"],r["half"]):r for r in rows if "検査技師" in r["area"]}
+    result = []
+    for original in rows:
+        row = dict(original)
+        if row["area"] == "診療の看護師合計":
+            row.pop("alternative_technicians",None)
+            d = problem["days"].index(row["date"])
+            h = 0 if row["half"] == "午前" else 1
+            tech = sum(p["role"] == "technician" and grid[d][i][h] == "C"
+                       for i,p in enumerate(problem["people"]))
+            a,b,c = problem["requirements"][d][h]
+            nurse_count = sum(p["role"] == "nurse" and grid[d][i][h] in "ABCD"
+                              for i,p in enumerate(problem["people"]))
+            mandatory = max(0,a+b-nurse_count,int(bool(row.get("veteran_missing"))))
+            alternative = min(max(0,c-tech-tech_keys.get((row["date"],row["half"]),{}).get("missing",0)),
+                              max(0,row["missing"]-mandatory))
+            if alternative:
+                row["alternative_technicians"] = alternative
+                row["note"] = "うち" + str(alternative) + "人は検査技師でも可"
+        result.append(row)
+    return result
+
+
 def grouped_shortages(shortages, problem, grid):
     """人数の不足と検査技師の職種条件を、C番の同じ行にまとめる。元の判定は変えない。"""
     if any(r["area"] == "診療の看護師合計" or "C番として計上" in r["area"] for r in shortages):
@@ -143,22 +171,8 @@ def grouped_shortages(shortages, problem, grid):
             elif "他院の検査技師" in row["area"]:
                 row["area"] = "検査技師（C番として計上）"
                 row["note"] = "C番の担当として必要"
-            if row["area"] == "診療の看護師合計" and grid:
-                d = problem["days"].index(row["date"])
-                h = 0 if row["half"] == "午前" else 1
-                tech = sum(p["role"] == "technician" and grid[d][i][h] == "C"
-                           for i,p in enumerate(problem["people"]))
-                a,b,c = problem["requirements"][d][h]
-                nurse_count = sum(p["role"] == "nurse" and grid[d][i][h] in "ABCD"
-                                  for i,p in enumerate(problem["people"]))
-                mandatory_nurses = max(0,a+b-nurse_count,int(bool(row.get("veteran_missing"))))
-                alternative = min(max(0,c-tech-tech_keys.get(key,{}).get("missing",0)),
-                                  max(0,row["missing"]-mandatory_nurses))
-                if alternative:
-                    row["alternative_technicians"] = alternative
-                    row["note"] = ("うち" + str(alternative) + "人は検査技師でも可")
             result.append(row)
-        return merge_veteran_shortages(result)
+        return annotate_technician_alternatives(merge_veteran_shortages(result), problem, grid)
     c_rows = {(r["date"], r["half"]): r for r in shortages if r["area"].startswith("C（")}
     tech_rows = {(r["date"], r["half"]): r for r in shortages if "他院の検査技師" in r["area"]}
     result = []

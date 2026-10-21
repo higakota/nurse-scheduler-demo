@@ -102,8 +102,19 @@ def load_reference(db, month):
         if raw:
             source = json.loads(raw)
             reference["included_visits"] = included_helper_visits(source["people"], source["days"], source["grid"])
+    # 以前保存した人数も、同じ勤務表から表示だけ更新する。再作成・DB更新はしない。
+    display_rows = reference["rows"]
+    if display_rows and reference.get("source_kind"):
+        raw = source_data(db, month, reference["source_kind"])
+        if raw:
+            from scheduler_engine import prepare
+            from schedule_display import annotate_technician_alternatives
+            source = json.loads(raw)
+            problem = prepare(snapshot, use_help=True)
+            problem["people"] = source["people"]
+            display_rows = annotate_technician_alternatives(display_rows,problem,source["grid"])
     days={}
-    for item in reference["rows"]:
+    for item in display_rows:
         count=item["missing"]
         veteran=item.get("veteran_missing",0)
         if veteran:
@@ -115,6 +126,8 @@ def load_reference(db, month):
             label=f"他院の検査技師{count}人"
         else:
             label=f"看護師{count}人"
+        if item.get("alternative_technicians"):
+            label += f"（うち{item['alternative_technicians']}人は検査技師でも可）"
         days.setdefault(item["date"],[]).append(dict(half=item["half"],label=label))
     return dict(state="reference" if reference["input_hash"]!=fp else "current",days=days,
                 kind=reference["kind"],created=reference["created"],included_visits=reference.get("included_visits", {}))

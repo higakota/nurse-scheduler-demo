@@ -145,3 +145,33 @@ class HelpShortagesTest(unittest.TestCase):
         db.close()
         self.assertEqual(self.reference()["state"],"outdated")
         self.assertFalse(publish_reference(connect_db,snapshot,fp,[],expected_source=("manual",raw)))
+
+
+class TechnicianAlternativeCalendarTest(unittest.TestCase):
+    setUp=fixtures.ScheduleRouteTest.setUp
+    tearDown=fixtures.ScheduleRouteTest.tearDown
+    shortage=HelpShortagesTest.shortage
+    draft=HelpShortagesTest.draft
+
+    def test_saved_reference_updates_help_calendar_without_recreating_or_writing(self):
+        self.shortage()
+        db=connect_db()
+        coverage=json.loads(db.execute("SELECT data FROM coverage_settings").fetchone()[0])
+        for half in ("am","pm"):coverage["2026-02-02_"+half]["c"]=2
+        db.execute("UPDATE coverage_settings SET data=?",(json.dumps(coverage),))
+        db.commit();db.close()
+        self.draft()
+        db=connect_db()
+        reference=json.loads(db.execute("SELECT data FROM help_shortage_previews").fetchone()[0])
+        # 修正前に保存した不足表示と同じ形にする。
+        for row in reference["rows"]:
+            row.pop("alternative_technicians",None)
+        db.execute("UPDATE help_shortage_previews SET data=?",(json.dumps(reference),))
+        db.commit()
+        self.client.get("/help?month=2026-02")
+        before=list(db.iterdump())
+        page=self.client.get("/help?month=2026-02").get_data(as_text=True)
+        self.assertIn("看護師2人",page)
+        self.assertIn("うち1人は検査技師でも可",page)
+        self.assertEqual(before,list(db.iterdump()))
+        db.close()
