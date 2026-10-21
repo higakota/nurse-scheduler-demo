@@ -44,9 +44,8 @@ class WorkflowGuidanceTest(unittest.TestCase):
         self.assertIn('value="advance_draft"',page)
         self.assertNotIn('value="help"',page)
         home=self.client.get("/?month=2026-02").get_data(as_text=True)
-        self.assertIn("0件 登録",home)
-        self.assertIn("別に1件",home)
-        self.assertIn("アプリ外",home)
+        self.assertNotIn("依頼したヘルプを勤務表に反映する",home)
+        self.assertIn("/monthly?month=2026-02#availability",home)
 
     def test_draft_register_and_build_follow_the_same_workflow(self):
         self.prepare_helpers()
