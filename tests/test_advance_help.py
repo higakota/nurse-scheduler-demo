@@ -64,6 +64,8 @@ class AdvanceHelpRouteTest(unittest.TestCase):
     tearDown=fixtures.ScheduleRouteTest.tearDown
 
     def test_staff_flag_and_backup_roundtrip_and_draft_action(self):
+        initial=self.client.get("/schedule?month=2026-02").get_data(as_text=True)
+        self.assertIn('value="draft"',initial)
         self.client.get("/staff")
         with self.client.session_transaction() as state:token=state["csrf_token"]
         response=self.client.post("/staff",data=dict(csrf_token=token,name="事前ヘルプ仮名",role="nurse",
@@ -78,6 +80,8 @@ class AdvanceHelpRouteTest(unittest.TestCase):
         restored.close();db.close()
         page=self.client.get("/schedule?month=2026-02").get_data(as_text=True)
         self.assertIn('value="advance_draft"',page)
+        self.assertNotIn('value="draft"',page)
+        self.assertNotIn("自院だけの不足を調べる",page)
         fields={key:re.search('name="'+key+'" value="([^"]*)"',page)[1] for key in ("csrf_token","fingerprint","result_token","seed_token")}
         response=self.client.post("/schedule?month=2026-02",data=dict(fields,mode="advance_draft"))
         self.assertIn("事前に配置してよいヘルプ",response.get_data(as_text=True))
