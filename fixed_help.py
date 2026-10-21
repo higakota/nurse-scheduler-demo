@@ -1,7 +1,7 @@
 """相談の基になった自院の仮表を変えずにヘルプだけを配置する。"""
 import json
 from help_shortages import conditions_hash
-from scheduler_engine import _generate, finish_policy
+from scheduler_engine import _generate, finish_policy, prepare, six_day_runs
 
 
 def load_manual_source(db, month):
@@ -45,8 +45,24 @@ def generate_fixed_help(snapshot, seed_raw, seconds=10, source_name="自院の�
     fixed = {(day, str(person["id"])): seed["grid"][d][i]
              for d, day in enumerate(seed["days"])
              for i, person in enumerate(seed["people"]) if not person["is_help"]}
-    result = _generate(snapshot, use_help=True, seconds=seconds, fixed_regular=fixed, partial=partial)
-    finish_policy(result, 5)
+    # 不足を残す仮表では、元の自院勤務にある6連勤も未調整事項として表示する。
+    # 自院勤務は固定したままなので、新しい6連勤を作ることはない。
+    existing_six = False
+    if partial:
+        check = prepare(snapshot,use_help=True)
+        positions = {str(p["id"]):i for i,p in enumerate(seed["people"])}
+        if not check["errors"]:
+            rows = [[seed["grid"][d][positions[str(p["id"])]] if str(p["id"]) in positions else "RR"
+                     for p in check["people"]] for d in range(len(seed["days"]))]
+            existing_six = bool(six_day_runs(check,rows))
+    result = _generate(snapshot, use_help=True, seconds=seconds, fixed_regular=fixed, partial=partial,
+                       draft_max_full_days=6 if existing_six else 5)
+    if partial and existing_six:
+        result.update(experimental=False,max_full_days=6)
+        if result.get("grid") is not None:
+            result["six_day_runs"]=six_day_runs(result["problem"],result["grid"])
+    else:
+        finish_policy(result, 5)
     if result["status"] in ("success", "draft"):
         # 最終確認でも自院の勤務記号が変わっていないことを保証する。
         for d, day in enumerate(result["problem"]["days"]):
@@ -56,6 +72,8 @@ def generate_fixed_help(snapshot, seed_raw, seconds=10, source_name="自院の�
         result["messages"].append(source_name + "を維持し、承諾済みのヘルプだけを配置しました。")
         if partial:
             result["included_help"] = True
+            if existing_six:
+                result["messages"].append("元の自院勤務に6連勤が残っています。未調整の仮表として表示しています。完成前に連勤を確認・調整してください。")
     else:
         result["messages"].insert(0, source_name + "は変更していません。現在の来院予定では固定した表を完成できませんでした。来院日時・職種・ベテランの条件を確認してください。")
     return result

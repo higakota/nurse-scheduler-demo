@@ -55,6 +55,22 @@ class FixedHelpTest(unittest.TestCase):
             self.assertEqual(list(row),list(result["grid"][d][:len(row)]))
         self.assertEqual(verify(result["problem"],result["grid"],allow_shortages=True,max_full_days=result["max_full_days"]),[])
 
+    def test_partial_fixed_roster_can_show_existing_six_as_unresolved(self):
+        snapshot=fixtures.sample(open_days=(2,3,4,5,6,7,9))
+        snapshot["monthly_settings"]["targets"]={str(i):"22" for i in range(1,6)}
+        days=[f"2026-02-{d:02}" for d in range(1,29)]
+        grid=[["RR"]*5 for _ in days]
+        for d in range(1,7):
+            grid[d]=["DD","DD","DD","DD","CC"]
+        grid[5]=["DO","DO","DO","DO","CO"]
+        seed=dict(days=days,people=snapshot["staff"],grid=grid,conditions_hash=conditions_hash(snapshot))
+        result=generate_fixed_help(snapshot,json.dumps(seed),seconds=2,partial=True)
+        self.assertEqual(result["status"],"draft",result["messages"])
+        self.assertTrue(result["six_day_runs"])
+        self.assertTrue(any("未調整の仮表" in m for m in result["messages"]))
+        self.assertEqual([list(r) for r in result["grid"]],grid)
+        self.assertEqual(verify(result["problem"],result["grid"],allow_shortages=True,max_full_days=6),[])
+
     def test_changed_own_conditions_are_rejected_and_legacy_seed_is_revalidated(self):
         snapshot, raw, seed = self.setup_case()
         snapshot["monthly_settings"]["targets"]["3"] = "26"
