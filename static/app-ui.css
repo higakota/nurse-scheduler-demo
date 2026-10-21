@@ -61,8 +61,6 @@
 @media(max-width:600px){.editor-heading{align-items:flex-start;flex-direction:column;gap:8px}.workflow-callout{padding:15px}.result-toolbar>*{width:100%}.result-toolbar form button{width:100%}}
 @media print{.workflow-callout,.editor-tools,.workflow-notice,.repair-actions{display:none!important}}
 
-.workflow-path{margin:20px 0}.workflow-path ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:0;list-style:none}.workflow-path li{min-width:0}.workflow-path a{display:grid;grid-template-columns:28px 1fr;gap:4px 9px;height:100%;padding:17px 14px;background:#fff;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--ink)}.workflow-path a:hover,.workflow-path a:focus-visible{border-color:var(--teal);background:#edf5f1}.workflow-path a>span{grid-row:span 2;display:grid;place-items:center;align-self:start;width:26px;height:26px;background:#edf5f1;border-radius:50%;font-weight:700;color:var(--teal)}.workflow-path strong{font-size:14px}.workflow-path small{font-size:12px;color:var(--muted)}
-@media(max-width:1050px){.workflow-path ol{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:550px){.workflow-path ol{grid-template-columns:1fr}.workflow-path a{padding:12px 14px}}
 
 /* Visible keyboard navigation across all working screens. */
 .app-layout :is(a,button,input,select,textarea,summary):focus-visible{outline:3px solid #236fbd;outline-offset:3px;scroll-margin-block:100px}
@@ -81,3 +79,29 @@
 @media(max-width:380px){.staff-number-grid{grid-template-columns:1fr}}
 
 .partial-help-action{max-width:none;margin:18px 0}
+
+/* 作業の順番を全画面でそろえる。完了判定ではなく、今の操作位置を示す。 */
+.journey-nav{margin-left:208px;padding:12px 32px;background:#fff;border-bottom:1px solid var(--line)}
+.journey-nav ol{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;list-style:none;margin:0;padding:0}
+.journey-nav li{min-width:0}
+.journey-nav a{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;color:#60726a;text-decoration:none;font-size:12px;background:#f6f8f7;height:100%}
+.journey-nav a>span{display:grid;place-items:center;width:23px;height:23px;flex-shrink:0;border-radius:50%;background:#e6ece8;color:#4b6457;font-weight:700}
+.journey-nav a[aria-current=step]{color:#185c4d;background:#e6f2ec}
+.journey-nav a[aria-current=step]>span{color:white;background:#216b58}
+.journey-nav a:hover{background:#edf3ef;color:#185c4d}
+.month-overview small{display:block;margin-top:5px;color:var(--muted);font-size:12px;font-weight:400}
+.process-explainer{padding:18px 22px;background:#fff;border:1px solid var(--line);border-radius:12px;margin:20px 0;color:var(--ink)}
+.process-explainer p{margin:7px 0;line-height:1.8}
+.process-explainer small{color:var(--muted)}
+.next-work-panel{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:20px 0;padding:20px 22px;border-radius:12px;background:#edf6f0;border:1px solid #d7e8dd}
+.next-work-panel h3{margin:4px 0 8px;font-size:18px}
+.next-work-panel p{margin:0;color:#52665b;font-size:14px;line-height:1.7}
+.next-work-panel .actions{display:flex;flex-wrap:wrap;gap:10px;flex-shrink:0;max-width:430px}
+.button-link.secondary{background:white;color:#216b58;border:1px solid #bccfc5}
+.next-work-panel>.button-link{flex-shrink:0}
+.creation-footer{display:flex;gap:20px;flex-wrap:wrap;font-size:13px;margin-bottom:0}
+.creation-controls .creation-option{padding-block:18px}
+.help-visits-calendar td{vertical-align:top}
+@media(max-width:1100px){.journey-nav{padding-inline:24px}.journey-nav a{padding:8px;font-size:11px;gap:6px}.next-work-panel{align-items:flex-start;flex-direction:column}.next-work-panel .actions{max-width:none}}
+@media(max-width:800px){.journey-nav{margin-left:0;padding:10px 16px}.journey-nav ol{display:flex;flex-wrap:wrap;gap:6px}.journey-nav li{flex:1 1 135px}.journey-nav a{font-size:12px}.next-work-panel{padding:16px}.process-explainer{padding:16px}}
+@media print{.journey-nav,.next-work-panel,.process-explainer{display:none!important}}

@@ -72,6 +72,7 @@ def publish_reference(connect_db, snapshot, fingerprint, rows, kind="draft", out
             from manual_schedule import seed_draft
             seed_draft(db, snapshot["month"], snapshot, fingerprint, outcome)
             stored = json.loads(db.execute("SELECT data FROM help_shortage_previews WHERE month=?", (snapshot["month"],)).fetchone()[0])
+            stored["planning_mode"] = "help" if outcome.get("included_help") else "advance" if outcome.get("advance_help") else "own"
             stored["included_visits"] = included_helper_visits(outcome["problem"]["people"], outcome["problem"]["days"], outcome["grid"])
             stored["source_kind"] = "draft"
             stored["source_hash"] = hashlib.sha256(source_data(db, snapshot["month"], "draft").encode()).hexdigest()

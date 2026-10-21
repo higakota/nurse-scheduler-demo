@@ -10,7 +10,7 @@
 <main class="container app-main" id="main-content">
 {% include "_page_intro.html" %}<h1>今月の入力</h1>
 
-<p class="page-description">下のタブで入力を切り替えます。変更は各タブで保存してください。</p>
+<p class="page-description">希望休・有給・会議と、事前に分かるヘルプの勤務可能日を入力します。入力がそろったら「不足を確認」へ進みます。</p>
 {% if saved %}<p class="success" role="status">保存しました。</p>{% endif %}
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 {% for warning in warnings %}<p class="error" role="alert">{{ warning }}</p>{% endfor %}

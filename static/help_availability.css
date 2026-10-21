@@ -17,3 +17,6 @@
 .help-visits-calendar .help-visit-chip.is-current{outline:1px solid #809992;box-shadow:none}
 .help-visits-calendar .calendar-picker.has-leave{background:transparent}
 .help-shortage-item{flex-wrap:wrap}
+
+.help-visits-calendar .calendar-picker>summary{min-height:118px}
+.help-shortage-context .hint{font-size:13px;line-height:1.65}

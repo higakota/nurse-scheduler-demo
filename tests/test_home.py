@@ -59,7 +59,7 @@ class HomeTest(unittest.TestCase):
         before=list(db.iterdump())
         text=self.client.get("/?month=2026-11").get_data(as_text=True)
         self.assertIn("0/4項目に入力あり",text)
-        self.assertIn("自動で作った勤務表",text)
+        self.assertIn("不足の確認",text)
         self.assertIn("調整した勤務表",text)
         self.assertEqual(before,list(db.iterdump()))
         db.close()

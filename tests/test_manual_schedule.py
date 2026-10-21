@@ -215,7 +215,7 @@ class ManualScheduleTest(unittest.TestCase):
         self.db.commit()
         fields = self.fields()
         preview = self.post(fields, "preview", {}).get_data(as_text=True)
-        self.assertIn("この内容を下書き保存", preview)
+        self.assertIn("この変更を勤務表に反映", preview)
         self.assertEqual(self.post(fields, "save", {}).status_code, 303)
         latest = json.loads(self.db.execute("SELECT data FROM manual_schedules").fetchone()[0])
         self.assertNotEqual(latest["input_hash"], "old-inputs")

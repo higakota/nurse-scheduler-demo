@@ -18,8 +18,9 @@ class ScheduleActionsTest(unittest.TestCase):
         controls=text.split('class="panel creation-controls"',1)[1].split("<details",1)[0]
         self.assertIn('name="mode" value="help"',controls)
         self.assertIn("ヘルプ込みで勤務表を作成",controls)
-        self.assertIn("来院予定 1件",controls)
-        self.assertIn("登録済みのヘルプは使いません",controls)
+        self.assertIn("依頼済み 1件",controls)
+        self.assertNotIn("登録済みのヘルプは使いません",controls)
+        self.assertIn("調整用の仮表",controls)
         self.assertEqual(before,list(db.iterdump()))
         db.close()
 
@@ -64,6 +65,6 @@ class ScheduleActionsTest(unittest.TestCase):
         response=self.client.post("/schedule?month=2026-02",data=fields)
         self.assertEqual(response.status_code,302)
         text=self.client.get(response.location).get_data(as_text=True)
-        self.assertIn("ヘルプ込み。",text)
+        self.assertIn("ヘルプ反映済み",text)
         self.assertLess(text.index('id="saved-result"'),text.index('id="schedule-recreate"'))
         self.assertIn('<details class="compact-help recreate-controls" id="schedule-recreate">',text)

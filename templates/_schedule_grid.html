@@ -5,7 +5,7 @@
 <button type="button" data-sheet-focus aria-pressed="false">表を大きく表示</button></div>
 {% if not display.comparison_available %}<p class="hint schedule-comparison-unavailable">この保存結果には作成時の希望休・有給が残っていないため、比較表示はできません。最新の入力で再作成してください。</p>{% endif %}
 {% if manual_editable|default(false) %}<div class="manual-bulk-tools"><label class="checkbox"><input id="manual-select-mode" type="checkbox">複数のマスをまとめて変更</label><button type="button" id="manual-bulk-edit" class="secondary" disabled>選んだマスを変更（0件）</button><button type="button" id="manual-clear-selection" class="secondary" hidden>選択を解除</button></div>{% endif %}
-<div class="paper-schedule-title"><strong>{{ month[:4] }}年{{ month[5:]|int }}月　勤務表</strong><span>{{ '仮表・未確定' if is_draft else ('以前の条件の保存結果' if stale else '保存済み') }}</span></div>
+<div class="paper-schedule-title"><strong>{{ month[:4] }}年{{ month[5:]|int }}月　勤務表</strong><span>{{ '編集・印刷する表' if request.endpoint=='manual_schedule' else '仮表（確認用）' if is_draft else '作成結果（反映前）' }}</span></div>
 <p class="paper-legend">日：全日勤務　休：休み　有休：有給　会：会議<br>ヘルプは勤務する日だけ表示します。「午前」「午後」は半日の来院、空欄は来院なしです。<br>「/」の左＝午前、右＝午後。「日/会」＝午前勤務・午後会議。医師予定も左＝午前、右＝午後です。</p>
 <p class="comparison-only comparison-legend"><strong>上段＝作成した勤務 ／ 下段＝入力した希望</strong><br>希望欄も「休」「有休」で表示します。本人了承で変更した日は元の希望休を残し、「了承出勤」と表示します。「代替休」は代わりに指定した希望休です。例：「休/—」＝午前だけ希望休。「—」＝その半日は指定なし。色枠の上下を見比べてください。</p>
 <div class="table-wrap paper-grid-wrap"><table class="paper-grid">

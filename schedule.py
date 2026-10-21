@@ -168,6 +168,12 @@ def register_schedule(app, connect_db):
                 source_raw = seed_raw
                 source_token = digest(json.dumps([seed_raw, manual_raw]))
 
+        if request.method=="GET" and not outcome and help_source=="draft" and not (saved and not stale) and (not request.args.get("phase") or request.args.get("resume")=="1"):
+            from draft_view import restore_draft
+            outcome=restore_draft(snapshot,fingerprint,seed_raw)
+            if outcome:
+                shortage_rows=grouped_shortages(outcome["shortages"],outcome["problem"],outcome["grid"])
+                source_raw=seed_raw
         current_comparison = {"wishes": snapshot.get("monthly_settings", {}).get("wishes", {}),
                               "leaves": snapshot.get("leave_history", {}).get("leaves", {})}
         draft_display = None
@@ -183,6 +189,12 @@ def register_schedule(app, connect_db):
         helper_ids={str(p["id"]) for p in snapshot["staff"] if p["is_help"]}
         help_count=sum(1 for key,period in snapshot.get("help_availability",{}).items()
                        if key.partition("_")[0] in helper_ids and period in ("full","am","pm"))
+        advance_ids={str(p["id"]) for p in snapshot["staff"] if p["is_help"] and p.get("advance_help")}
+        advance_visit_count=sum(v in ("full","am","pm") and k.partition("_")[0] in advance_ids for k,v in snapshot.get("help_availability",{}).items())
+        requested_help_count=help_count-advance_visit_count
+        planning_phase=request.args.get("phase")
+        if planning_phase not in ("plan","build"):
+            planning_phase="build" if requested_help_count or (outcome and outcome.get("included_help")) else "plan"
         from manual_schedule import load_manual
         db=connect_db()
         try:
@@ -194,7 +206,7 @@ def register_schedule(app, connect_db):
         from itsdangerous import URLSafeSerializer
         shortage_scope = URLSafeSerializer(app.secret_key, salt="agreed-shortage-days").dumps(
             dict(month=month,fingerprint=fingerprint,days=concise_shortages(shortage_rows),
-                 source_kind=help_source,source_hash=digest(source_raw) if source_raw else "",include_help=request.form.get("mode") in ("help","help_draft","rebalance_draft","rebalance","six","advance_draft"))) if shortage_rows else ""
-        return render_template("schedule.html", advance_help_count=sum(1 for p in snapshot["staff"] if p["is_help"] and p.get("advance_help")), shortage_scope=shortage_scope, paid_candidates=paid_candidates, edit_revision=edit_revision, seed_token=source_token, fixed_help_base=bool(source_raw), help_source=help_source, has_seed=bool(seed_raw), has_manual=bool(manual_raw), source_name=source_name, month=month, fingerprint=fingerprint, result_token=digest(original),
+                 source_kind=help_source,source_hash=digest(source_raw) if source_raw else "",include_help=not bool(outcome and outcome.get("grid")) and request.form.get("mode") in ("help","help_draft","rebalance_draft","rebalance","six","advance_draft"))) if shortage_rows else ""
+        return render_template("schedule.html", ui_current_step=4 if planning_phase=="build" or (saved and not stale and not outcome) else 2, planning_phase=planning_phase, requested_help_count=requested_help_count, advance_visit_count=advance_visit_count, advance_help_count=sum(1 for p in snapshot["staff"] if p["is_help"] and p.get("advance_help")), shortage_scope=shortage_scope, paid_candidates=paid_candidates, edit_revision=edit_revision, seed_token=source_token, fixed_help_base=bool(source_raw), help_source=help_source, has_seed=bool(seed_raw), has_manual=bool(manual_raw), source_name=source_name, month=month, fingerprint=fingerprint, result_token=digest(original),
                                outcome=outcome, result=saved, stale=stale, draft_display=draft_display, saved_display=saved_display, shortage_rows=shortage_rows, shortage_summary=concise_shortages(shortage_rows),
                                help_count=help_count)

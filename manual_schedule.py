@@ -19,7 +19,9 @@ def seed_draft(db, month, snapshot, fingerprint, outcome):
     problem = outcome["problem"]
     from help_shortages import conditions_hash
     data = dict(conditions_hash=conditions_hash(snapshot), days=problem["days"], people=problem["people"], grid=outcome["grid"],
-                input_hash=fingerprint, source="仮作成の表", created=datetime.now(timezone.utc).isoformat())
+                input_hash=fingerprint, source="仮作成の表", created=datetime.now(timezone.utc).isoformat(),
+                included_help=bool(outcome.get("included_help")),advance_help=bool(outcome.get("advance_help")),
+                rebalanced=bool(outcome.get("rebalanced")),notes=outcome.get("messages",[]))
     db.execute("CREATE TABLE IF NOT EXISTS manual_schedule_seeds(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
     db.execute("INSERT INTO manual_schedule_seeds VALUES (?,?) ON CONFLICT(month) DO UPDATE SET data=excluded.data",
                (month,json.dumps(data,ensure_ascii=False)))

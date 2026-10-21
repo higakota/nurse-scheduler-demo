@@ -46,7 +46,7 @@ if(button)button.disabled=document.body.dataset.helpVisitDirty==="true"||documen
     });
     const count = Object.keys(changes).length;
     dirty = count > 0;
-    document.getElementById("help-status").textContent = count ? "未保存：" + count + "件" : "来院が決まった日だけ選んでください。";
+    document.getElementById("help-status").textContent = count ? "変更 " + count + "件。下のボタンでまとめて登録します。" : "来院が決まった日だけ選んでください。";
     document.getElementById("help-save").disabled = !dirty;
     document.body.dataset.helpVisitDirty=String(dirty);updateHelpRefresh();
     document.getElementById("help-changes").value = JSON.stringify(changes);

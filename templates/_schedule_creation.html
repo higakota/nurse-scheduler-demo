@@ -1,21 +1,21 @@
+{% set build_phase=planning_phase|default('plan')=='build' %}
 <section class="panel creation-controls" aria-labelledby="creation-title">
-<div class="section-heading"><div><p class="eyebrow">作成・再作成</p><h2 id="creation-title">{{ '登録したヘルプを加えて作成' if help_count else '自院の勤務表から始める' }}</h2></div>{% if help_count %}<span class="status-badge saved">来院予定 {{ help_count }}件</span>{% endif %}</div>
+<div class="section-heading"><div><p class="eyebrow">{{ '手順4' if build_phase else '手順2' }}</p><h2 id="creation-title">{{ '登録したヘルプを反映する' if build_phase else 'まず、不足を確認する' }}</h2></div>{% if build_phase %}<span class="status-badge saved">依頼済み {{ requested_help_count|default(0) }}件</span>{% endif %}</div>
 <form method="post" class="schedule-form">
-<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="result_token" value="{{ result_token }}"><input type="hidden" name="seed_token" value="{{ seed_token }}">
-
-<input type="hidden" name="replace" value="yes">
-
-{% if help_count %}<div class="creation-option help-create-primary">
-<div><h3>ヘルプ込みで勤務表を作成</h3><p class="hint">{% if fixed_help_base %}不足を確認した自院の表は変えず、ヘルプを追加します。{% else %}元の仮表がないため、自院スタッフも含めて新規作成します。{% endif %}</p><p class="hint">自院を優先し、看護師ヘルプが同じ日に2人以上になる配置はできるだけ避けます。看護師＋検査技師の2人は問題ありません。全日来院OKの人は全日勤務にします。</p><a href="{{ url_for('help_availability',month=month) }}">来院予定を確認・修正 →</a></div>
-<button name="mode" value="help">ヘルプ込みで勤務表を作成</button></div>{% endif %}
-{% if advance_help_count %}<div class="creation-option creation-secondary"><div><h3>事前に分かっているヘルプも使って不足を調べる</h3><p class="hint">自院と、依頼前から配置してよい人の勤務可能日で仮作成します。ほかのヘルプへの依頼が必要な箇所を確認できます。</p></div><button name="mode" value="advance_draft">事前登録のヘルプも使って仮作成</button></div>{% else %}
-<div class="creation-option creation-secondary"><div><h3>自院だけの不足を調べる</h3><p class="hint">登録済みのヘルプは使いません。相談前の仮表です。不足が残る場合、作り直すと不足する日が変わることがあります。編集画面の表は上書きしません。</p></div><button name="mode" value="draft" class="{{ 'secondary' if help_count else '' }}">不足を残して仮作成する</button></div>{% endif %}
-{% if not help_count %}<p class="hint">ヘルプを使う場合は、<a href="{{ url_for('help_availability',month=month) }}">来院予定を登録</a>してください。スタッフ登録だけでは勤務に含めません。</p>{% endif %}
-<details class="creation-option-more"><summary>ほかの作成方法</summary>
-<div class="creation-option"><div><h3>自院だけで作成</h3><p class="hint">不足のない勤務表を作ります。</p></div><button name="mode" value="self" class="secondary">自院スタッフだけで作成</button></div>
-</details>
-{% if outcome and outcome.status in ('infeasible','draft') and outcome.shortages and request.form.get('mode') != 'draft_six' %}
-<details class="creation-option-more"><summary>ヘルプを確保できず、不足が残るとき</summary><p class="hint">希望休・有給を守り、自院の勤務を組み直した仮案を表示します。6連勤になる人と日付を確認してから、編集画面へ反映できます。7連勤以上にはしません。</p><button name="mode" value="draft_six" class="secondary">6連勤を含めて組み直す</button></details>
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="result_token" value="{{ result_token }}"><input type="hidden" name="seed_token" value="{{ seed_token }}"><input type="hidden" name="replace" value="yes">
+{% macro plan_action() %}
+<div class="creation-option"><div><h3>{{ '事前登録のヘルプも使って仮作成' if advance_help_count|default(0) else '自院スタッフで仮作成' }}</h3><p class="hint">{{ '自院スタッフと、事前に分かっているヘルプの勤務可能日で作ります。' if advance_help_count|default(0) else '自院スタッフの希望・勤務条件から作ります。' }}不足する日・職種・時間帯・人数を表で確認します。</p></div>
+{% if advance_help_count|default(0) %}<button name="mode" value="advance_draft">事前登録のヘルプも使って仮作成</button>{% else %}<button name="mode" value="draft">不足を残して仮作成する</button>{% endif %}</div>
+{% endmacro %}
+{% if build_phase %}
+<div class="creation-option help-create-primary"><div><h3>ヘルプ込みで勤務表を作成</h3><p class="hint">{{ '不足を確認した元の表に、来院OKのヘルプを追加します。' if fixed_help_base else '元の表がないため、自院と登録済みヘルプで新規作成します。' }}不足が残る場合も、調整用の仮表を表示します。</p><a href="{{ url_for('help_availability',month=month) }}">来院予定を確認・変更 →</a></div><button name="mode" value="help">ヘルプ込みで勤務表を作成</button></div>
+<details class="creation-option-more"><summary>最初の不足確認をやり直す</summary><p class="hint">依頼後のヘルプは含めません。自院の仮配置を作り直すため、不足する日が変わる場合があります。</p>{{ plan_action() }}</details>
+{% else %}
+{{ plan_action() }}
+<p class="hint">この段階では、依頼後に登録したヘルプは含めません。不足があればアプリ外で相談し、<a href="{{ url_for('help_availability',month=month) }}">来院予定を登録</a>します。スタッフ登録だけでは勤務に含めません。{% if requested_help_count|default(0) %}<a href="{{ url_for('schedule',month=month,phase='build') }}">来院予定を登録済みなら、ヘルプを反映する →</a>{% endif %}</p>
 {% endif %}
+<details class="creation-option-more"><summary>ほかの作成方法</summary><div class="creation-option"><div><h3>自院だけで作成</h3><p class="hint">事前登録・依頼済みのヘルプを使わず、不足のない表を探します。</p></div><button name="mode" value="self" class="secondary">自院スタッフだけで作成</button></div></details>
+{% if outcome and outcome.status in ('infeasible','draft') and outcome.shortages and request.form.get('mode') != 'draft_six' %}
+<details class="creation-option-more"><summary>ヘルプを確保できない場合の最終手段</summary><p class="hint">希望休・有給を守り、6連勤を含む仮案を確認します。7連勤以上にはしません。</p><button name="mode" value="draft_six" class="secondary">6連勤を含めて組み直す</button></details>{% endif %}
 <p id="schedule-action-status" class="schedule-action-status" role="status" hidden></p>
-</form><p class="hint"><a href="{{ url_for('input_review',month=month) }}">入力内容をまとめて確認 →</a></p></section>
+</form><p class="creation-footer"><a href="{{ url_for('input_review',month=month) }}">入力内容を確認 →</a><a href="{{ url_for('manual_schedule',month=month) }}">編集中の勤務表を開く →</a></p></section>

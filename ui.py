@@ -8,13 +8,12 @@ from doctor_import import IMPORT_VERSION
 
 STEPS = [
     ("doctor_import", "医師予定", "Excelから担当医を取り込む"),
-    ("monthly_settings", "希望休・会議", "希望休・有給、休日日数、休診日と会議"),
+    ("monthly_settings", "希望休・会議・事前ヘルプ", "希望休・有給、休日日数、会議、事前に来られる日"),
     ("leave_history", "前月末勤務", "月をまたぐ連勤を確認"),
     ("coverage_settings", "必要人数", "診療に必要な最低人数を確認"),
 ]
-INPUT_TABS = [("doctor_import","医師予定"),("monthly_settings","希望休・会議"),("coverage_settings","必要人数"),
+INPUT_TABS = [("doctor_import","医師予定"),("monthly_settings","希望休・会議・事前ヘルプ"),("coverage_settings","必要人数"),
               ("leave_history","前月末勤務"),("weekly_settings","月をまたぐ週"),("input_review","入力一覧")]
-SCHEDULE_TABS = [("schedule","自動作成"),("manual_schedule","編集・印刷")]
 PAGE_ALIASES = {"agreed_record_edit":"manual_schedule", "agreed_wish_change":"manual_schedule", "doctor_edit":"doctor_import", "staff_delete":"staff_settings",
                 "preview_restore":"data_backup", "restore_backup":"data_backup"}
 
@@ -25,7 +24,7 @@ PAGES = {
     "help_requests": ("ヘルプ相談リスト", "不足から相談状況を管理し、来院が決まった人を反映します。"),
     "index": ("ホーム", "今月の勤務表をつくりましょう。"),
     "help_availability": ("ヘルプの来院予定", "不足時に相談し、来院が決まった日だけ追加します。"),
-    "schedule": ("勤務表の自動作成", "自院スタッフで作成し、不足時にヘルプを追加して再作成します。"),
+    "schedule": ("勤務表の自動作成", "事前ヘルプで不足を確認し、依頼後の来院予定を反映します。"),
     "staff_delete": ("スタッフの削除", "削除の対象を確認します。"),
     "weekly_settings": ("非常勤の週勤務", "月曜〜日曜の上限と、月をまたぐ週の実績・決定済み勤務を確認します。"),
     "staff_settings": ("スタッフ設定", "職種やベテランなど、毎月共通の設定です。"),
@@ -56,13 +55,17 @@ def register_ui(app):
         active = PAGE_ALIASES.get(endpoint, endpoint)
         input_endpoints = {item[0] for item in INPUT_TABS}
         group = "inputs" if active in input_endpoints else ("schedules" if active in ("schedule","manual_schedule") else active)
-        tabs = INPUT_TABS if group=="inputs" else (SCHEDULE_TABS if group=="schedules" else [])
+        tabs = INPUT_TABS if group=="inputs" else []
         year, number = map(int, month.split("-"))
         month_index = year * 12 + number - 1
         def adjacent(offset):
             y, m = divmod(month_index + offset, 12)
             return f"{y:04}-{m+1:02}" if 1900 <= y <= 9998 else None
-        return dict(ui_previous_month=adjacent(-1), ui_next_month=adjacent(1),
+        current_step = (1 if group=="inputs" else 3 if group=="help_availability" else
+                        5 if active=="manual_schedule" else
+                        4 if active=="schedule" and (request.args.get("phase")=="build" or request.form.get("mode") in ("help","help_draft","rebalance","rebalance_draft")) else
+                        2 if active=="schedule" else 0)
+        return dict(ui_current_step=current_step,ui_previous_month=adjacent(-1), ui_next_month=adjacent(1),
                     ui_month=month, ui_month_label=f"{year}年{number}月",
                     ui_active=active, ui_group=group, ui_tabs=tabs, ui_month_endpoint=active,
                     ui_title=PAGES.get(active, PAGES["index"])[0],
@@ -93,7 +96,19 @@ def render_home(connect_db):
         manual=json.loads(manual_row[0]) if manual_row else {}
         manual_stale=bool(manual and manual.get("input_hash")!=current_hash)
         generated_stale=bool(generated and generated.get("input_hash")!=current_hash)
-        help_visits=sum(1 for key,value in snapshot.get("help_availability",{}).items() if value in ("full","am","pm") and key.partition("_")[0] in {str(p["id"]) for p in staff if p["is_help"]})
+        advance_ids={str(p["id"]) for p in staff if p["is_help"] and p["advance_help"]}
+        helper_ids={str(p["id"]) for p in staff if p["is_help"]}
+        advance_visits=sum(v in ("full","am","pm") and k.partition("_")[0] in advance_ids for k,v in snapshot.get("help_availability",{}).items())
+        requested_visits=sum(v in ("full","am","pm") and k.partition("_")[0] in helper_ids-advance_ids for k,v in snapshot.get("help_availability",{}).items())
+        from help_shortages import load_reference
+        reference=load_reference(db,month)
+        ref_row=db.execute("SELECT data FROM help_shortage_previews WHERE month=?",(month,)).fetchone() if "help_shortage_previews" in tables else None
+        ref_data=json.loads(ref_row[0]) if ref_row else {}
+        reference_valid=reference["state"] in ("current","reference")
+        reference_mode=ref_data.get("planning_mode","manual" if ref_data.get("source_kind")=="manual" else "advance")
+        shortage_days=len(reference["days"]) if reference_valid else None
+        needs_help_build=bool(requested_visits and reference_valid and
+                              (reference_mode in ("advance","own") or ref_data.get("input_hash")!=current_hash))
         verified = bool(doctors and review and review["version"] == IMPORT_VERSION and review["data"] == snapshots["doctor_plans"])
         states = [
             dict(saved=bool(doctors), attention=bool(doctors and not verified),
@@ -111,7 +126,7 @@ def render_home(connect_db):
              for step, state in zip(STEPS, states)]
     next_card = next((card for card in cards if not card["saved"] or card["attention"]), dict(endpoint="input_review",title="入力一覧"))
     year, number = map(int, month.split("-"))
-    return render_template("home.html", cards=cards, staff_count=len(staff), manual_saved=manual_saved,
-                           next_card=next_card, month=month, generated_saved=bool(generated), generated_stale=generated_stale, manual_stale=manual_stale, help_visits=help_visits,
+    return render_template("home.html", advance_visits=advance_visits, requested_visits=requested_visits, shortage_days=shortage_days, needs_help_build=needs_help_build, reference_valid=reference_valid, cards=cards, staff_count=len(staff), manual_saved=manual_saved,
+                           next_card=next_card, month=month, generated_saved=bool(generated), generated_stale=generated_stale, manual_stale=manual_stale,
                            saved_count=sum(card["saved"] for card in cards),
                            month_days=calendar.monthrange(year, number)[1])

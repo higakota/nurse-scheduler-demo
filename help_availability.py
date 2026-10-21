@@ -128,6 +128,8 @@ def register_help_availability(app, connect_db):
                     db.commit()
                     if request.form.get("return_monthly") == "1":
                         return redirect(url_for("monthly_settings", month=month, saved="1", _anchor="availability"))
+                    if request.form.get("continue")=="build":
+                        return redirect(url_for("schedule",month=month,phase="build",help_saved="1"))
                     return redirect(url_for("help_availability", month=month, staff=request.form.get("staff", ""), saved="1"))
                 except ValueError as exc:
                     db.rollback()
