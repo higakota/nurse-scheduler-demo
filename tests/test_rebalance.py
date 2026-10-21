@@ -66,6 +66,19 @@ class RebalanceRouteTest(unittest.TestCase):
         self.assertEqual(applied["grid"],value["grid"])
         self.assertEqual(applied["history"][-1]["grid"],json.loads(manual)["grid"])
 
+    def test_global_partial_adjustment_keeps_manual_until_review(self):
+        manual=self.seed()
+        original=self.stored("generated_schedules")
+        response=self.client.post("/schedule?month=2026-02",data=dict(self.fields(),mode="rebalance_draft"))
+        self.assertEqual(response.status_code,200)
+        self.assertIn("自院全体を調整した仮表",response.get_data(as_text=True))
+        self.assertEqual(self.stored("manual_schedules"),manual)
+        self.assertEqual(self.stored("generated_schedules"),original)
+        draft=json.loads(self.stored("manual_schedule_seeds"))
+        self.assertEqual(draft["grid"][1][0],"DD")
+        response=self.client.post("/schedule?month=2026-02",data=dict(self.fields(),mode="rebalance_draft",seed_token="old"))
+        self.assertIn("自院の仮表が変更",response.get_data(as_text=True))
+
     def test_old_source_and_source_changed_during_search_are_rejected(self):
         manual=self.seed()
         before=self.stored("generated_schedules")
