@@ -28,6 +28,37 @@
   const staff = document.getElementById("absence-staff");
   const days = [...document.querySelectorAll("[data-absence-day]")];
   const labels = {full: "全日", am: "午前", pm: "午後"};
+  const gridCells=[...document.querySelectorAll("[data-input-person]")];
+  const gridDialog=document.getElementById("input-absence-dialog");
+  let selectedGrid=null;
+  function renderGrid(){
+    for(const cell of gridCells){
+      const key=cell.dataset.inputPerson+"_"+cell.dataset.inputDay;
+      const wish=value("wishes",key),paid=value("leaves",key);
+      cell.textContent=!wish&&!paid?"":wish==="full"&&!paid?"休":paid==="full"&&!wish?"有休":["am","pm"].map(half=>[(wish==="full"||wish===half)?"休":"",(paid==="full"||paid===half)?"有":""].join("")||"—").join("/");
+      cell.title=[wish?labels[wish]+"希望休":"",paid?labels[paid]+"有給":""].filter(Boolean).join("／");
+      cell.classList.toggle("has-wish",Boolean(wish));cell.classList.toggle("has-paid",Boolean(paid));
+      cell.classList.toggle("is-dirty",["wishes","leaves"].some(kind=>Object.hasOwn(changes[kind],key)));
+    }
+    if(selectedGrid){
+      const key=selectedGrid.dataset.inputPerson+"_"+selectedGrid.dataset.inputDay;
+      gridDialog.querySelectorAll("[data-grid-kind]").forEach(b=>b.setAttribute("aria-pressed",String(value(b.dataset.gridKind,key)===b.dataset.gridPeriod)));
+    }
+  }
+  gridCells.forEach(cell=>cell.addEventListener("click",()=>{
+    selectedGrid=cell;
+    const name=[...staff.options].find(o=>o.value===cell.dataset.inputPerson)?.textContent||"";
+    document.getElementById("input-absence-title").textContent=name;
+    document.getElementById("input-absence-description").textContent=cell.dataset.inputDay+"の希望休・有給";
+    renderGrid();gridDialog.showModal();
+  }));
+  gridDialog?.querySelectorAll("[data-grid-kind]").forEach(button=>button.addEventListener("click",()=>{
+    if(!selectedGrid)return;
+    const key=selectedGrid.dataset.inputPerson+"_"+selectedGrid.dataset.inputDay,kind=button.dataset.gridKind,period=button.dataset.gridPeriod;
+    if(period===(original[kind][key]||""))delete changes[kind][key];else changes[kind][key]=period;
+    render();
+  }));
+  document.getElementById("input-absence-close")?.addEventListener("click",()=>{gridDialog.close();selectedGrid?.focus();});
   let dirty = false;
   let submitting = false;
   function value(kind, key) {
@@ -57,6 +88,7 @@
     document.getElementById("absence-status").textContent = count ? "未保存：" + count + "件。最後にまとめて保存してください。" : "休む日だけ選んでください。";
     document.getElementById("absence-save").disabled = !dirty;
     document.getElementById("absence-changes").value = JSON.stringify(changes);
+    renderGrid();
     document.dispatchEvent(new Event("monthly-input-state"));
   }
   days.forEach(picker => {

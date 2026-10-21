@@ -63,8 +63,46 @@ def extract_events(raw, sheet, rows):
                     continue
                 for part, title in enumerate(paragraphs):
                     key = hashlib.sha256((sheet + ":" + drawingpath + ":" + str(index) + ":" + str(part)).encode()).hexdigest()[:24]
-                    result["meetings"].append({"id": key, "title": title, "source": sheet + "・文字枠" + str(index + 1), "date": ""})
+                    result["meetings"].append({"id": key, "title": title, "source": sheet + "・文字枠" + str(index + 1), "date": drawing_date(root, anchor, columns)})
     return result
+
+
+def drawing_date(root, anchor, columns):
+    """Map the visual centre of a text box to a dated column."""
+    def number(label):
+        result = 0
+        for c in label:
+            result = result * 26 + ord(c) - ord("A") + 1
+        return result - 1
+    dated = {number(col): day for col, day in columns.items()}
+    if not dated:
+        return ""
+    widths = {}
+    for col in root.findall("s:cols/s:col", S):
+        # Excel column widths use the default font's maximum digit width.
+        pixels = int(float(col.get("width", "8.43")) * 7 + 5)
+        for index in range(int(col.get("min", "1"))-1, min(int(col.get("max", "1")), max(dated)+2)):
+            widths[index] = pixels * 9525
+    offsets = [0]
+    for index in range(max(dated)+2):
+        offsets.append(offsets[-1] + widths.get(index, 64 * 9525))
+    start = anchor.find("x:from", X)
+    if start is None:
+        return ""
+    def position(node):
+        col = int(node.findtext("x:col", "-1", X))
+        return offsets[col] + int(node.findtext("x:colOff", "0", X)) if 0 <= col < len(offsets)-1 else None
+    left = position(start)
+    end = anchor.find("x:to", X)
+    extent = anchor.find("x:ext", X)
+    right = position(end) if end is not None else (left + int(extent.get("cx", "0")) if left is not None and extent is not None else None)
+    if left is None or right is None or right <= left:
+        return ""
+    centre = (left + right) / 2
+    for col, day in dated.items():
+        if offsets[col] <= centre < offsets[col+1]:
+            return day
+    return ""
 
 
 def monthly_snapshot(db, month):

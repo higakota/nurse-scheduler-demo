@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>月別入力 | 看護師勤務表</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"></head>
+<link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='monthly_input_grid.css') }}"></head>
 <body class="app-layout">{% include "_shell.html" %}
 
 <main class="container app-main" id="main-content">
@@ -48,14 +48,14 @@
 <div class="save-bar" data-month-save><p id="settings-status" role="status">休日日数・週上限・休診日を保存します。希望休・有給は専用の保存ボタンを使ってください。</p><button>入力内容を保存</button></div>
 </form>
 <section class="panel" id="meetings" data-month-panel="meetings">
-<h2>午後の会議</h2>
+<h2>午後の会議</h2><p class="hint">日付の＋で追加。会議名を押すと編集できます。Excelの候補は参加者を指定して反映します。</p>{% with absence_grid=false %}{% include "_monthly_input_grid.html" %}{% endwith %}
 {% if error and request.form.get('action', '').startswith('meeting_') %}<p class="error" role="alert">会議は保存できませんでした：{{ error }}</p>{% endif %}
 {% if saved %}<p class="success" role="status">保存しました。登録済みの会議は{{ data.meetings|length }}件です。</p>{% endif %}
 <p class="hint">参加者は午後全体を診療に配置できません。全員参加の場合は全員にチェックを入れてください。同じ人の会議が同じ午後に複数ある場合は、重複を確認できないため登録を保留します。</p>
 <h3>登録済みの会議（{{ data.meetings|length }}件）</h3><p class="hint">追加・保存した会議はこの一覧に表示されます。Excelの未反映候補は下に別表示しています。</p>
 {% for meeting in data.meetings|sort(attribute='date') %}
 {% set editing = request.form.get('action') == 'meeting_edit' and request.form.get('meeting_id') == meeting.id %}
-<article class="meeting">
+<article class="meeting" id="meeting-{{ meeting.id }}">
 <h3>{{ meeting.date|date_with_weekday }} 午後：{{ meeting.title }}</h3>
 <p class="hint">{{ 'Excelから反映済み' if meeting.get('import_source') else '手入力で登録' }} ／ 午後</p>
 <p>参加者：{% for id in meeting.participants %}{{ names.get(id, '未登録スタッフ') }}{{ '、' if not loop.last }}{% else %}未設定{% endfor %}</p>
@@ -69,15 +69,16 @@
 </form></details>
 <form method="post"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="settings_fingerprint" value="{{ settings_fingerprint }}"><input type="hidden" name="action" value="meeting_delete"><input type="hidden" name="meeting_id" value="{{ meeting.id }}"><button>この会議を削除</button></form>
 </article>{% else %}<p>登録済みの会議はありません。Excelの読取候補は、日付・参加者を確認して反映するまで勤務表に使われません。</p>{% endfor %}
-<h3>会議を追加</h3>
+<button type="button" id="meeting-open-add" class="secondary">会議を追加</button>
+<dialog id="meeting-add-dialog" aria-labelledby="meeting-add-title" {% if error and request.form.get('action') == 'meeting_add' %}data-reopen{% endif %}><h2 id="meeting-add-title">午後の会議を追加</h2>
 {% if error and request.form.get('action') == 'meeting_add' %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 <form method="post" action="{{ url_for('monthly_settings', month=month, _anchor='meetings') }}">
 <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="meeting_add"><input type="hidden" name="settings_fingerprint" value="{{ settings_fingerprint }}">
 <label for="meeting_date">日付（{{ month }}）</label><select id="meeting_date" name="meeting_date" required><option value="">日を選択</option>{% for day in days %}<option value="{{ day }}" {% if request.form.get('meeting_date', '') == day.isoformat() %}selected{% endif %}>{{ day.day }}日（{{ weekdays[day.weekday()] }}）</option>{% endfor %}</select>
 <label for="title">会議名</label><input id="title" name="title" maxlength="80" value="{{ request.form.get('title', '') }}" required>
 <fieldset><legend>参加者</legend>{% for person in staff %}<label class="checkbox"><input type="checkbox" name="participants" value="{{ person.id }}" {% if person.id|string in request.form.getlist('participants') %}checked{% endif %}>{{ person.name }}</label>{% endfor %}</fieldset>
-<button>会議を追加</button>
-</form>
+<button>会議を追加</button><button type="button" id="meeting-add-close" class="secondary">閉じる</button>
+</form></dialog>
 </section>
 {% for event_tab in ['closures', 'meetings'] %}
 <section data-month-panel="{{ event_tab }}" class="panel">
@@ -89,4 +90,4 @@
 {% else %}<p><a href="{{ url_for('doctor_import', month=month) }}">医師予定のExcelを読み取る</a>と、このタブで候補を確認できます。</p>{% endif %}
 </section>{% endfor %}
 
-</main><script src="{{ url_for('static', filename='monthly.js') }}"></script><script src="{{ url_for('static', filename='absence_calendar.js') }}"></script></body></html>
+</main><script src="{{ url_for('static', filename='monthly.js') }}"></script><script src="{{ url_for('static', filename='absence_calendar.js') }}"></script><script src="{{ url_for('static',filename='monthly_input_grid.js') }}"></script></body></html>

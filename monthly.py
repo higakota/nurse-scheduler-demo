@@ -49,6 +49,24 @@ def register_monthly(app, connect_db):
                     event_row = previous_draft
             if event_row:
                 event_preview = json.loads(event_row["data"])
+                # Older saved candidates can gain dates without changing saved meetings.
+                if any(not item.get("date") for item in event_preview.get("extras",{}).get("meetings",[])):
+                    tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                    source = db.execute("SELECT workbook FROM doctor_import_draft WHERE owner=?", (session.get("import_owner",""),)).fetchone() if "doctor_import_draft" in tables else None
+                    if source:
+                        from doctor_import import parse_schedule
+                        from excel_events import extract_events
+                        first = event_preview["extras"]["meetings"][0]
+                        sheet = first.get("source","").split("・文字枠")[0]
+                        try:
+                            fresh = extract_events(source["workbook"], sheet, parse_schedule(source["workbook"],sheet,month))
+                            dates = {item["id"]:item["date"] for item in fresh["meetings"]}
+                            for item in event_preview["extras"]["meetings"]:
+                                item["date"] = dates.get(item["id"],item.get("date",""))
+                        except (ValueError,KeyError):
+                            pass
+            doctor_row = db.execute("SELECT data FROM doctor_plans WHERE month=?",(month,)).fetchone() if db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='doctor_plans'").fetchone() else None
+            input_doctors = json.loads(doctor_row["data"]) if doctor_row else {}
             if request.method == "POST":
                 if not secrets.compare_digest(session["csrf_token"], request.form.get("csrf_token", "")):
                     abort(400, description="画面を開き直してから保存してください。")
@@ -223,6 +241,6 @@ def register_monthly(app, connect_db):
         finally:
             db.close()
         absence_weeks = [[day if day.month == number else None for day in week] for week in calendar.Calendar(firstweekday=6).monthdatescalendar(year, number)]
-        return render_template("monthly.html", settings_fingerprint=settings_fingerprint, absence_weeks=absence_weeks, absence_leaves=absence_data["leaves"], absence_fingerprint=absence_fingerprint, event_preview=event_preview, extra_staff=staff, month=month, days=days, staff=staff, data=data, names=names,
+        return render_template("monthly.html", input_doctors=input_doctors, settings_fingerprint=settings_fingerprint, absence_weeks=absence_weeks, absence_leaves=absence_data["leaves"], absence_fingerprint=absence_fingerprint, event_preview=event_preview, extra_staff=staff, month=month, days=days, staff=staff, data=data, names=names,
                                error=error, warnings=warnings, saved=request.method == "GET" and request.args.get("saved") == "1",
                                weekdays="月火水木金土日")
