@@ -32,3 +32,17 @@
 .app-layout .input-day-meeting-title:hover{background:#f4e7bf}
 .input-day-meeting-title+.input-day-meeting-title{border-top:1px dotted #ddcfaa}
 .input-day-meeting-title small{color:#806631}
+
+/* Requests fit the viewport; only the meeting sheet scrolls horizontally. */
+.input-sheet-fit{overflow:visible;min-width:0}
+.input-sheet-fit .input-sheet{width:100%;min-width:0;max-width:100%}
+.input-sheet-fit .input-sheet-name{width:clamp(60px,9vw,132px)}
+.input-sheet-fit .input-sheet th,.input-sheet-fit .input-sheet td{min-width:0;padding:3px 0;overflow-wrap:anywhere}
+.input-sheet-fit .input-sheet tbody th{padding:6px 3px;font-size:clamp(8px,.85vw,12px)}
+.input-sheet-fit .input-sheet thead th{font-size:clamp(7px,.85vw,12px)}
+.input-sheet-fit .input-sheet thead small{font-size:clamp(6px,.7vw,10px)}
+.input-sheet-fit .input-absence-cell{font-size:clamp(6px,.75vw,11px)}
+.input-doctor-inline td{background:#fffaea;vertical-align:top}
+.input-doctor-inline td>div{display:flex;justify-content:center;align-items:flex-start;gap:1px;padding:5px 0}
+.input-doctor-inline td span{writing-mode:vertical-rl;text-orientation:upright;white-space:nowrap;line-height:1.15;font-size:clamp(4px,.65vw,10px)}
+.input-doctor-inline td span+span{border-left:1px dotted #d8d5c3;padding-left:1px}

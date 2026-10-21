@@ -25,6 +25,12 @@ class InputSheetTest(unittest.TestCase):
             self.assertEqual(text.count('data-input-person="'),2*length)
             self.assertEqual(text.count('id="absence-form"'),1)
             self.assertIn('id="absence-person-view" hidden',text)
+            wishes=text.split('id="wishes"',1)[1].split('id="absence-person-view"',1)[0]
+            self.assertIn('input-sheet-fit',wishes)
+            self.assertIn('class="input-doctor-inline"',wishes)
+            self.assertNotIn('class="input-meeting-row"',wishes)
+            self.assertNotIn('data-attendance-day=',wishes)
+            self.assertNotIn('input-doctor-disclosure',wishes)
         db.close()
 
     def test_candidate_is_shown_on_date_but_not_registered(self):
