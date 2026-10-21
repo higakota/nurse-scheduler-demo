@@ -8,7 +8,6 @@
 {% if help_count %}<div class="creation-option help-create-primary">
 <div><h3>ヘルプ込みで勤務表を作成</h3><p class="hint">{% if fixed_help_base %}不足を確認した自院の表は変えず、ヘルプを追加します。{% else %}元の仮表がないため、自院スタッフも含めて新規作成します。{% endif %}</p><p class="hint">自院を優先し、看護師ヘルプが同じ日に2人以上になる配置はできるだけ避けます。看護師＋検査技師の2人は問題ありません。全日来院OKの人は全日勤務にします。</p><a href="{{ url_for('help_availability',month=month) }}">来院予定を確認・修正 →</a></div>
 <button name="mode" value="help">ヘルプ込みで勤務表を作成</button></div>{% endif %}
-{% if fixed_help_base %}<div class="creation-option creation-secondary"><div><h3>不足が埋まらないときは、自院全体も調整</h3><p class="hint">依頼済みヘルプの勤務を固定し、了承出勤・希望休・有給・会議を守って自院と事前登録ヘルプを調整します。不足のない表ができた場合だけ結果を表示します。</p><p class="hint">編集画面の勤務表はそのままです。変更内容を確認してから取り込めます。</p></div><button name="mode" value="rebalance" class="secondary">自院の勤務も調整して作成</button></div>{% endif %}
 {% if advance_help_count %}<div class="creation-option creation-secondary"><div><h3>事前に分かっているヘルプも使って不足を調べる</h3><p class="hint">自院と、依頼前から配置してよい人の勤務可能日で仮作成します。ほかのヘルプへの依頼が必要な箇所を確認できます。</p></div><button name="mode" value="advance_draft">事前登録のヘルプも使って仮作成</button></div>{% else %}
 <div class="creation-option creation-secondary"><div><h3>自院だけの不足を調べる</h3><p class="hint">登録済みのヘルプは使いません。相談前の仮表です。不足が残る場合、作り直すと不足する日が変わることがあります。編集画面の表は上書きしません。</p></div><button name="mode" value="draft" class="{{ 'secondary' if help_count else '' }}">不足を残して仮作成する</button></div>{% endif %}
 {% if not help_count %}<p class="hint">ヘルプを使う場合は、<a href="{{ url_for('help_availability',month=month) }}">来院予定を登録</a>してください。スタッフ登録だけでは勤務に含めません。</p>{% endif %}
