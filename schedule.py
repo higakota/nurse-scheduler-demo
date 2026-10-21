@@ -97,6 +97,13 @@ def register_schedule(app, connect_db):
                 elif request.form.get("mode") in ("help","help_draft") and source_raw:
                     from fixed_help import generate_fixed_help
                     outcome = generate_fixed_help(snapshot, source_raw, seconds=app.config.get("SCHEDULER_SECONDS",10), source_name=source_name, partial=request.form.get("mode")=="help_draft")
+                    if request.form.get("mode")=="help" and outcome["status"] in ("infeasible","unknown"):
+                        draft=generate_fixed_help(snapshot,source_raw,seconds=app.config.get("SCHEDULER_SECONDS",10),
+                                                  source_name=source_name,partial=True)
+                        if draft["status"]=="draft":
+                            draft["messages"].insert(0,"完成条件が残っているため、ヘルプを反映した仮表として表示しています。不足や6連勤を確認・調整してください。")
+                            outcome=draft
+
                 elif request.form.get("mode") in ("help_draft","rebalance_draft"):
                     from scheduler_engine import prefer_five
                     outcome=prefer_five(planning_snapshot,use_help=True,partial=True,seconds=app.config.get("SCHEDULER_SECONDS",10))
