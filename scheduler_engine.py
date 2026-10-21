@@ -871,7 +871,7 @@ def _draft_by_person(problem, seconds, max_full_days=5):
                             nurse_count = sum(people[j]["role"] == "nurse" and grid[d][j][h] == "W" for j in range(len(people)) if j != i)
                             tech_present = sum(people[j]["role"] == "technician" and grid[d][j][h] == "W" for j in range(len(people)) if j != i)
                             if people[i]["role"] == "technician":
-                                benefit += int(need_c > 0 and not tech_present)
+                                benefit += int(tech_present < need_c)
                             else:
                                 benefit += int(nurse_count < need_a + need_b + max(0, need_c-int(tech_present)))
                                 if people[i]["veteran"] and not any(people[j]["veteran"] and grid[d][j][h] == "W" for j in range(len(people)) if j != i):

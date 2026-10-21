@@ -71,3 +71,32 @@ class HelpRolePreferenceTest(unittest.TestCase):
         self.assertEqual(after,[(1,0),(1,1)])
         self.assertEqual(sum(map(sum,before)),sum(map(sum,after)))
         self.assertEqual(verify(problem,result,allow_shortages=True,max_full_days=5),[])
+
+    def test_two_technician_helpers_fill_c_without_extra_nurse(self):
+        data=fixtures.sample(regular_count=3)
+        data["monthly_settings"]["wishes"]["4_2026-02-02"]="full"
+        data["monthly_settings"]["targets"]["4"]="28"
+        for half in ("am","pm"):data["coverage_settings"]["2026-02-02_"+half]["c"]=2
+        for pid in (9,10):
+            data["staff"].append(dict(id=pid,name="検査ヘルプ仮名"+str(pid),role="technician",
+                employment="",veteran=0,is_help=1,allowed_areas="C"))
+            data["help_availability"][str(pid)+"_2026-02-02"]="full"
+        result=generate(data,use_help=True,seconds=3)
+        self.assertEqual(result["status"],"success",result["messages"])
+        self.assertEqual(sum(pair=="CC" for pair in result["grid"][1]),2)
+        self.assertEqual(draft_shortages(result["problem"],1,result["grid"][1]),[])
+        self.assertEqual(verify(result["problem"],result["grid"],max_full_days=result["max_full_days"]),[])
+
+    def test_c_shortage_can_be_filled_by_second_technician_but_ab_cannot(self):
+        from scheduler_engine import prepare,allocate
+        from help_limits import planned_helper_roles
+        from schedule_display import grouped_shortages,concise_shortages
+        data=fixtures.sample(regular_count=2)
+        for half in ("am","pm"):data["coverage_settings"]["2026-02-02_"+half]["c"]=2
+        problem=prepare(data)
+        row=allocate(problem,1,["WW","WW","WW"],partial=True)
+        self.assertEqual(planned_helper_roles(problem,1,row),(1,1))
+        grid=[("RR",)*3 for _ in problem["days"]];grid[1]=row
+        rows=grouped_shortages(draft_shortages(problem,1,row),problem,grid)
+        self.assertEqual(concise_shortages(rows),[dict(date="2026-02-02",
+            items=["午前・午後：看護師2人不足（うち1人は検査技師でも可）"])])

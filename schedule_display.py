@@ -115,6 +115,9 @@ def monthly_display(days, people, grid, monthly=None, targets=None, shortages=No
                                   if item["missing"] else ("ベテラン" + str(count) + "人へ交代（人数充足）"))
                 elif item.get("requires_technician"):
                     labels.append(("C" + str(item["missing"]) + "人（要検査技師）") if item["missing"] else "C充足（要検査技師）")
+                elif item.get("alternative_technicians"):
+                    labels.append(short + str(item["missing"]) + "人（うち" +
+                                  str(item["alternative_technicians"]) + "人は検査技師でも可）")
                 else:
                     labels.append(short + str(item["missing"]) + "人")
             cells.append(dict(label="・".join(labels) if labels else "—", missing=bool(items)))
@@ -140,6 +143,20 @@ def grouped_shortages(shortages, problem, grid):
             elif "他院の検査技師" in row["area"]:
                 row["area"] = "検査技師（C番として計上）"
                 row["note"] = "C番の担当として必要"
+            if row["area"] == "診療の看護師合計" and grid:
+                d = problem["days"].index(row["date"])
+                h = 0 if row["half"] == "午前" else 1
+                tech = sum(p["role"] == "technician" and grid[d][i][h] == "C"
+                           for i,p in enumerate(problem["people"]))
+                a,b,c = problem["requirements"][d][h]
+                nurse_count = sum(p["role"] == "nurse" and grid[d][i][h] in "ABCD"
+                                  for i,p in enumerate(problem["people"]))
+                mandatory_nurses = max(0,a+b-nurse_count,int(bool(row.get("veteran_missing"))))
+                alternative = min(max(0,c-tech-tech_keys.get(key,{}).get("missing",0)),
+                                  max(0,row["missing"]-mandatory_nurses))
+                if alternative:
+                    row["alternative_technicians"] = alternative
+                    row["note"] = ("うち" + str(alternative) + "人は検査技師でも可")
             result.append(row)
         return merge_veteran_shortages(result)
     c_rows = {(r["date"], r["half"]): r for r in shortages if r["area"].startswith("C（")}
@@ -212,6 +229,8 @@ def concise_shortages(rows):
             veteran=0
         else:
             text = f"{label}{missing}人不足" if missing else f"{label}への交代が必要"
+        if row.get("alternative_technicians"):
+            text += f"（うち{row['alternative_technicians']}人は検査技師でも可）"
         if veteran:
             text += f"（うちベテラン{veteran}人）" if missing else f"（ベテラン{veteran}人）"
         group = days.setdefault(row["date"], {})

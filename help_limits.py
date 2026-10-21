@@ -7,7 +7,7 @@ def helper_count(people, rows):
                for p, pair in zip(people, rows))
 
 
-def helper_demand_roles(problem, d, rows):
+def helper_demand_roles(problem, d, rows, *, prefer_technicians=False):
     """役割の重複を除いて、自院の不足を埋めるヘルプ人数の下限を求める。"""
     nurses, technicians = 0, 0
     for half, (a, b, c) in enumerate(problem["requirements"][d]):
@@ -21,6 +21,13 @@ def helper_demand_roles(problem, d, rows):
         needed = max(0, a+b+c_need-len(nurses_present),
                      c_need-sum("C" in p.get("allowed_areas","ABC") for p in nurses_present),
                      int(not any(p["veteran"] for p in nurses_present)))
+        if prefer_technicians:
+            # C番の残りは追加の技師でも担当できる。A・Bとベテランは看護師が必要。
+            nurse_only = max(0, a+b-len(nurses_present),
+                             int(not any(p["veteran"] for p in nurses_present)))
+            extra_tech = max(0, needed-nurse_only)
+            needed -= extra_tech
+            replacement += extra_tech
         nurses = max(nurses, needed)
         technicians = max(technicians, replacement)
     return nurses, technicians
@@ -48,7 +55,7 @@ def nurse_helper_excess(people, rows):
 
 def planned_helper_roles(problem,d,rows):
     """事前配置した人と、追加相談が必要な人数を合わせて比較する。"""
-    nurses,techs=helper_demand_roles(problem,d,rows)
+    nurses,techs=helper_demand_roles(problem,d,rows,prefer_technicians=True)
     nurses+=sum(p["is_help"] and p["role"]=="nurse" and any(c in "ABCDWMO" for c in pair)
                 for p,pair in zip(problem["people"],rows))
     techs+=sum(p["is_help"] and p["role"]=="technician" and any(c in "ABCDWMO" for c in pair)
