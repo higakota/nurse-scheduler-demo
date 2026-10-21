@@ -77,5 +77,7 @@ class MeetingAttendanceTest(unittest.TestCase):
         page=self.client.get("/monthly?month=2026-10").get_data(as_text=True)
         self.assertIn('data-attendance-person="1"',page)
         self.assertIn('id="meeting-attendance-dialog"',page)
-        self.assertIn('class="input-meeting-agenda-link"',page)
+        self.assertIn('class="input-day-meeting-title"',page)
         self.assertIn("仮名会議",page)
+        self.assertNotIn('class="input-meeting-agenda"',page)
+        self.assertIn('--input-sheet-days:31',page)

@@ -14,11 +14,6 @@
 .input-meeting-row td{padding:4px 2px}
 .input-sheet tbody th{white-space:normal}
 
-.input-meeting-agenda{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;margin:12px 0}
-.input-meeting-agenda>div{background:#fffaea;border:1px solid #e5d9b7;border-radius:6px;padding:10px 12px}
-.input-meeting-agenda strong{display:block;font-size:12px;color:#6d623f}
-.app-layout .input-meeting-agenda-link{display:block;text-align:left;white-space:normal;overflow-wrap:anywhere;background:transparent;color:var(--teal);font-size:13px;font-weight:500;padding:4px 0}
-.input-meeting-agenda-link small{margin-left:6px;color:#806631;font-size:11px}
 .app-layout .input-attendance-cell{display:block;background:transparent;color:var(--ink);width:100%;min-height:42px;padding:3px 0;border-radius:0;font-size:12px}
 .app-layout .input-attendance-cell:hover{background:#fff0be}
 .app-layout .input-attendance-cell:disabled{background:transparent;color:var(--muted)}
@@ -27,3 +22,13 @@
 #meeting-attendance-dialog{width:min(520px,92vw);max-height:90vh;overflow:auto;padding:24px;border:1px solid var(--line);border-radius:12px}
 #meeting-attendance-dialog::backdrop{background:#142e284d}
 #attendance-choices .checkbox{padding:10px 0;border-bottom:1px solid var(--line);white-space:normal}
+/* Keep full meeting names inside their date columns. */
+.input-sheet{width:calc(144px + var(--input-sheet-days) * 96px);min-width:100%}
+.input-sheet-name{width:144px}
+.input-sheet tr>th:first-child{position:sticky;left:0;z-index:2;box-shadow:1px 0 0 #bdc9c3}
+.input-sheet thead tr>th:first-child{z-index:3}
+.input-sheet-wrap{overscroll-behavior-x:contain}
+.app-layout .input-day-meeting-title{display:block;width:100%;padding:7px 4px;background:transparent;color:var(--teal);font-size:12px;font-weight:500;white-space:normal;overflow-wrap:anywhere;text-align:left;line-height:1.6;border-radius:4px}
+.app-layout .input-day-meeting-title:hover{background:#f4e7bf}
+.input-day-meeting-title+.input-day-meeting-title{border-top:1px dotted #ddcfaa}
+.input-day-meeting-title small{color:#806631}
