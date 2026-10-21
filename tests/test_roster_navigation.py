@@ -106,3 +106,36 @@ class RosterNavigationTest(unittest.TestCase):
         page=self.client.get("/schedule?month=2026-02").get_data(as_text=True)
         self.assertIn('id="working-result"',page)
         self.assertNotIn('id="saved-result"',page)
+
+    def test_paid_candidates_are_visible_read_only_during_source_review(self):
+        source=self.generate()
+        old=copy.deepcopy(source);old["updated"]="2020-01-01T00:00:00+00:00";old["grid"][1][0]="RR"
+        self.store("manual_schedules",old)
+        value=digest(json.dumps(source,sort_keys=True,ensure_ascii=False))
+        before=self.dump()
+        page=self.client.get("/schedule/manual?month=2026-02&view_source=generated&view_token="+value+"&paid_open=1").get_data(as_text=True)
+        self.assertIn('class="leave-candidate-preview-person"',page)
+        self.assertNotIn('class="leave-candidate-action"',page)
+        self.assertIn("先に勤務表の変更を保存",page)
+        self.assertEqual(before,self.dump())
+
+    def test_first_edit_view_can_apply_leave_from_its_saved_source(self):
+        self.generate()
+        page=self.client.get("/schedule/manual?month=2026-02").get_data(as_text=True)
+        form=re.search(r'<form[^>]+action="/schedule/paid-candidate[^"]*"[^>]*>(.*?)</form>',page,re.S)[1]
+        values={k:html.unescape(v) for k,v in re.findall(r'name="([^"]+)" value="([^"]*)"',form)}
+        self.assertEqual(values["source_kind"],"generated")
+        response=self.client.post("/schedule/paid-candidate?month=2026-02",data=values)
+        self.assertEqual(response.status_code,302)
+        db=connect_db()
+        leaves=json.loads(db.execute("SELECT data FROM leave_history").fetchone()[0])["leaves"]
+        self.assertEqual(leaves[values["staff"]+"_"+values["day"]],values["period"])
+        db.close()
+
+    def test_old_edit_view_links_to_candidate_list_for_new_source(self):
+        source=self.generate()
+        old=copy.deepcopy(source);old["updated"]="2020-01-01T00:00:00+00:00";old["input_hash"]="old"
+        self.store("manual_schedules",old)
+        page=self.client.get("/schedule/manual?month=2026-02").get_data(as_text=True)
+        self.assertIn("新しい表の有給候補を確認する",page)
+        self.assertIn("この編集表は入力変更前の表",page)

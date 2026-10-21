@@ -46,7 +46,7 @@
 <div class="actions"><button id="manual-apply">表に反映する</button><button type="button" id="manual-cancel">キャンセル</button></div>
 <p class="hint">ここではまだ保存しません。最後にまとめて確認・保存できます。</p></form></dialog>
 {% endif %}
-{% if not preview %}<section class="panel"><p class="hint">有給候補は、最後に保存した勤務表から調べます。編集したら先に保存してください。</p>{% include "_leave_candidates.html" %}</section>{% endif %}
+<section class="panel">{% if preview %}<p class="hint">表示中の変更後の表で調べた候補です。表を反映すると、ここから有給を追加できます。</p>{% else %}<p class="hint">表示中の保存済み勤務表から候補を調べます。</p>{% endif %}{% include "_leave_candidates.html" %}{% if stale and not preview and not error %}{% if pending_kind %}<p><a class="button-link secondary" href="{{ url_for('manual_schedule',month=month,view_source=pending_kind,view_token=pending_token,paid_open='1',_anchor='paid-candidates') }}">新しい表の有給候補を確認する</a></p>{% else %}<form method="post">{% include "_manual_tokens.html" %}<button name="action" value="reflect_inputs">入力の変更を反映して候補を確認する</button></form>{% endif %}{% endif %}</section>
 <section class="panel"><h2>現在の入力条件との確認</h2>
 {% if warnings %}<details {% if preview %}open{% endif %}><summary>確認事項 {{ warnings|length }}件を見る</summary><ul class="error">{% for message in warnings %}<li>{{ message }}</li>{% endfor %}</ul></details>{% endif %}
 {% if shortages %}<details {% if preview %}open{% endif %}><summary>配置・資格の不足 {{ shortages|length }}件を見る</summary><ul>{% for row in shortages %}<li>{{ row.date|date_with_weekday }} {{ row.half }}：{{ row.area }} {{ row.missing }}人不足{% if row.veteran_missing %}（うちベテラン{{ row.veteran_missing }}人）{% endif %}</li>{% endfor %}</ul></details>{% endif %}

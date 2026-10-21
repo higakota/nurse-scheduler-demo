@@ -24,5 +24,5 @@ def import_patch(base,source,staff):
 def pending_source(base,sources,fingerprint):
     current=[(kind,source) for kind,source in sources.items()
              if source.get("input_hash")==fingerprint and newer(source,base)
-             and (source["grid"]!=base["grid"] or source["people"]!=base["people"])]
+             and (source["grid"]!=base["grid"] or source["people"]!=base["people"] or source.get("input_hash")!=base.get("input_hash"))]
     return max(current,key=lambda item:stamp(item[1])) if current else (None,None)

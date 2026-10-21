@@ -345,10 +345,32 @@ def register_manual_schedule(app, connect_db):
                 for cell in row["cells"]:
                     cell["label"]="未確認"
         from leave_candidates import leave_candidates
-        paid_candidates = (leave_candidates(snapshot,base if "updated" in base else None,fp)
-                           if not preview and not error else
-                           dict(days=[],groups=[],message="編集内容を確認・保存してから、有給候補を確認してください。"))
-        paid_candidates["source_kind"]="manual"
+        candidate_source=base
+        candidate_kind="manual"
+        if preview:
+            candidate_source=dict(base,grid=grid,input_hash=fp)
+        elif "updated" not in base:
+            # 保存済み生成結果・仮表を初めて編集するときも、同じ元の表で候補を調べる。
+            from roster_navigation import stamp
+            matches=[]
+            for kind,value in import_sources.items():
+                if value.get("input_hash")!=fp:continue
+                try:
+                    aligned=align_helper_rows(snapshot,value)
+                except ValueError:
+                    continue
+                if aligned["grid"]==base["grid"]:
+                    matches.append((kind,value))
+            if matches:
+                candidate_kind,candidate_source=max(matches,key=lambda item:stamp(item[1]))
+            else:
+                candidate_source=None
+        paid_candidates=(leave_candidates(snapshot,candidate_source,fp) if not error else
+                         dict(days=[],groups=[],message="編集内容を確認してから、有給候補を確認してください。"))
+        paid_candidates["source_kind"]=candidate_kind
+        paid_candidates["read_only"]=preview
+        if not preview and base["input_hash"]!=fp and paid_candidates.get("message"):
+            paid_candidates["message"]="この編集表は入力変更前の表です。新しい表か、入力変更を反映した表で候補を確認してください。"
         pending_token=digest(json.dumps(pending_value,sort_keys=True,ensure_ascii=False)) if pending_value else ""
         return render_template("manual_schedule.html",source_view_error=bool(error and request.args.get("view_source")),pending_kind=pending_kind,pending_token=pending_token,help_changes=help_changes,paid_changes=paid_changes,paid_candidates=paid_candidates,month=month,base=base,grid=grid,display=display,
                                input_priority=bool(request.form.get("input_priority")=="yes" or request.form.get("action")=="reflect_inputs"),fingerprint=fp,revision=token,error=error,preview=preview,changes=changes,patch=patch,initial_patch=initial_patch,
