@@ -33,7 +33,7 @@ class InputSheetTest(unittest.TestCase):
         db.commit()
         before=list(db.iterdump())
         page=self.client.get("/monthly?month=2026-10").get_data(as_text=True)
-        self.assertIn('href="#excel-meeting-candidate"',page)
+        self.assertIn('data-attendance-day="2026-10-02"',page)
         self.assertIn('value="2026-10-02" selected',page)
         self.assertIn("参加者を指定",page)
         self.assertEqual(before,list(db.iterdump()))

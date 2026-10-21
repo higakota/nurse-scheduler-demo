@@ -28,7 +28,7 @@ def register_monthly(app, connect_db):
         db = connect_db()
         try:
             db.execute("CREATE TABLE IF NOT EXISTS monthly_settings (month TEXT PRIMARY KEY, data TEXT NOT NULL)")
-            if request.method == "POST" and request.form.get("action") in ("settings", "excel_events", "meeting_add", "meeting_edit", "meeting_time", "meeting_delete"):
+            if request.method == "POST" and request.form.get("action") in ("settings", "excel_events", "meeting_attendance", "meeting_add", "meeting_edit", "meeting_time", "meeting_delete"):
                 db.execute("BEGIN IMMEDIATE")
             staff = db.execute("SELECT * FROM staff ORDER BY id").fetchall()
             ids = {str(person["id"]) for person in staff}
@@ -71,13 +71,26 @@ def register_monthly(app, connect_db):
                 if not secrets.compare_digest(session["csrf_token"], request.form.get("csrf_token", "")):
                     abort(400, description="画面を開き直してから保存してください。")
                 action = request.form.get("action")
-                if action in ("meeting_add", "meeting_edit", "meeting_time", "meeting_delete") and (
-                        action == "meeting_edit" or "settings_fingerprint" in request.form):
+                if action in ("meeting_attendance", "meeting_add", "meeting_edit", "meeting_time", "meeting_delete") and (
+                        action in ("meeting_edit","meeting_attendance") or "settings_fingerprint" in request.form):
                     if not secrets.compare_digest(settings_fingerprint, request.form.get("settings_fingerprint", "")):
                         error = "会議またはスタッフ等の設定が別の画面で変更されています。画面を開き直してください。"
                         action = "meeting_conflict"
                 if action == "meeting_conflict":
                     pass
+                elif action == "meeting_attendance":
+                    person_id = request.form.get("attendance_staff","")
+                    meeting_day = request.form.get("attendance_day","")
+                    if person_id not in ids or meeting_day not in {d.isoformat() for d in days}:
+                        error = "スタッフと対象月の日付を選択してください。"
+                    elif date.fromisoformat(meeting_day).weekday()==6 or meeting_day in data["closures"]:
+                        error = "休診日には会議の参加を登録できません。"
+                    else:
+                        from meeting_attendance import attendance_plan
+                        try:
+                            data = attendance_plan(data,event_preview,person_id,meeting_day,request.form.getlist("attendance"))
+                        except ValueError as exc:
+                            error = str(exc)
                 elif action == "absence_save":
                     try:
                         save_absences(db, month, request.form)
@@ -241,6 +254,7 @@ def register_monthly(app, connect_db):
         finally:
             db.close()
         absence_weeks = [[day if day.month == number else None for day in week] for week in calendar.Calendar(firstweekday=6).monthdatescalendar(year, number)]
-        return render_template("monthly.html", input_doctors=input_doctors, settings_fingerprint=settings_fingerprint, absence_weeks=absence_weeks, absence_leaves=absence_data["leaves"], absence_fingerprint=absence_fingerprint, event_preview=event_preview, extra_staff=staff, month=month, days=days, staff=staff, data=data, names=names,
+        from meeting_attendance import attendance_choices
+        return render_template("monthly.html", attendance_days=attendance_choices(data,event_preview), input_doctors=input_doctors, settings_fingerprint=settings_fingerprint, absence_weeks=absence_weeks, absence_leaves=absence_data["leaves"], absence_fingerprint=absence_fingerprint, event_preview=event_preview, extra_staff=staff, month=month, days=days, staff=staff, data=data, names=names,
                                error=error, warnings=warnings, saved=request.method == "GET" and request.args.get("saved") == "1",
                                weekdays="月火水木金土日")

@@ -48,7 +48,7 @@
 <div class="save-bar" data-month-save><p id="settings-status" role="status">休日日数・週上限・休診日を保存します。希望休・有給は専用の保存ボタンを使ってください。</p><button>入力内容を保存</button></div>
 </form>
 <section class="panel" id="meetings" data-month-panel="meetings">
-<h2>午後の会議</h2><p class="hint">日付の＋で追加。会議名を押すと編集できます。Excelの候補は参加者を指定して反映します。</p>{% with absence_grid=false %}{% include "_monthly_input_grid.html" %}{% endwith %}
+<h2>午後の会議</h2><p class="hint">スタッフと日付のマスを押して会議への参加を入力します。＋は会議自体を追加するボタンです。</p>{% with absence_grid=false %}{% include "_monthly_input_grid.html" %}{% endwith %}
 {% if error and request.form.get('action', '').startswith('meeting_') %}<p class="error" role="alert">会議は保存できませんでした：{{ error }}</p>{% endif %}
 {% if saved %}<p class="success" role="status">保存しました。登録済みの会議は{{ data.meetings|length }}件です。</p>{% endif %}
 <p class="hint">参加者は午後全体を診療に配置できません。全員参加の場合は全員にチェックを入れてください。同じ人の会議が同じ午後に複数ある場合は、重複を確認できないため登録を保留します。</p>
@@ -69,6 +69,16 @@
 </form></details>
 <form method="post"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="settings_fingerprint" value="{{ settings_fingerprint }}"><input type="hidden" name="action" value="meeting_delete"><input type="hidden" name="meeting_id" value="{{ meeting.id }}"><button>この会議を削除</button></form>
 </article>{% else %}<p>登録済みの会議はありません。Excelの読取候補は、日付・参加者を確認して反映するまで勤務表に使われません。</p>{% endfor %}
+<dialog id="meeting-attendance-dialog" aria-labelledby="meeting-attendance-title" {% if error and request.form.get('action')=='meeting_attendance' %}data-reopen{% endif %}>
+<h2 id="meeting-attendance-title">会議への参加</h2>{% if error and request.form.get('action')=='meeting_attendance' %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="{{ url_for('monthly_settings',month=month,_anchor='meetings') }}">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="settings_fingerprint" value="{{ settings_fingerprint }}"><input type="hidden" name="action" value="meeting_attendance"><input type="hidden" name="attendance_day" id="attendance-day">
+<label for="attendance-staff">スタッフ</label><select name="attendance_staff" id="attendance-staff" data-ui-only="true">{% for person in staff %}<option value="{{ person.id }}">{{ person.name }}</option>{% endfor %}</select>
+<p class="hint">参加する会議にチェックして保存します。チェックを外すと、その会議への参加を取り消します。</p>
+<div id="attendance-choices"></div><p id="attendance-empty" hidden>この日の会議はまだありません。先に会議を追加してください。</p>
+<div class="actions"><button id="attendance-save">参加を保存</button><button type="button" class="secondary" id="attendance-close">閉じる</button></div></form></dialog>
+<script type="application/json" id="attendance-data">{{ attendance_days|tojson }}</script>
+<script type="application/json" id="attendance-pending">{{ {'day':request.form.get('attendance_day',''),'staff':request.form.get('attendance_staff',''),'selected':request.form.getlist('attendance')}|tojson }}</script>
 <button type="button" id="meeting-open-add" class="secondary">会議を追加</button>
 <dialog id="meeting-add-dialog" aria-labelledby="meeting-add-title" {% if error and request.form.get('action') == 'meeting_add' %}data-reopen{% endif %}><h2 id="meeting-add-title">午後の会議を追加</h2>
 {% if error and request.form.get('action') == 'meeting_add' %}<p class="error" role="alert">{{ error }}</p>{% endif %}
