@@ -165,8 +165,8 @@ class MonthlyTest(unittest.TestCase):
         self.assertEqual(saved["targets"], data["targets"])
         self.assertEqual(saved["wishes"], data["wishes"])
         page = self.client.get("/monthly?month=2026-10").get_data(as_text=True)
-        self.assertIn("Excelから反映済み", page)
-        self.assertIn("この会議を編集", page)
+        self.assertIn('class="meeting-editor-dialog"',page)
+        self.assertIn('data-meeting-edit=',page)
 
     def test_edit_meeting_rejects_invalid_date_participants_overlap_and_stale(self):
         self.post(action="meeting_add", meeting_date="2026-10-20", title="会議1", participants="1", start="14:00", end="15:00")
@@ -214,8 +214,10 @@ class MonthlyTest(unittest.TestCase):
                              meeting_date="2026-10-20", title="確認用会議", participants="1", start="14:00", end="15:00")
         self.assertEqual(response.status_code, 302)
         text = self.client.get(response.location).get_data(as_text=True)
-        self.assertIn("登録済みの会議（1件）", text)
-        self.assertIn("2026-10-20（火） 午後：確認用会議", text)
+        self.assertNotIn("登録済みの会議（1件）", text)
+        self.assertIn('data-meeting-edit=',text)
+        self.assertIn("確認用会議を編集", text)
+        self.assertNotIn('<article class="meeting"',text)
         self.assertIn("保存しました。登録済みの会議は1件", text)
         self.assertIn('action="/monthly?month=2026-10#meetings"', text)
 

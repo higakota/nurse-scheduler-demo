@@ -3,6 +3,7 @@ const dialog=document.getElementById("input-absence-dialog");
 document.querySelectorAll("[data-open-meeting]").forEach(link=>link.addEventListener("click",event=>{
  event.preventDefault();const target=document.querySelector(link.getAttribute("href"));if(!target)return;
  document.querySelector('[data-month-tab="meetings"]')?.click();
+ if(target.matches("dialog")){target.showModal();return;}
  if(target.matches("details"))target.open=true;else target.querySelector("details")?.setAttribute("open","");
  target.scrollIntoView({block:"center",behavior:"smooth"});
 }));
@@ -10,6 +11,11 @@ document.querySelectorAll("[data-meeting-day]").forEach(button=>button.addEventL
  const date=document.getElementById("meeting_date");date.value=button.dataset.meetingDay;
  document.getElementById("meeting-add-dialog").showModal();document.getElementById("title").focus();
 }));
+document.querySelectorAll("[data-meeting-edit]").forEach(button=>button.addEventListener("click",()=>{
+ document.getElementById("meeting-"+button.dataset.meetingEdit)?.showModal();
+}));
+document.querySelectorAll("[data-close-meeting]").forEach(button=>button.addEventListener("click",()=>button.closest("dialog").close()));
+document.querySelectorAll(".meeting-editor-dialog[data-reopen]").forEach(dialog=>dialog.showModal());
 const meetingDialog=document.getElementById("meeting-add-dialog");
 document.getElementById("meeting-open-add")?.addEventListener("click",()=>meetingDialog.showModal());
 document.getElementById("meeting-add-close")?.addEventListener("click",()=>meetingDialog.close());
