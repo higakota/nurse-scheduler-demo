@@ -1,4 +1,4 @@
 <nav class="journey-nav" aria-label="勤務表作成の手順"><ol>
 {% for number,title,endpoint,phase in [(1,'今月の入力','monthly_settings',''),(2,'不足を確認','schedule','plan'),(3,'ヘルプを依頼・登録','help_availability',''),(4,'ヘルプを反映','schedule','build'),(5,'調整・印刷','manual_schedule','')] %}
-<li><a href="{{ url_for(endpoint,month=ui_month,phase=phase) if phase else url_for(endpoint,month=ui_month) }}" {% if ui_current_step==number %}aria-current="step"{% endif %}><span>{{ number }}</span><strong>{{ title }}</strong></a></li>
+<li><a href="{{ url_for(endpoint,month=ui_month,view_source=edit_source_kind,view_token=edit_source_token) if number==5 and edit_source_kind|default('') else url_for(endpoint,month=ui_month,phase=phase) if phase else url_for(endpoint,month=ui_month) }}" {% if ui_current_step==number %}aria-current="step"{% endif %}><span>{{ number }}</span><strong>{{ title }}</strong></a></li>
 {% endfor %}</ol></nav>

@@ -61,7 +61,7 @@ document.querySelectorAll("[data-print-packet]").forEach(button => {
 window.addEventListener("beforeprint", () => {
   if (!selectedPacket) {
     originalTitle = document.title;
-    preparePrint(document.getElementById("manual-print") || document.getElementById("draft-print") || document.getElementById("saved-print"));
+    preparePrint(document.getElementById("manual-print") || document.getElementById("draft-print") || document.getElementById("saved-print") || document.getElementById("working-print"));
   }
   fitMonthlySheet();
 });

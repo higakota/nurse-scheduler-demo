@@ -41,14 +41,15 @@ def load_manual(db, month, snapshot, fingerprint, generated):
     days = [date(year,number,d).isoformat() for d in range(1,calendar.monthrange(year,number)[1]+1)]
     people = snapshot["staff"]
     candidates=[json.loads(value) for value in (seed,generated) if value]
-    source=max(candidates,key=lambda item:(item.get("input_hash")==fingerprint,item.get("created",""))) if candidates else {}
+    from roster_navigation import stamp
+    source=max(candidates,key=lambda item:(item.get("input_hash")==fingerprint,stamp(item))) if candidates else {}
     source_days = {day:d for d,day in enumerate(source.get("days",[]))}
     source_people = {str(p["id"]):i for i,p in enumerate(source.get("people",[]))}
     grid = []
     for day in days:
         grid.append([source["grid"][source_days[day]][source_people[str(p["id"])]]
                      if day in source_days and str(p["id"]) in source_people else "RR" for p in people])
-    return dict(days=days,people=people,grid=grid,history=[],input_hash=source.get("input_hash",fingerprint),
+    return dict(source,days=days,people=people,grid=grid,history=source.get("history",[]),input_hash=source.get("input_hash",fingerprint),
                 source=source.get("source","保存済みの自動作成結果" if generated else "手入力（初期状態は全員休み）")), token
 
 
@@ -218,6 +219,7 @@ def register_manual_schedule(app, connect_db):
         changes=[]
         patch="{}"
         initial_patch={}
+        pending_kind,pending_value=None,None
         try:
             if request.method=="POST":
                 if not secrets.compare_digest(session["csrf_token"],request.form.get("csrf_token","")):
@@ -237,6 +239,23 @@ def register_manual_schedule(app, connect_db):
                 import_sources["generated"]=json.loads(generated)
             if seed_row:
                 import_sources["draft"]=json.loads(seed_row[0])
+            pending_kind,pending_value=None,None
+            from roster_navigation import pending_source,import_patch
+            if "updated" in base:
+                pending_kind,pending_value=pending_source(base,import_sources,fp)
+            if request.method=="GET" and request.args.get("view_source"):
+                kind=request.args["view_source"]
+                source=import_sources.get(kind)
+                if not source or digest(json.dumps(source,sort_keys=True,ensure_ascii=False))!=request.args.get("view_token"):
+                    raise ValueError("指定した勤務表は更新されています。元の作成画面を開き直してください。")
+                if source.get("input_hash")!=fp:
+                    raise ValueError("指定した表の後に入力が変わっています。現在の入力を確認してください。")
+                patch=import_patch(base,source,snapshot["staff"])
+                grid,changes=checked_patch(base,patch)
+                snapshot,paid_changes=synchronize_paid_inputs(snapshot,base,grid)
+                snapshot,help_changes=synchronize_help_inputs(snapshot,base,grid)
+                session["manual_confirmation"]=digest(json.dumps([month,fp,token,patch,False]))
+                preview=True
             if request.method=="POST":
                 if request.form.get("fingerprint")!=fp or request.form.get("revision")!=token:
                     error="入力条件または下書きが別の画面で変更されました。最新の内容を確認して編集し直してください。"
@@ -330,6 +349,7 @@ def register_manual_schedule(app, connect_db):
                            if not preview and not error else
                            dict(days=[],groups=[],message="編集内容を確認・保存してから、有給候補を確認してください。"))
         paid_candidates["source_kind"]="manual"
-        return render_template("manual_schedule.html",help_changes=help_changes,paid_changes=paid_changes,paid_candidates=paid_candidates,month=month,base=base,grid=grid,display=display,
+        pending_token=digest(json.dumps(pending_value,sort_keys=True,ensure_ascii=False)) if pending_value else ""
+        return render_template("manual_schedule.html",source_view_error=bool(error and request.args.get("view_source")),pending_kind=pending_kind,pending_token=pending_token,help_changes=help_changes,paid_changes=paid_changes,paid_candidates=paid_candidates,month=month,base=base,grid=grid,display=display,
                                input_priority=bool(request.form.get("input_priority")=="yes" or request.form.get("action")=="reflect_inputs"),fingerprint=fp,revision=token,error=error,preview=preview,changes=changes,patch=patch,initial_patch=initial_patch,
                                warnings=warnings,shortages=shortages,codes=CODES,import_sources=import_sources,checks_incomplete=checks_incomplete,stale=base["input_hash"]!=fp)

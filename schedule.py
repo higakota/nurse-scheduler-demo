@@ -168,7 +168,11 @@ def register_schedule(app, connect_db):
                 source_raw = seed_raw
                 source_token = digest(json.dumps([seed_raw, manual_raw]))
 
-        if request.method=="GET" and not outcome and help_source=="draft" and not (saved and not stale) and (not request.args.get("phase") or request.args.get("resume")=="1"):
+        from roster_navigation import newer
+        seed_value=json.loads(seed_raw) if seed_raw else None
+        resume_requested=request.args.get("resume")=="1"
+        draft_newer=bool(seed_value and saved and newer(seed_value,saved))
+        if request.method=="GET" and not outcome and help_source=="draft" and (resume_requested or not (saved and not stale) or draft_newer) and (not request.args.get("phase") or resume_requested):
             from draft_view import restore_draft
             outcome=restore_draft(snapshot,fingerprint,seed_raw)
             if outcome:
@@ -212,10 +216,25 @@ def register_schedule(app, connect_db):
             finally:db.close()
         paid_candidates = leave_candidates(snapshot, candidate_source, fingerprint)
         paid_candidates["source_kind"]="draft" if outcome and outcome.get("status")=="draft" else "generated"
+        working=json.loads(manual_raw) if manual_raw else None
+        working_current=bool(not outcome and working and working.get("input_hash")==fingerprint and
+                             (not saved or newer(working,saved)) and request.args.get("phase")!="plan")
+        working_display=None
+        working_warnings=[]
+        if working_current:
+            from manual_schedule import diagnostics,align_helper_rows
+            working=align_helper_rows(snapshot,working)
+            working_warnings,working_shortages=diagnostics(snapshot,working,working["grid"])
+            working_display=monthly_display(working["days"],working["people"],working["grid"],snapshot.get("monthly_settings"),
+                            shortages=working_shortages,comparison_inputs=current_comparison,doctor_plans=snapshot.get("doctor_plans"))
+        edit_source_kind=("draft" if outcome and outcome.get("status")=="draft" else
+                          "generated" if saved and not stale and not outcome and not working_current else "")
+        edit_source_value=(json.loads(seed_raw) if edit_source_kind=="draft" and seed_raw else saved if edit_source_kind=="generated" else None)
+        edit_source_token=digest(json.dumps(edit_source_value,sort_keys=True,ensure_ascii=False)) if edit_source_value else ""
         from itsdangerous import URLSafeSerializer
         shortage_scope = URLSafeSerializer(app.secret_key, salt="agreed-shortage-days").dumps(
             dict(month=month,fingerprint=fingerprint,days=concise_shortages(shortage_rows),
                  source_kind=help_source,source_hash=digest(source_raw) if source_raw else "",include_help=not bool(outcome and outcome.get("grid")) and request.form.get("mode") in ("help","help_draft","rebalance_draft","rebalance","six","advance_draft"))) if shortage_rows else ""
-        return render_template("schedule.html", ui_current_step=4 if planning_phase=="build" or (saved and not stale and not outcome) else 2, planning_phase=planning_phase, requested_help_count=requested_help_count, advance_visit_count=advance_visit_count, advance_help_count=sum(1 for p in snapshot["staff"] if p["is_help"] and p.get("advance_help")), shortage_scope=shortage_scope, paid_candidates=paid_candidates, edit_revision=edit_revision, seed_token=source_token, fixed_help_base=bool(source_raw), help_source=help_source, has_seed=bool(seed_raw), has_manual=bool(manual_raw), source_name=source_name, month=month, fingerprint=fingerprint, result_token=digest(original),
+        return render_template("schedule.html",working_current=working_current,working_display=working_display,working_warnings=working_warnings,edit_source_kind=edit_source_kind,edit_source_token=edit_source_token, ui_current_step=4 if planning_phase=="build" or (saved and not stale and not outcome) else 2, planning_phase=planning_phase, requested_help_count=requested_help_count, advance_visit_count=advance_visit_count, advance_help_count=sum(1 for p in snapshot["staff"] if p["is_help"] and p.get("advance_help")), shortage_scope=shortage_scope, paid_candidates=paid_candidates, edit_revision=edit_revision, seed_token=source_token, fixed_help_base=bool(source_raw), help_source=help_source, has_seed=bool(seed_raw), has_manual=bool(manual_raw), source_name=source_name, month=month, fingerprint=fingerprint, result_token=digest(original),
                                outcome=outcome, result=saved, stale=stale, draft_display=draft_display, saved_display=saved_display, shortage_rows=shortage_rows, shortage_summary=concise_shortages(shortage_rows),
                                help_count=help_count)

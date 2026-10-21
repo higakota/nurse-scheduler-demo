@@ -6,8 +6,9 @@
 {% if stale %}<p class="workflow-notice" role="status"><strong>入力変更を反映して作り直せます。</strong> {% if has_manual %}<a href="{{ url_for('manual_schedule',month=month) }}">編集画面で、変更箇所を今の勤務表に反映する →</a>{% else %}最新の条件で勤務表を作成できます。下の作成ボタンから進んでください。{% endif %}</p>{% endif %}
 {% for message in get_flashed_messages(category_filter=['candidate-leave']) %}<p role="status">{{ message }}</p>{% endfor %}
 {% include "_schedule_outcome.html" %}
-{% set show_result = result and not stale and not (outcome and outcome.status == 'draft') and request.args.get('phase')!='plan' %}
+{% set show_result = result and not stale and not outcome and not working_current and request.args.get('phase')!='plan' %}
 {% set collapse_creation = (show_result and not outcome and request.args.get('phase')!='build' and not request.args.get('help_source')) or (outcome and outcome.status=='draft') %}
+{% if working_current %}<section class="panel" id="working-result"><h2>編集・保存した勤務表</h2><p>最新の編集内容を表示しています。</p>{% if working_warnings %}<p class="hint">勤務条件に確認事項があります。編集画面で確認してください。</p>{% endif %}<a class="button-link" href="{{ url_for('manual_schedule',month=month) }}">この勤務表を編集・印刷する</a>{% with display=working_display,is_draft=false %}{% include "_schedule_grid.html" %}{% endwith %}</section>{% endif %}
 {% if not collapse_creation %}{% include "_schedule_creation.html" %}{% endif %}
 {% if show_result %}<section class="panel" id="saved-result"><span class="status-badge saved">{{ 'ヘルプ反映済み' if result.mode=='help' else '自院のみの作成結果' }}</span><h2>{{ "自院全体も調整した月間勤務表" if result.get("rebalanced") else "自動で作った月間勤務表" }}</h2>{% if result.get("rebalanced") %}<p class="workflow-notice"><strong>月全体の人数・勤務条件を確認した案です。</strong>自院の出勤日も調整しています。「この作成結果を確認して編集へ」で変更箇所を確認してから反映してください。</p>{% endif %}<div class="result-toolbar"><form method="post" action="{{ url_for('manual_schedule',month=month) }}"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="revision" value="{{ edit_revision }}"><input type="hidden" name="action" value="import"><button name="source" value="generated">変更を確認して勤務表に反映</button></form><button type="button" class="secondary" data-print-packet="saved-print">印刷／PDF保存</button></div><p class="hint">作成結果は確認用です。変更箇所を確認して反映した表が、編集・印刷の対象になります。</p>
 {% with display=saved_display, is_draft=false %}{% include "_schedule_grid.html" %}{% endwith %}
@@ -20,6 +21,7 @@
 <section class="panel">{% include "_leave_candidates.html" %}</section>
 {% with print_id='draft-print', print_display=draft_display, is_draft=true, experimental=outcome.experimental, print_shortages=shortage_rows, print_runs=outcome.six_day_runs %}{% include "_schedule_print.html" %}{% endwith %}
 {% endif %}
-{% if result and not stale and not (outcome and outcome.status == 'draft') %}{% with print_id='saved-print', print_display=saved_display, is_draft=false, experimental=false, print_shortages=[], print_runs=result.get('six_day_runs', []) %}{% include "_schedule_print.html" %}{% endwith %}{% endif %}
+{% if show_result %}{% with print_id='saved-print', print_display=saved_display, is_draft=false, experimental=false, print_shortages=[], print_runs=result.get('six_day_runs', []) %}{% include "_schedule_print.html" %}{% endwith %}{% endif %}
 
+{% if working_current %}{% with print_id='working-print',print_display=working_display,is_draft=false,experimental=false,print_shortages=[],print_runs=[] %}{% include "_schedule_print.html" %}{% endwith %}{% endif %}
 </main><script src="{{ url_for('static', filename='schedule_print.js') }}"></script><script src="{{ url_for('static',filename='schedule_actions.js') }}"></script></body></html>
