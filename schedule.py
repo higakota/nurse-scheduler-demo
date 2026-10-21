@@ -69,16 +69,16 @@ def register_schedule(app, connect_db):
         if request.method == "POST":
             if not secrets.compare_digest(session["csrf_token"].encode(), request.form.get("csrf_token","").encode()):
                 abort(400)
-            if request.form.get("mode") not in ("self","help","six","draft","draft_six"):
+            if request.form.get("mode") not in ("self","help","rebalance","six","draft","draft_six"):
                 abort(400)
             if not secrets.compare_digest(fingerprint.encode(), request.form.get("fingerprint","").encode()) or not secrets.compare_digest(digest(original).encode(), request.form.get("result_token","").encode()):
                 outcome = {"status":"input_error","messages":["別の画面で入力または作成結果が変更されました。最新の内容を確認して作成してください。"],"shortages":[]}
-            elif request.form.get("mode") == "help" and (seed_raw or manual_raw) and request.form.get("seed_token", "") != source_token:
+            elif request.form.get("mode") in ("help","rebalance") and (seed_raw or manual_raw) and request.form.get("seed_token", "") != source_token:
                 outcome = {"status":"input_error","messages":["別の画面で自院の仮表が変更されました。画面を開き直してください。"],"shortages":[]}
             elif original and request.form.get("mode") not in ("draft","draft_six") and request.form.get("replace") != "yes":
                 outcome = {"status":"input_error","messages":["保存済み結果を置き換えることを確認してください。"],"shortages":[]}
             else:
-                use_help = request.form.get("mode") in ("help","six")
+                use_help = request.form.get("mode") in ("help","rebalance","six")
                 if request.form.get("mode") == "help" and not source_checked:
                     outcome = {"status":"input_error", "messages":["自院の勤務を変更した後の不足が未確認です。ヘルプ画面で「不足を表示・更新」を押してから作成してください。"], "shortages":[]}
                 elif request.form.get("mode") == "help" and source_raw:
@@ -89,20 +89,22 @@ def register_schedule(app, connect_db):
                            if request.form.get("mode") in ("draft","draft_six") else
                            (generate(snapshot, use_help, seconds=app.config.get("SCHEDULER_SECONDS",10), allow_six=True)
                             if request.form.get("mode")=="six" else generate(snapshot, use_help, seconds=app.config.get("SCHEDULER_SECONDS",10))))
+                if request.form.get("mode") == "rebalance":
+                    outcome["messages"].append("了承出勤・希望休・有給・会議・来院OKの時間帯を守り、自院全体の勤務を組み直しました。" if outcome["status"]=="success" else "自院全体も調整して探索しました。自院だけの仮作成を繰り返しても、不足が解消するとは限りません。")
                 if outcome["status"] == "success":
                     validation = verify(outcome["problem"], outcome["grid"], max_full_days=outcome.get("max_full_days",5))
                     if validation:
                         outcome.update(status="unknown", messages=validation)
                     else:
                         problem = outcome["problem"]
-                        saved = dict(max_full_days=outcome.get("max_full_days",5), six_day_runs=outcome.get("six_day_runs", []), doctor_plans=snapshot.get("doctor_plans", {}), monthly_context=snapshot.get("monthly_settings", {}), comparison_inputs={"wishes": snapshot.get("monthly_settings", {}).get("wishes", {}), "leaves": snapshot.get("leave_history", {}).get("leaves", {})}, weekly_summary=weekly_summary(problem,outcome["grid"]), input_hash=fingerprint, mode="help" if use_help else "self", days=problem["days"],
+                        saved = dict(rebalanced=request.form.get("mode")=="rebalance", max_full_days=outcome.get("max_full_days",5), six_day_runs=outcome.get("six_day_runs", []), doctor_plans=snapshot.get("doctor_plans", {}), monthly_context=snapshot.get("monthly_settings", {}), comparison_inputs={"wishes": snapshot.get("monthly_settings", {}).get("wishes", {}), "leaves": snapshot.get("leave_history", {}).get("leaves", {})}, weekly_summary=weekly_summary(problem,outcome["grid"]), input_hash=fingerprint, mode="help" if use_help else "self", days=problem["days"],
                                      people=problem["people"], grid=outcome["grid"], notes=outcome["messages"],
                                      created=datetime.now(timezone.utc).isoformat(), targets={str(problem["people"][i]["id"]):problem["targets"][k]/2 for k,i in enumerate(problem["regular"])})
                         db = connect_db()
                         try:
                             db.execute("BEGIN IMMEDIATE")
                             _, latest, latest_result = read_snapshot(db,month)
-                            if latest != fingerprint or latest_result != original or (request.form.get("mode") == "help" and (load_seed(db, month) != seed_raw or load_manual_source(db, month) != manual_raw)):
+                            if latest != fingerprint or latest_result != original or (request.form.get("mode") in ("help","rebalance") and (load_seed(db, month) != seed_raw or load_manual_source(db, month) != manual_raw)):
                                 db.rollback()
                                 outcome.update(status="input_error",messages=["作成中に入力または結果が変更されたため、保存しませんでした。再作成してください。"])
                             else:
@@ -163,7 +165,7 @@ def register_schedule(app, connect_db):
         from itsdangerous import URLSafeSerializer
         shortage_scope = URLSafeSerializer(app.secret_key, salt="agreed-shortage-days").dumps(
             dict(month=month,fingerprint=fingerprint,days=concise_shortages(shortage_rows),
-                 source_kind=help_source,source_hash=digest(source_raw) if source_raw else "",include_help=request.form.get("mode") in ("help","six"))) if shortage_rows else ""
+                 source_kind=help_source,source_hash=digest(source_raw) if source_raw else "",include_help=request.form.get("mode") in ("help","rebalance","six"))) if shortage_rows else ""
         return render_template("schedule.html", shortage_scope=shortage_scope, paid_candidates=paid_candidates, edit_revision=edit_revision, seed_token=source_token, fixed_help_base=bool(source_raw), help_source=help_source, has_seed=bool(seed_raw), has_manual=bool(manual_raw), source_name=source_name, month=month, fingerprint=fingerprint, result_token=digest(original),
                                outcome=outcome, result=saved, stale=stale, draft_display=draft_display, saved_display=saved_display, shortage_rows=shortage_rows, shortage_summary=concise_shortages(shortage_rows),
                                help_count=help_count)

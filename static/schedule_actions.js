@@ -9,8 +9,8 @@ replace?.addEventListener("change",()=>{replace.removeAttribute("aria-invalid");
 form.addEventListener("submit",event=>{
 if(submitting){event.preventDefault();return;}
 const mode=event.submitter?.value;
-if(!["draft","draft_six","self","help","six"].includes(mode)){event.preventDefault();return;}
-if(["self","help","six"].includes(mode)&&replace&&!replace.checked){
+if(!["draft","draft_six","self","help","rebalance","six"].includes(mode)){event.preventDefault();return;}
+if(["self","help","rebalance","six"].includes(mode)&&replace&&!replace.checked){
 event.preventDefault();status.hidden=false;status.textContent="保存済みの自動作成結果を置き換えるチェックを入れてから作成してください。手動下書きは変更しません。";replace.setAttribute("aria-invalid","true");replace.focus();return;
 }
 const field=document.createElement("input");field.type="hidden";field.name="mode";field.value=mode;form.append(field);
