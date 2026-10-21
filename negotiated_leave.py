@@ -54,7 +54,7 @@ def approved_help_preview(snapshot, base):
 
 def automatic_rest(snapshot, base, grid, person_id, protected_day):
     """指定公休に不足する分を、他の日の全日休みで補う。既存の不足は増やさない。"""
-    from scheduler_engine import prepare, verify, draft_shortages
+    from scheduler_engine import prepare, verify, draft_shortages, six_day_runs
     from itertools import combinations
     person = next(p for p in snapshot["staff"] if str(p["id"]) == person_id)
     target = snapshot.get("monthly_settings", {}).get("targets", {}).get(person_id)
@@ -88,6 +88,7 @@ def automatic_rest(snapshot, base, grid, person_id, protected_day):
             continue
         candidates.append((d,gain))
     tried=0
+    best=None
     for count in range(1,min(needed,len(candidates))+1):
         for selected in combinations(candidates,count):
             tried+=1
@@ -101,10 +102,89 @@ def automatic_rest(snapshot, base, grid, person_id, protected_day):
                 changes.append(dict(day=base["days"][d],before=trial[d][i],after="RR",automatic=True))
                 trial[d][i]="RR"
             if not (set(verify(problem,trial,allow_shortages=True,max_full_days=6))-before_errors):
-                return trial,changes
+                score=len(six_day_runs(problem,trial))
+                if best is None or score<best[0]:
+                    best=(score,trial,changes)
+                if score==0:
+                    return trial,changes
         if tried>5000:
             break
+    if best is not None:
+        return best[1],best[2]
     raise ValueError("公休を補える日が見つかりませんでした。人数不足を増やさず調整できる代わりの休みを選ぶか、自院の勤務・ヘルプを見直してください。")
+
+
+def avoid_six_after_agreement(snapshot, base, grid, person_id, protected_day):
+    """Try local whole-day rest moves before fixing the agreed roster for help."""
+    from scheduler_engine import prepare, verify, draft_shortages, six_day_runs
+    person = next(p for p in snapshot["staff"] if str(p["id"]) == person_id)
+    i = next(i for i,p in enumerate(base["people"]) if str(p["id"]) == person_id)
+    problem = prepare(snapshot,use_help=True)
+    if problem["errors"] or [str(p["id"]) for p in problem["people"]] != [str(p["id"]) for p in base["people"]]:
+        return grid, []
+    def runs(rows):
+        run=problem["tails"][i]
+        count=0
+        for row in rows:
+            run=run+1 if all(code in WORK for code in row[i]) else 0
+            count+=int(run==6)
+        return count
+    initial = runs(grid)
+    if not initial:
+        return grid, []
+    before_errors = set(verify(problem,grid,allow_shortages=True,max_full_days=6))
+    def deficits(d,row):
+        return {(r["half"],r["area"]):r["missing"] for r in draft_shortages(problem,d,row)}
+    before = [deficits(d,row) for d,row in enumerate(grid)]
+    def acceptable(d,pair):
+        row=list(grid[d]);row[i]=pair
+        return all(value<=before[d].get(key,0) for key,value in deficits(d,row).items())
+    off=[]
+    on=[]
+    for d,day in enumerate(base["days"]):
+        if day==protected_day:
+            continue
+        pair=grid[d][i]
+        if all(c in WORK for c in pair) and "M" not in pair and "RR" in problem["options"][d][i] and acceptable(d,"RR"):
+            off.append(d)
+        if pair=="RR":
+            for option in problem["options"][d][i]:
+                if all(c in WORK for c in option) and "M" not in option:
+                    clinical="".join(("C" if person["role"]=="technician" else "D") if c=="W" else c for c in option)
+                    if acceptable(d,clinical):
+                        on.append((d,clinical))
+    best=None
+    # Keep the person's rest total by moving an existing day off first.
+    for d in off:
+        for replacement,pair in on:
+            trial=[list(row) for row in grid];trial[d][i]="RR";trial[replacement][i]=pair
+            if set(verify(problem,trial,allow_shortages=True,max_full_days=6))-before_errors:
+                continue
+            count=runs(trial)
+            if count<initial and (best is None or count<best[0]):
+                best=(count,trial)
+                if count==0:
+                    break
+        if best is not None and best[0]==0:
+            break
+    # Part-time staff have a weekly maximum, not an exact public-holiday target.
+    # A whole-day rest is also allowed if no move can avoid the run.
+    if person["employment"]=="part" and (best is None or best[0]>0):
+        for d in off:
+            trial=[list(row) for row in grid];trial[d][i]="RR"
+            if set(verify(problem,trial,allow_shortages=True,max_full_days=6))-before_errors:
+                continue
+            count=runs(trial)
+            if count<initial and (best is None or count<best[0]):
+                best=(count,trial)
+                if count==0:
+                    break
+    if best is None:
+        return grid, []
+    result=best[1]
+    changes=[dict(day=day,before=grid[d][i],after=result[d][i],automatic=True)
+             for d,day in enumerate(base["days"]) if result[d][i]!=grid[d][i]]
+    return result,changes
 
 
 def change_plan(snapshot, base, person_id, day, period, swap, reason):
@@ -170,6 +250,20 @@ def change_plan(snapshot, base, person_id, day, period, swap, reason):
         changes.append(dict(day=swap, before=grid[sd][i], after="RR"))
         grid[sd][i] = "RR"
         wishes[swap_key] = "full"
+    automatic_changes=[]
+    if not swap:
+        grid, automatic_changes = automatic_rest(dict(snapshot,monthly_settings=settings),base,grid,person_id,day)
+        changes.extend(automatic_changes)
+    grid, run_changes = avoid_six_after_agreement(dict(snapshot,monthly_settings=settings),base,grid,person_id,day)
+    changes.extend(run_changes)
+    automatic_changes.extend(run_changes)
+    automatic_days={change["day"] for change in automatic_changes}
+    affected=list(dict.fromkeys(change["day"] for change in changes))
+    changes=[dict(day=changed_day,before=base["grid"][days.index(changed_day)][i],
+                  after=grid[days.index(changed_day)][i],
+                  **({"automatic":True} if changed_day in automatic_days else {}))
+             for changed_day in affected if base["grid"][days.index(changed_day)][i]!=grid[days.index(changed_day)][i]]
+    automatic_changes=[change for change in changes if change.get("automatic") and change["after"]=="RR"]
     boundary_changes=[]
     neighbor_boundaries=copy.deepcopy(snapshot.get("weekly_neighbor_boundaries",{}))
     if person["employment"]=="part":
@@ -182,10 +276,6 @@ def change_plan(snapshot, base, person_id, day, period, swap, reason):
                     boundary_changes.append(dict(month=neighbor,key=boundary_key,before=entries[boundary_key],after=units/2))
                     entries[boundary_key]=units/2
     snapshot=dict(snapshot,weekly_neighbor_boundaries=neighbor_boundaries)
-    automatic_changes=[]
-    if not swap:
-        grid, automatic_changes = automatic_rest(dict(snapshot,monthly_settings=settings),base,grid,person_id,day)
-        changes.extend(automatic_changes)
     audit = dict(paid_changes=paid_changes,boundary_changes=boundary_changes,automatic_rest_dates=[change["day"] for change in automatic_changes],rest_before=sum(rest_units(row[i]) for row in base["grid"])/2,
                  rest_after=sum(rest_units(row[i]) for row in grid)/2,
                  rest_target=settings.get("targets", {}).get(person_id), staff_id=person_id, date=day, original_wish=original, remaining_wish=after,
