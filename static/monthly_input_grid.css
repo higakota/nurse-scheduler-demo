@@ -59,3 +59,12 @@
 #attendance-choices .checkbox{padding:12px;border:1px solid var(--line);border-radius:8px;margin:8px 0;white-space:normal;font-weight:500}
 #attendance-choices .checkbox:has(input:checked){background:#edf6ef;border-color:#85b49b}
 @media(max-width:500px){.absence-view-switch{display:flex}.absence-view-switch button{flex:1;padding:8px 6px;font-size:12px}#input-absence-dialog,#meeting-add-dialog,#meeting-attendance-dialog{padding:18px}}
+
+.advance-input-sheet .advance-day-cell{display:block;width:100%;min-height:54px;padding:3px 1px;border:0;border-radius:0;background:transparent;color:#245b4d;font-size:12px;cursor:pointer}
+.advance-input-sheet .advance-day-cell.has-availability{background:#e6f1eb;font-weight:600}
+.advance-input-sheet .advance-day-cell.is-pending{background:#fff0c2}
+.advance-input-sheet .advance-day-cell:disabled{cursor:default;background:transparent}
+.advance-input-sheet .advance-day-cell:not(:disabled):hover{background:#f1f5f3}
+#advance-period-dialog{width:min(480px,calc(100vw - 32px));border:1px solid #ccd9d3;border-radius:14px;padding:24px}
+#advance-period-dialog::backdrop{background:#18352d66}
+#advance-period-dialog [aria-pressed=true]{outline:3px solid #d6be54}

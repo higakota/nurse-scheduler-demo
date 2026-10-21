@@ -89,11 +89,21 @@ class AdvanceHelpRouteTest(unittest.TestCase):
         page=self.client.get("/monthly?month=2026-02").get_data(as_text=True)
         self.assertIn('data-month-tab="availability"',page)
         self.assertIn('data-advance-key="9_2026-02-02"',page)
+        self.assertIn('data-advance-cell="9_2026-02-02"',page)
+        db=connect_db()
+        db.execute("INSERT INTO staff(id,name,role,employment,veteran,is_help,allowed_areas,advance_help) VALUES (10,'追加事前仮名','technician','full',0,1,'C',1)")
+        db.execute("INSERT INTO staff(id,name,role,employment,veteran,is_help,allowed_areas,advance_help) VALUES (11,'通常ヘルプ仮名','nurse','full',0,1,'ABC',0)")
+        db.commit();db.close()
+        page=self.client.get("/monthly?month=2026-02").get_data(as_text=True)
+        self.assertIn('data-advance-cell="10_2026-02-02"',page)
+        self.assertNotIn('data-advance-cell="11_2026-02-02"',page)
+
         fp=re.search('name="fingerprint" value="([^"]*)"',page)[1]
         with self.client.session_transaction() as state:token=state["csrf_token"]
         response=self.client.post("/help?month=2026-02",data=dict(csrf_token=token,fingerprint=fp,return_monthly="1",changes=json.dumps({"9_2026-02-02":"full"})))
         help_page=self.client.get("/help?month=2026-02").get_data(as_text=True)
-        self.assertIn("追加で依頼するヘルプは未登録",help_page)
+        self.assertIn("通常ヘルプ仮名",help_page)
+        self.assertNotIn("追加事前仮名",help_page)
         self.assertNotIn("事前ヘルプ仮名",help_page)
         self.assertIn("#availability",help_page)
         self.assertIn("/monthly?",response.location)

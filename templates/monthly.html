@@ -96,9 +96,17 @@
 {% if advance_people %}
 <form method="post" action="{{ url_for('help_availability',month=month) }}" id="advance-availability-form">
 <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ help_fingerprint }}"><input type="hidden" name="return_monthly" value="1"><input type="hidden" name="changes" id="advance-availability-changes">
-<table class="leave-calendar"><caption>{{ month[:4] }}年{{ month[5:]|int }}月</caption><thead><tr>{% for label in '日月火水木金土' %}<th>{{ label }}</th>{% endfor %}</tr></thead><tbody>
-{% for week in absence_weeks %}<tr>{% for day in week %}<td>{% if day %}<strong>{{ day.day }}</strong>{% if day.weekday()==6 or day.isoformat() in data.closures %}<small> 休診</small>{% else %}{% for person in advance_people %}{% set key=person.id|string ~ '_' ~ day.isoformat() %}<label>{{ person.name }}<select data-advance-key="{{ key }}" aria-label="{{ person.name }} {{ day.isoformat() }}の勤務可能時間">{% for value,label in [('', '未登録'),('full','全日'),('am','午前'),('pm','午後')] %}{% if value!='pm' or person.role!='technician' %}<option value="{{ value }}" {% if advance_visits.get(key,'')==value %}selected{% endif %}>{{ label }}</option>{% endif %}{% endfor %}</select></label>{% endfor %}{% endif %}{% endif %}</td>{% endfor %}</tr>{% endfor %}
-</tbody></table><p class="hint">保存後、「事前登録のヘルプも使って仮作成」で不足を確認してください。追加で依頼する人の予定も、ヘルプ画面と共通です。</p><button id="advance-availability-save" disabled>勤務可能日を保存</button></form>
+<p class="hint">スタッフと日付が交わるマスを押して、全日・午前・午後を選びます。空欄は未登録です。</p>
+<div class="input-sheet-wrap input-sheet-fit"><table class="input-sheet advance-input-sheet" style="--input-sheet-days:{{ days|length }}" aria-label="{{ month }}の事前ヘルプ勤務可能日">
+<colgroup><col class="input-sheet-name">{% for day in days %}<col>{% endfor %}</colgroup>
+<thead><tr><th scope="col">スタッフ</th>{% for day in days %}<th scope="col" class="{{ 'input-closed' if day.weekday()==6 or day.isoformat() in data.closures else '' }}">{{ day.day }}<small>{{ weekdays[day.weekday()] }}</small></th>{% endfor %}</tr></thead>
+<tbody>{% for person in advance_people %}<tr><th scope="row">{{ person.name }}<small>{{ '検査技師' if person.role=='technician' else '看護師' }}・事前登録</small></th>
+{% for day in days %}{% set key=person.id|string ~ '_' ~ day.isoformat() %}{% set closed=day.weekday()==6 or day.isoformat() in data.closures %}<td class="{{ 'input-closed' if closed else '' }}">
+<button type="button" class="advance-day-cell" data-advance-cell="{{ key }}" data-person-name="{{ person.name }}" data-role="{{ person.role }}" data-date="{{ day.isoformat() }}" aria-label="{{ person.name }} {{ day.isoformat() }}の勤務可能時間を編集" {% if closed %}disabled{% endif %}></button>
+<select data-advance-key="{{ key }}" hidden aria-label="{{ person.name }} {{ day.isoformat() }}の勤務可能時間">{% for value,label in [('', '未登録'),('full','全日'),('am','午前'),('pm','午後')] %}{% if value!='pm' or person.role!='technician' %}<option value="{{ value }}" {% if advance_visits.get(key,'')==value %}selected{% endif %}>{{ label }}</option>{% endif %}{% endfor %}</select></td>{% endfor %}</tr>{% endfor %}</tbody>
+</table></div>
+<dialog id="advance-period-dialog" aria-labelledby="advance-period-title"><h2 id="advance-period-title">勤務可能な時間帯</h2><p id="advance-period-person"></p><div class="actions">{% for value,label in [('full','全日'),('am','午前'),('pm','午後'),('','取り消す')] %}<button type="button" data-advance-period="{{ value }}">{{ label }}</button>{% endfor %}</div><p class="hint">変更後、カレンダー下の「勤務可能日を保存」を押してください。</p><button type="button" id="advance-period-close" class="secondary">変更せず閉じる</button></dialog>
+<p class="hint">保存後、「事前登録のヘルプも使って仮作成」で不足を確認してください。追加で依頼する人の予定も、ヘルプ画面と共通です。</p><button id="advance-availability-save" disabled>勤務可能日を保存</button></form>
 {% else %}<p>対象のヘルプはいません。スタッフ設定で「勤務可能日が先に分かり、依頼前から配置してよい」を指定してください。</p>{% endif %}
 <p><a href="{{ url_for('help_availability',month=month) }}">不足の確認・追加のヘルプ来院予定 →</a></p>
 </section>
