@@ -123,7 +123,8 @@ class ExcelEventsTest(unittest.TestCase):
         self.assertIsNone(self.plan())
         db.close()
         text = self.client.get(response.location).get_data(as_text=True)
-        self.assertIn("2026-12-01（火） 午後：職場会議", text)
+        self.assertIn("職場会議を編集", text)
+        self.assertIn('data-meeting-edit=',text)
 
     def test_previous_import_candidates_visible_after_session_change(self):
         self.load()
@@ -132,7 +133,7 @@ class ExcelEventsTest(unittest.TestCase):
         page = other.get("/monthly?month=2026-12").get_data(as_text=True)
         self.assertIn("職場会議", page)
         self.assertIn("候補（未反映）", page)
-        self.assertIn("登録済みの会議（0件）", page)
+        self.assertNotIn('<article class="meeting"',page)
 
 
     def test_renamed_excel_candidate_is_saved_with_edited_title(self):

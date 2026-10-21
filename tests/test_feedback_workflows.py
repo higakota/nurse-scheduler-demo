@@ -200,6 +200,56 @@ class CandidateApplyRouteTest(unittest.TestCase):
         db.close()
 
 
+    def test_candidate_from_different_table_is_reviewed_before_replacing_manual(self):
+        import html,re
+        from app import connect_db
+        from schedule import read_snapshot
+        from leave_candidates import source_token
+        fields=fixtures.ScheduleRouteTest.fields(self)
+        self.client.post("/schedule?month=2026-02",data=dict(fields,mode="self"))
+        db=connect_db()
+        snapshot,fp,raw=read_snapshot(db,"2026-02");source=json.loads(raw)
+        day=leave_candidates(snapshot,source,fp)["days"][0];person=day["people"][0]
+        old=copy.deepcopy(source);old["updated"]="old";old["grid"][1][1]="RR"
+        db.execute("CREATE TABLE IF NOT EXISTS manual_schedules(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
+        db.execute("INSERT INTO manual_schedules VALUES (?,?)",("2026-02",json.dumps(old)))
+        db.commit();before=list(db.iterdump());db.close()
+        with self.client.session_transaction() as sess:csrf=sess["csrf_token"]
+        form=dict(csrf_token=csrf,fingerprint=fp,source_token=source_token(source),source_kind="generated",staff=str(person["id"]),day=day["date"],period="full")
+        response=self.client.post("/schedule/paid-candidate?month=2026-02",data=form)
+        page=response.get_data(as_text=True)
+        self.assertIn("有給の反映を確認",page)
+        db=connect_db();self.assertEqual(before,list(db.iterdump()));db.close()
+        token=html.unescape(re.search('name="manual_token" value="([^"]*)"',page)[1])
+        response=self.client.post("/schedule/paid-candidate?month=2026-02",data=dict(form,confirm_replace="yes",manual_token=token))
+        self.assertEqual(response.status_code,302)
+        db=connect_db()
+        saved=json.loads(db.execute("SELECT data FROM manual_schedules").fetchone()[0])
+        expected=copy.deepcopy(source["grid"]);expected[source["days"].index(day["date"])][next(i for i,p in enumerate(source["people"]) if p["id"]==person["id"])]="PP"
+        self.assertEqual(saved["grid"],expected)
+        self.assertEqual(saved["history"][-1]["grid"],old["grid"])
+        self.assertEqual(json.loads(db.execute("SELECT data FROM leave_history").fetchone()[0])["leaves"][str(person["id"])+"_"+day["date"]],"full")
+        db.close()
+
+    def test_manual_candidate_uses_same_aligned_metadata_as_display(self):
+        import html,re
+        from app import connect_db
+        fields=fixtures.ScheduleRouteTest.fields(self)
+        self.client.post("/schedule?month=2026-02",data=dict(fields,mode="self"))
+        db=connect_db()
+        raw=db.execute("SELECT data FROM generated_schedules").fetchone()[0]
+        source=json.loads(raw);source["updated"]="old";source["people"][0]["name"]="過去仮名"
+        db.execute("CREATE TABLE IF NOT EXISTS manual_schedules(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
+        db.execute("INSERT INTO manual_schedules VALUES (?,?)",("2026-02",json.dumps(source)));db.commit();db.close()
+        page=self.client.get("/schedule/manual?month=2026-02").get_data(as_text=True)
+        candidate=re.search(r'<form[^>]+action="/schedule/paid-candidate[^"]*"[^>]*>(.*?)</form>',page,re.S)[1]
+        form={k:html.unescape(v) for k,v in re.findall(r'name="([^"]+)" value="([^"]*)"',candidate)}
+        response=self.client.post("/schedule/paid-candidate?month=2026-02",data=form)
+        self.assertEqual(response.status_code,302)
+        db=connect_db();leaves=json.loads(db.execute("SELECT data FROM leave_history").fetchone()[0])["leaves"]
+        self.assertEqual(leaves[form["staff"]+"_"+form["day"]],form["period"]);db.close()
+
+
 class StaffWeeklyFeedbackTest(unittest.TestCase):
     def test_technician_has_individual_weekly_limit(self):
         import test_staff

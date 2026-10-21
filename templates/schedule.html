@@ -4,6 +4,7 @@
 
 {% if request.args.get('saved') == '1' %}<p class="success" role="status">勤務表を作成しました。内容を確認し、必要なら編集へ進んでください。</p>{% endif %}
 {% if stale %}<p class="workflow-notice" role="status"><strong>入力変更を反映して作り直せます。</strong> {% if has_manual %}<a href="{{ url_for('manual_schedule',month=month) }}">編集画面で、変更箇所を今の勤務表に反映する →</a>{% else %}最新の条件で勤務表を作成できます。下の作成ボタンから進んでください。{% endif %}</p>{% endif %}
+{% for message in get_flashed_messages(category_filter=['candidate-leave']) %}<p role="status">{{ message }}</p>{% endfor %}
 {% include "_schedule_outcome.html" %}
 {% set show_result = result and not stale and not (outcome and outcome.status == 'draft') and request.args.get('phase')!='plan' %}
 {% set collapse_creation = (show_result and not outcome and request.args.get('phase')!='build' and not request.args.get('help_source')) or (outcome and outcome.status=='draft') %}
