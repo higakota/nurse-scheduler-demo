@@ -7,7 +7,7 @@
 <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="absence_save">
 <input type="hidden" name="absence_fingerprint" value="{{ absence_fingerprint }}"><input type="hidden" name="absence_changes" id="absence-changes">
 <div class="absence-view-switch" role="group" aria-label="入力の表示"><button type="button" class="secondary" data-absence-view="sheet" aria-pressed="true">全員を一覧で入力</button><button type="button" class="secondary" data-absence-view="person" aria-pressed="false">1人ずつ入力</button></div>
-<div id="absence-sheet-view"><p class="input-sheet-legend">マスを押して入力。緑：希望休 ／ 桃色：有給 ／ 枠：未保存。半日は左が午前／右が午後。「—」と空欄は希望の登録なしです。</p>{% with absence_grid=true %}{% include "_monthly_input_grid.html" %}{% endwith %}</div>
+<div id="absence-sheet-view"><p class="input-sheet-legend">マスを押して入力。緑：希望休 ／ 桃色：有給 ／ 黄枠：未保存。半日は左が午前／右が午後。「—」と空欄は希望の登録なしです。</p>{% with absence_grid=true %}{% include "_monthly_input_grid.html" %}{% endwith %}</div>
 <div id="absence-person-view" hidden><div class="absence-staff-bar"><label for="absence-staff">スタッフ</label><select id="absence-staff" name="absence_staff">{% for person in staff %}<option value="{{ person.id }}" {% if request.form.get('absence_staff', request.args.get('staff', '')) == person.id|string %}selected{% endif %}>{{ person.name }}</option>{% endfor %}</select><span class="absence-month">{{ month[:4] }}年{{ month[5:]|int }}月</span></div>
 <table class="leave-calendar"><caption class="sr-only">{{ month }}の希望休・有給</caption><thead><tr>{% for day in '日月火水木金土' %}<th scope="col">{{ day }}</th>{% endfor %}</tr></thead><tbody>
 {% for week in absence_weeks %}<tr>{% for day in week %}{% if day %}
