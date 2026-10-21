@@ -8,13 +8,13 @@
 <body class="app-layout">{% include "_shell.html" %}
 
 <main class="container app-main" id="main-content">
-{% include "_page_intro.html" %}<h1>希望休・会議</h1>
+{% include "_page_intro.html" %}<h1>今月の入力</h1>
 
 <p class="page-description">下のタブで入力を切り替えます。変更は各タブで保存してください。</p>
 {% if saved %}<p class="success" role="status">保存しました。</p>{% endif %}
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 {% for warning in warnings %}<p class="error" role="alert">{{ warning }}</p>{% endfor %}
-<nav class="month-tabs" aria-label="月別入力の項目"><a href="#wishes" data-month-tab="wishes">希望休・有給</a><a href="#targets" data-month-tab="targets">休日日数・週上限</a><a href="#closures" data-month-tab="closures">休診日</a><a href="#meetings" data-month-tab="meetings">会議</a></nav>{% include "_absence_calendar.html" %}<form method="post" class="monthly-form">
+<nav class="month-tabs" aria-label="月別入力の項目"><a href="#wishes" data-month-tab="wishes">希望休・有給</a><a href="#targets" data-month-tab="targets">休日日数・週上限</a><a href="#closures" data-month-tab="closures">休診日</a><a href="#meetings" data-month-tab="meetings">会議</a><a href="#availability" data-month-tab="availability">みどりに出勤できる日</a></nav>{% include "_absence_calendar.html" %}<form method="post" class="monthly-form">
 <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="settings"><input type="hidden" name="preserve_wishes" value="yes"><input type="hidden" name="settings_fingerprint" value="{{ settings_fingerprint }}"><input type="hidden" name="settings_tab" id="settings-tab" value="targets">
 <section class="panel" id="targets" data-month-panel="targets">
 <h2>スタッフ別の休日日数</h2>
@@ -90,6 +90,18 @@
 <button>会議を追加</button><button type="button" id="meeting-add-close" class="secondary">閉じる</button>
 </form></dialog>
 </section>
+<section class="panel" id="availability" data-month-panel="availability">
+<h2>みどりに出勤できる日</h2>
+<p>事前に配置してよいヘルプの勤務可能日を入力します。この人もヘルプ人数に数えます。</p>
+{% if advance_people %}
+<form method="post" action="{{ url_for('help_availability',month=month) }}" id="advance-availability-form">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ help_fingerprint }}"><input type="hidden" name="return_monthly" value="1"><input type="hidden" name="changes" id="advance-availability-changes">
+<table class="leave-calendar"><caption>{{ month[:4] }}年{{ month[5:]|int }}月</caption><thead><tr>{% for label in '日月火水木金土' %}<th>{{ label }}</th>{% endfor %}</tr></thead><tbody>
+{% for week in absence_weeks %}<tr>{% for day in week %}<td>{% if day %}<strong>{{ day.day }}</strong>{% if day.weekday()==6 or day.isoformat() in data.closures %}<small> 休診</small>{% else %}{% for person in advance_people %}{% set key=person.id|string ~ '_' ~ day.isoformat() %}<label>{{ person.name }}<select data-advance-key="{{ key }}" aria-label="{{ person.name }} {{ day.isoformat() }}の勤務可能時間">{% for value,label in [('', '未登録'),('full','全日'),('am','午前'),('pm','午後')] %}{% if value!='pm' or person.role!='technician' %}<option value="{{ value }}" {% if advance_visits.get(key,'')==value %}selected{% endif %}>{{ label }}</option>{% endif %}{% endfor %}</select></label>{% endfor %}{% endif %}{% endif %}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table><p class="hint">保存後、「事前登録のヘルプも使って仮作成」で不足を確認してください。追加で依頼する人の予定も、ヘルプ画面と共通です。</p><button id="advance-availability-save" disabled>勤務可能日を保存</button></form>
+{% else %}<p>対象のヘルプはいません。スタッフ設定で「勤務可能日が先に分かり、依頼前から配置してよい」を指定してください。</p>{% endif %}
+<p><a href="{{ url_for('help_availability',month=month) }}">不足の確認・追加のヘルプ来院予定 →</a></p>
+</section>
 {% for event_tab in ['closures', 'meetings'] %}
 <section data-month-panel="{{ event_tab }}" class="panel">
 <h2>Excelから読み取った{{ '休診日' if event_tab == 'closures' else '会議' }}の候補（未反映）</h2>
@@ -100,4 +112,4 @@
 {% else %}<p><a href="{{ url_for('doctor_import', month=month) }}">医師予定のExcelを読み取る</a>と、このタブで候補を確認できます。</p>{% endif %}
 </section>{% endfor %}
 
-</main><script src="{{ url_for('static', filename='monthly.js') }}"></script><script src="{{ url_for('static', filename='absence_calendar.js') }}"></script><script src="{{ url_for('static',filename='monthly_input_grid.js') }}"></script></body></html>
+</main><script src="{{ url_for('static', filename='advance_availability.js') }}"></script><script src="{{ url_for('static', filename='monthly.js') }}"></script><script src="{{ url_for('static', filename='absence_calendar.js') }}"></script><script src="{{ url_for('static',filename='monthly_input_grid.js') }}"></script></body></html>

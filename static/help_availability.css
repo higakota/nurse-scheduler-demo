@@ -10,3 +10,10 @@
 .help-visits-calendar .help-visit-chip{border:0;width:100%;text-align:left;font-weight:400;cursor:pointer}.help-visits-calendar .help-visit-chip:hover,.help-visits-calendar .help-visit-chip.is-current{box-shadow:inset 3px 0 #216b58;background:#d7ebdf}.help-visits-calendar .calendar-picker.has-leave{background:#f4f9f5}
 
 .help-visits-calendar .help-visit-chip{background:#e4f2e9;color:#245c42;padding:3px 5px;font-size:11px;line-height:1.4;min-height:24px;border-radius:5px}.help-visits-calendar .help-visit-chip:hover,.help-visits-calendar .help-visit-chip.is-current{background:#d7ebdf}
+
+.help-visits-calendar .help-visit-chip{background:#edf3fb;color:#284e76;box-shadow:none}
+.help-visits-calendar .help-visit-chip.is-reflected{background:#e4f2e9;color:#245c42}
+.help-visits-calendar .help-visit-chip small{display:block;font-size:10px;margin-top:2px}
+.help-visits-calendar .help-visit-chip.is-current{outline:1px solid #809992;box-shadow:none}
+.help-visits-calendar .calendar-picker.has-leave{background:transparent}
+.help-shortage-item{flex-wrap:wrap}

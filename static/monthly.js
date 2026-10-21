@@ -3,7 +3,7 @@ const main=document.getElementById("main-content");
 if(!main)return;
 const settings=document.querySelector(".monthly-form");
 const tabs=[...document.querySelectorAll("[data-month-tab]")];
-const labels={wishes:"希望休・有給",targets:"休日日数・週上限",closures:"休診日",meetings:"会議"};
+const labels={wishes:"希望休・有給",targets:"休日日数・週上限",closures:"休診日",meetings:"会議",availability:"みどりに出勤できる日"};
 const forms=[...main.querySelectorAll("form")];
 const controls=form=>[...form.querySelectorAll("input,select,textarea")].filter(input=>
 input.type!=="hidden"&&input.type!=="submit"&&input.type!=="button"&&!input.dataset.uiOnly&&input.id!=="absence-staff");
@@ -27,7 +27,7 @@ function showPanel(name){
 document.getElementById("settings-tab").value=name;
 document.querySelectorAll("[data-month-panel]").forEach(panel=>panel.hidden=panel.dataset.monthPanel!==name);
 tabs.forEach(tab=>tab.setAttribute("aria-selected",String(tab.dataset.monthTab===name)));
-document.querySelectorAll("[data-month-save]").forEach(bar=>bar.hidden=name==="meetings"||name==="wishes");
+document.querySelectorAll("[data-month-save]").forEach(bar=>bar.hidden=name==="meetings"||name==="wishes"||name==="availability");
 }
 const banner=document.createElement("p");banner.id="monthly-unsaved";banner.className="month-unsaved";banner.setAttribute("role","status");banner.hidden=true;
 document.querySelector(".month-tabs")?.before(banner);

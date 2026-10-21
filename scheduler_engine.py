@@ -5,7 +5,7 @@ import time
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from doctor_import import IMPORT_VERSION
-from help_limits import nurse_helper_excess
+from help_limits import nurse_helper_excess, planned_helper_roles
 
 from leave_and_history import trailing_full_days
 from meeting_rules import checked_times, check_meeting_overlap
@@ -495,7 +495,7 @@ def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, parti
                     full = tuple(all(code in ("W","M","O") for code in pair) for pair in pairs)
                     attend = tuple(any(code in ("W","M","O") for code in pair) for pair in pairs)
                     help_used = (
-                        nurse_helper_excess(problem['people'],pairs),
+                        max(0,planned_helper_roles(problem,d,grid)[0]-1) if partial else nurse_helper_excess(problem['people'],pairs),
                         sum(sum(code in ("W","M","O") for code in pairs[i]) for i,p in enumerate(problem["people"]) if p["is_help"] and p["role"] == "nurse"),
                         sum(sum(code in ("W","M","O") for code in pairs[i]) for i,p in enumerate(problem["people"]) if p["is_help"]))
                     candidate = (grid, tuple(rests[i] for i in problem["regular"]), full, attend, help_used,
@@ -504,7 +504,7 @@ def _generate(snapshot, use_help=False, seconds=10, allow_nurse_help=True, parti
                     state_key = candidate[1:4] + (candidate[5],)
                     if partial and state_key in candidate_indices:
                         index = candidate_indices[state_key]
-                        if candidate[6] < candidates[index][6]:
+                        if (candidate[6],candidate[4]) < (candidates[index][6],candidates[index][4]):
                             candidates[index] = candidate
                         continue
                     if len(candidates) + cached_count >= (250000 if partial else 50000):

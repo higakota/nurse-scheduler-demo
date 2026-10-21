@@ -8,6 +8,7 @@ if(button)button.disabled=document.body.dataset.helpVisitDirty==="true"||documen
   const people=JSON.parse(document.getElementById("help-people").textContent);
   const modal=document.getElementById("help-visit-dialog");
   let selectedDay=null;
+  const included = JSON.parse(document.getElementById("help-included").textContent);
   const original = JSON.parse(document.getElementById("help-original").textContent);
   let changes = {};
   try { const patch = JSON.parse(JSON.parse(document.getElementById("help-pending").textContent)); if (patch && typeof patch === "object" && !Array.isArray(patch)) changes = patch; } catch {}
@@ -28,7 +29,11 @@ if(button)button.disabled=document.body.dataset.helpVisitDirty==="true"||documen
         const visit=Object.hasOwn(changes,visitKey)?changes[visitKey]:(original[visitKey]||"");
         if(!visit)continue;
         const item=document.createElement("button");item.type="button";item.className="help-visit-chip";item.dataset.helpPerson=String(person.id);item.classList.toggle("is-current",String(person.id)===staff.value);
-        item.textContent=person.name+"："+(labels[visit]||visit)+(Object.hasOwn(changes,visitKey)?"（未保存）":"");
+        const reflected=included[visitKey]===visit&&!Object.hasOwn(changes,visitKey);
+        item.classList.toggle("is-reflected",reflected);
+        const name=document.createElement("span");name.textContent=person.name+"（"+(person.role==="technician"?"検査技師":"看護師")+"）";
+        const detail=document.createElement("small");detail.textContent=(labels[visit]||visit)+"・"+(Object.hasOwn(changes,visitKey)?"未保存":reflected?"反映済み":"未反映");
+        item.append(name,detail);
         visits.append(item);
       }
       picker.querySelector(".calendar-pending").textContent = pending ? "未保存" : "";

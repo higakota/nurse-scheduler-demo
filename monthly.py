@@ -251,10 +251,13 @@ def register_monthly(app, connect_db):
                         check_meeting_overlap([other], meeting)
                     except ValueError as exc:
                         warnings.append(meeting["date"] + "：" + str(exc))
+            from help_availability import load_help
+            advance_visits, help_people, _, help_fingerprint = load_help(db, month)
+            advance_people = [p for p in help_people if p.get("advance_help")]
         finally:
             db.close()
         absence_weeks = [[day if day.month == number else None for day in week] for week in calendar.Calendar(firstweekday=6).monthdatescalendar(year, number)]
         from meeting_attendance import attendance_choices
-        return render_template("monthly.html", attendance_days=attendance_choices(data,event_preview), input_doctors=input_doctors, settings_fingerprint=settings_fingerprint, absence_weeks=absence_weeks, absence_leaves=absence_data["leaves"], absence_fingerprint=absence_fingerprint, event_preview=event_preview, extra_staff=staff, month=month, days=days, staff=staff, data=data, names=names,
+        return render_template("monthly.html", advance_visits=advance_visits, advance_people=advance_people, help_fingerprint=help_fingerprint, attendance_days=attendance_choices(data,event_preview), input_doctors=input_doctors, settings_fingerprint=settings_fingerprint, absence_weeks=absence_weeks, absence_leaves=absence_data["leaves"], absence_fingerprint=absence_fingerprint, event_preview=event_preview, extra_staff=staff, month=month, days=days, staff=staff, data=data, names=names,
                                error=error, warnings=warnings, saved=request.method == "GET" and request.args.get("saved") == "1",
                                weekdays="月火水木金土日")

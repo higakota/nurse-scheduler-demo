@@ -126,6 +126,8 @@ def register_help_availability(app, connect_db):
                     db.execute("INSERT INTO help_availability VALUES (?,?) ON CONFLICT(month) DO UPDATE SET data=excluded.data",
                                (month, json.dumps(candidate, ensure_ascii=False)))
                     db.commit()
+                    if request.form.get("return_monthly") == "1":
+                        return redirect(url_for("monthly_settings", month=month, saved="1", _anchor="availability"))
                     return redirect(url_for("help_availability", month=month, staff=request.form.get("staff", ""), saved="1"))
                 except ValueError as exc:
                     db.rollback()

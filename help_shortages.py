@@ -10,6 +10,20 @@ def conditions_hash(snapshot):
     return hashlib.sha256(json.dumps(values,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
 
 
+def included_helper_visits(people, days, grid):
+    from scheduler_engine import WORK
+    visits = {}
+    for d, day in enumerate(days):
+        for i, person in enumerate(people):
+            if not person["is_help"]:
+                continue
+            pair = grid[d][i]
+            am, pm = pair[0] in WORK, pair[1] in WORK
+            if am or pm:
+                visits[str(person["id"]) + "_" + day] = "full" if am and pm else "am" if am else "pm"
+    return visits
+
+
 def write_reference(db, snapshot, fingerprint, rows, kind="draft", source_kind=None, source_raw=None):
     db.execute("CREATE TABLE IF NOT EXISTS help_shortage_previews(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
     value=dict(input_hash=fingerprint,conditions_hash=conditions_hash(snapshot),rows=rows,
@@ -22,6 +36,8 @@ def write_reference(db, snapshot, fingerprint, rows, kind="draft", source_kind=N
                 if key in old:
                     value[key]=old[key]
     if source_kind is not None and source_raw is not None:
+        source = json.loads(source_raw)
+        value["included_visits"] = included_helper_visits(source["people"], source["days"], source["grid"])
         value.update(source_kind=source_kind,source_hash=hashlib.sha256(source_raw.encode()).hexdigest())
     db.execute("INSERT INTO help_shortage_previews VALUES (?,?) ON CONFLICT(month) DO UPDATE SET data=excluded.data",
                (snapshot["month"],json.dumps(value,ensure_ascii=False)))
@@ -42,7 +58,9 @@ def publish_reference(connect_db, snapshot, fingerprint, rows, kind="draft", out
             if current != source_raw:
                 db.rollback()
                 return False
-        write_reference(db,snapshot,fingerprint,rows,kind=kind)
+        write_reference(db,snapshot,fingerprint,rows,kind=kind,
+                        source_kind=expected_source[0] if expected_source else None,
+                        source_raw=expected_source[1] if expected_source else None)
         if expected_source:
             row = db.execute("SELECT data FROM help_shortage_previews WHERE month=?", (snapshot["month"],)).fetchone()
             value = json.loads(row[0])
@@ -51,6 +69,9 @@ def publish_reference(connect_db, snapshot, fingerprint, rows, kind="draft", out
         if outcome is not None:
             from manual_schedule import seed_draft
             seed_draft(db, snapshot["month"], snapshot, fingerprint, outcome)
+            stored = json.loads(db.execute("SELECT data FROM help_shortage_previews WHERE month=?", (snapshot["month"],)).fetchone()[0])
+            stored["included_visits"] = included_helper_visits(outcome["problem"]["people"], outcome["problem"]["days"], outcome["grid"])
+            db.execute("UPDATE help_shortage_previews SET data=? WHERE month=?", (json.dumps(stored, ensure_ascii=False), snapshot["month"]))
         db.commit()
         return True
     finally:
@@ -71,6 +92,11 @@ def load_reference(db, month):
         reference["kind"]=="verified" and reference["input_hash"]!=fp
     ):
         return dict(state="outdated",days={},kind=reference["kind"],created=reference["created"])
+    if "included_visits" not in reference:
+        raw = source_data(db, month, reference.get("source_kind", "draft"))
+        if raw:
+            source = json.loads(raw)
+            reference["included_visits"] = included_helper_visits(source["people"], source["days"], source["grid"])
     days={}
     for item in reference["rows"]:
         count=item["missing"]
@@ -86,7 +112,7 @@ def load_reference(db, month):
             label=f"看護師{count}人"
         days.setdefault(item["date"],[]).append(dict(half=item["half"],label=label))
     return dict(state="reference" if reference["input_hash"]!=fp else "current",days=days,
-                kind=reference["kind"],created=reference["created"])
+                kind=reference["kind"],created=reference["created"],included_visits=reference.get("included_visits", {}))
 
 
 def source_data(db, month, kind):

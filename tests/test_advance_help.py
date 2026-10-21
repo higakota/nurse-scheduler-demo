@@ -34,9 +34,12 @@ class AdvanceHelpEngineTest(unittest.TestCase):
         self.assertTrue(all(row[i]=="RR" for d,row in enumerate(result["grid"]) if d!=1))
         self.assertEqual(verify(result["problem"],result["grid"],allow_shortages=True),[])
         self.assertFalse(result["shortages"])
-        from help_shortages import shortages_from_source
+        from help_shortages import shortages_from_source, included_helper_visits
         source=dict(days=result["problem"]["days"],people=result["problem"]["people"],grid=result["grid"])
         self.assertFalse(shortages_from_source(data,json.dumps(source)))
+        reflected=included_helper_visits(source["people"],source["days"],source["grid"])
+        self.assertEqual(reflected,{"9_2026-02-02":"full"})
+        self.assertNotIn("10_2026-02-02",reflected)
         self.assertEqual(data,before)
         own=generate_draft(data,seconds=2)
         self.assertTrue(own["shortages"])
@@ -78,6 +81,24 @@ class AdvanceHelpRouteTest(unittest.TestCase):
         fields={key:re.search('name="'+key+'" value="([^"]*)"',page)[1] for key in ("csrf_token","fingerprint","result_token","seed_token")}
         response=self.client.post("/schedule?month=2026-02",data=dict(fields,mode="advance_draft"))
         self.assertIn("事前に配置してよいヘルプ",response.get_data(as_text=True))
+
+    def test_monthly_available_days_share_help_storage(self):
+        db=connect_db()
+        db.execute("INSERT INTO staff(id,name,role,employment,veteran,is_help,allowed_areas,advance_help) VALUES (9,'事前ヘルプ仮名','nurse','full',1,1,'ABC',1)")
+        db.commit();db.close()
+        page=self.client.get("/monthly?month=2026-02").get_data(as_text=True)
+        self.assertIn('data-month-tab="availability"',page)
+        self.assertIn('data-advance-key="9_2026-02-02"',page)
+        fp=re.search('name="fingerprint" value="([^"]*)"',page)[1]
+        with self.client.session_transaction() as state:token=state["csrf_token"]
+        response=self.client.post("/help?month=2026-02",data=dict(csrf_token=token,fingerprint=fp,return_monthly="1",changes=json.dumps({"9_2026-02-02":"full"})))
+        self.assertIn("/monthly?",response.location)
+        self.assertTrue(response.location.endswith("#availability"))
+        db=connect_db()
+        self.assertEqual(json.loads(db.execute("SELECT data FROM help_availability WHERE month='2026-02'").fetchone()[0]),{"9_2026-02-02":"full"})
+        db.close()
+        stale=self.client.post("/help?month=2026-02",data=dict(csrf_token=token,fingerprint=fp,return_monthly="1",changes=json.dumps({"9_2026-02-02":"am"})))
+        self.assertIn("別の画面",stale.get_data(as_text=True))
 
     def test_old_backup_without_flag_still_restores(self):
         db=sqlite3.connect(":memory:")
