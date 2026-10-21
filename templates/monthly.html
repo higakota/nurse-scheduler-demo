@@ -74,9 +74,10 @@
 <form method="post" action="{{ url_for('monthly_settings',month=month,_anchor='meetings') }}">
 <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="settings_fingerprint" value="{{ settings_fingerprint }}"><input type="hidden" name="action" value="meeting_attendance"><input type="hidden" name="attendance_day" id="attendance-day">
 <label for="attendance-staff">スタッフ</label><select name="attendance_staff" id="attendance-staff" data-ui-only="true">{% for person in staff %}<option value="{{ person.id }}">{{ person.name }}</option>{% endfor %}</select>
-<p class="hint">参加する会議にチェックして保存します。チェックを外すと、その会議への参加を取り消します。</p>
+<p class="hint">参加する会議を選び、一覧に反映してください。最後にまとめて保存します。</p>
 <div id="attendance-choices"></div><p id="attendance-empty" hidden>この日の会議はまだありません。先に会議を追加してください。</p>
-<div class="actions"><button id="attendance-save">参加を保存</button><button type="button" class="secondary" id="attendance-close">閉じる</button></div></form></dialog>
+<div class="actions"><button id="attendance-save">一覧に反映</button><button type="button" class="secondary" id="attendance-close">閉じる</button></div></form></dialog>
+<form method="post" id="attendance-batch-form"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="settings_fingerprint" value="{{ settings_fingerprint }}"><input type="hidden" name="action" value="meeting_attendance_batch"><input type="hidden" id="attendance-changes" name="attendance_changes" value="{{ request.form.get('attendance_changes','{}') }}"><div class="save-bar"><p id="attendance-batch-status" role="status">参加する人のマスを押して入力してください。</p><button id="attendance-batch-save" disabled>会議の参加をまとめて保存</button></div></form>
 <script type="application/json" id="attendance-data">{{ attendance_days|tojson }}</script>
 <script type="application/json" id="attendance-pending">{{ {'day':request.form.get('attendance_day',''),'staff':request.form.get('attendance_staff',''),'selected':request.form.getlist('attendance')}|tojson }}</script>
 <button type="button" id="meeting-open-add" class="secondary">会議を追加</button>

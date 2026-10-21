@@ -11,12 +11,14 @@ const value=input=>input.type==="checkbox"||input.type==="radio"?String(input.ch
 const initial=new Map(forms.map(form=>[form,new Map(controls(form).map(input=>[input,value(input)]))]));
 window.monthlySubmitting=false;
 function isDirty(form){
+if(form.id==="attendance-batch-form")return !document.getElementById("attendance-batch-save").disabled;
 if(form.id==="absence-form")return !document.getElementById("absence-save").disabled;
 return controls(form).some(input=>value(input)!==initial.get(form)?.get(input));
 }
 function dirtyPanels(){
 const names=new Set();
 for(const form of forms){
+if(form.id==="attendance-batch-form"){if(isDirty(form))names.add("meetings");continue;}
 if(form.id==="absence-form"){if(isDirty(form))names.add("wishes");continue;}
 for(const input of controls(form))if(value(input)!==initial.get(form)?.get(input)){
 const panel=input.closest("[data-month-panel]");if(panel)names.add(panel.dataset.monthPanel);
@@ -43,6 +45,7 @@ main.addEventListener("input",updateStatus);
 main.addEventListener("change",updateStatus);
 document.addEventListener("monthly-input-state",updateStatus);
 main.addEventListener("submit",event=>{
+if(event.target.closest("#meeting-attendance-dialog"))return;
 const other=forms.filter(form=>form!==event.target&&isDirty(form));
 if(other.length&&!window.confirm("別の項目に未保存の変更があります。この内容だけ保存して移動すると、ほかの未保存の変更は失われます。続けますか？")){
 event.preventDefault();event.stopImmediatePropagation();return;

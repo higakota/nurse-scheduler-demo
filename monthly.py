@@ -28,7 +28,7 @@ def register_monthly(app, connect_db):
         db = connect_db()
         try:
             db.execute("CREATE TABLE IF NOT EXISTS monthly_settings (month TEXT PRIMARY KEY, data TEXT NOT NULL)")
-            if request.method == "POST" and request.form.get("action") in ("settings", "excel_events", "meeting_attendance", "meeting_add", "meeting_edit", "meeting_time", "meeting_delete"):
+            if request.method == "POST" and request.form.get("action") in ("settings", "excel_events", "meeting_attendance", "meeting_attendance_batch", "meeting_add", "meeting_edit", "meeting_time", "meeting_delete"):
                 db.execute("BEGIN IMMEDIATE")
             staff = db.execute("SELECT * FROM staff ORDER BY id").fetchall()
             ids = {str(person["id"]) for person in staff}
@@ -71,13 +71,20 @@ def register_monthly(app, connect_db):
                 if not secrets.compare_digest(session["csrf_token"], request.form.get("csrf_token", "")):
                     abort(400, description="画面を開き直してから保存してください。")
                 action = request.form.get("action")
-                if action in ("meeting_attendance", "meeting_add", "meeting_edit", "meeting_time", "meeting_delete") and (
-                        action in ("meeting_edit","meeting_attendance") or "settings_fingerprint" in request.form):
+                if action in ("meeting_attendance", "meeting_attendance_batch", "meeting_add", "meeting_edit", "meeting_time", "meeting_delete") and (
+                        action in ("meeting_edit","meeting_attendance","meeting_attendance_batch") or "settings_fingerprint" in request.form):
                     if not secrets.compare_digest(settings_fingerprint, request.form.get("settings_fingerprint", "")):
                         error = "会議またはスタッフ等の設定が別の画面で変更されています。画面を開き直してください。"
                         action = "meeting_conflict"
                 if action == "meeting_conflict":
                     pass
+                elif action == "meeting_attendance_batch":
+                    from meeting_attendance import attendance_batch_plan
+                    try:
+                        changes=json.loads(request.form.get("attendance_changes",""))
+                        data=attendance_batch_plan(data,event_preview,changes,ids,{d.isoformat() for d in days})
+                    except (ValueError,TypeError) as exc:
+                        error=str(exc) if not isinstance(exc,json.JSONDecodeError) else "会議参加の変更内容を読み取れません。"
                 elif action == "meeting_attendance":
                     person_id = request.form.get("attendance_staff","")
                     meeting_day = request.form.get("attendance_day","")

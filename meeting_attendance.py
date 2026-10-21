@@ -18,7 +18,7 @@ def attendance_choices(data, preview):
     return result
 
 
-def attendance_plan(data, preview, staff_id, day, selected):
+def attendance_plan(data, preview, staff_id, day, selected, validate=True):
     choices = attendance_choices(data, preview).get(day, [])
     allowed = {item["key"] for item in choices}
     if not set(selected) <= allowed:
@@ -40,6 +40,31 @@ def attendance_plan(data, preview, staff_id, day, selected):
             updated["meetings"].append(dict(id=secrets.token_hex(8), date=day,
                 title=item["title"], participants=[staff_id], start="", end="", import_source=item["id"]))
     for meeting in updated["meetings"]:
-        if meeting["date"] == day:
+        if validate and meeting["date"] == day:
             check_meeting_overlap(updated["meetings"], meeting, exclude=meeting["id"])
+    return updated
+
+def attendance_batch_plan(data,preview,changes,staff_ids,days):
+    """全セルの変更をまとめて検証する。途中までの保存はしない。"""
+    from datetime import date
+    if not isinstance(changes,dict) or len(changes)>len(staff_ids)*len(days):
+        raise ValueError("会議参加の変更内容が正しくありません。")
+    updated=deepcopy(data)
+    touched=set()
+    for key,selected in changes.items():
+        if not isinstance(key,str) or "_" not in key:
+            raise ValueError("会議参加のスタッフ・日付が正しくありません。")
+        pid,day=key.split("_",1)
+        if pid not in staff_ids or day not in days or date.fromisoformat(day).weekday()==6 or day in data["closures"]:
+            raise ValueError("会議参加のスタッフ・日付を確認してください。")
+        if not isinstance(selected,list) or any(not isinstance(v,str) for v in selected) or len(selected)!=len(set(selected)):
+            raise ValueError("参加する会議を選び直してください。")
+        touched.add(day)
+        # 同じExcel候補を別の人が選んでも、一つの会議としてまとめる。
+        imported={"excel:"+m["import_source"]:"saved:"+m["id"] for m in updated["meetings"] if m.get("import_source")}
+        selected=[imported.get(v,v) for v in selected]
+        updated=attendance_plan(updated,preview,pid,day,selected,validate=False)
+    for meeting in updated["meetings"]:
+        if meeting["date"] not in touched:continue
+        check_meeting_overlap(updated["meetings"],meeting,exclude=meeting.get("id"))
     return updated

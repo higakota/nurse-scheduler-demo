@@ -27,12 +27,37 @@ if(attendanceDialog){
  const pending=JSON.parse(document.getElementById("attendance-pending").textContent);
  const staff=document.getElementById("attendance-staff"),dayField=document.getElementById("attendance-day");
  let attendanceTrigger=null;
+ const batch=document.getElementById("attendance-batch-form"),field=document.getElementById("attendance-changes");
+ let changes={};try{changes=JSON.parse(field.value)||{};}catch{}
+ const selection=(pid,day)=>Object.hasOwn(changes,pid+"_"+day)?changes[pid+"_"+day]:(days[day]||[]).filter(item=>item.participants.map(String).includes(pid)).map(item=>item.key);
+ function renderBatch(){
+  document.querySelectorAll("[data-attendance-person]").forEach(button=>{
+   const pid=button.dataset.attendancePerson,day=button.dataset.attendanceDay;
+   const picked=selection(pid,day);button.replaceChildren();
+   for(const key of picked){const item=(days[day]||[]).find(item=>item.key===key);if(item){const span=document.createElement("span");span.className="input-participating";span.title=item.title;span.textContent="会";button.append(span);}}
+   button.classList.toggle("is-dirty",Object.hasOwn(changes,pid+"_"+day));
+  });
+  const count=Object.keys(changes).length;
+  field.value=JSON.stringify(changes);
+  document.getElementById("attendance-batch-save").disabled=!count;
+  document.getElementById("attendance-batch-status").textContent=count?"未保存："+count+"件。最後にまとめて保存してください。":"参加する人のマスを押して入力してください。";
+  document.dispatchEvent(new Event("monthly-input-state"));
+ }
+ attendanceDialog.querySelector("form").addEventListener("submit",event=>{
+  event.preventDefault();
+  const selected=[...attendanceDialog.querySelectorAll('[name="attendance"]:checked')].map(input=>input.value);
+  const key=staff.value+"_"+dayField.value;
+  const original=(days[dayField.value]||[]).filter(item=>item.participants.map(String).includes(staff.value)).map(item=>item.key);
+  if(JSON.stringify([...selected].sort())===JSON.stringify([...original].sort()))delete changes[key];else changes[key]=selected;
+  renderBatch();attendanceDialog.close();
+ });
+ renderBatch();
  function renderAttendance(selected){
   const choices=days[dayField.value]||[],list=document.getElementById("attendance-choices");list.replaceChildren();
   for(const item of choices){
    const label=document.createElement("label");label.className="checkbox";
    const input=document.createElement("input");input.type="checkbox";input.name="attendance";input.value=item.key;input.dataset.uiOnly="true";
-   input.checked=selected?selected.includes(item.key):item.participants.map(String).includes(staff.value);
+   input.checked=(selected||selection(staff.value,dayField.value)).includes(item.key);
    label.append(input,document.createTextNode(item.title+(item.candidate?"（Excelから登録）":"")));list.append(label);
   }
   document.getElementById("attendance-empty").hidden=Boolean(choices.length);
