@@ -257,26 +257,38 @@ def change_plan(snapshot, base, person_id, day, period, swap, reason):
     grid, run_changes = avoid_six_after_agreement(dict(snapshot,monthly_settings=settings),base,grid,person_id,day)
     changes.extend(run_changes)
     automatic_changes.extend(run_changes)
+    from agreed_rebalance import rebalance_agreement
+    grid,global_adjustment=rebalance_agreement(dict(snapshot,monthly_settings=settings),base,grid,person_id,day,period)
     automatic_days={change["day"] for change in automatic_changes}
-    affected=list(dict.fromkeys(change["day"] for change in changes))
-    changes=[dict(day=changed_day,before=base["grid"][days.index(changed_day)][i],
-                  after=grid[days.index(changed_day)][i],
-                  **({"automatic":True} if changed_day in automatic_days else {}))
-             for changed_day in affected if base["grid"][days.index(changed_day)][i]!=grid[days.index(changed_day)][i]]
-    automatic_changes=[change for change in changes if change.get("automatic") and change["after"]=="RR"]
+    changes=[]
+    for d,changed_day in enumerate(days):
+        for j,changed_person in enumerate(base["people"]):
+            if base["grid"][d][j]==grid[d][j]:
+                continue
+            change=dict(day=changed_day,before=base["grid"][d][j],after=grid[d][j])
+            if j!=i:
+                change.update(staff_id=str(changed_person["id"]),name=changed_person["name"],automatic=True)
+            elif changed_day in automatic_days or changed_day!=day:
+                change["automatic"]=True
+            changes.append(change)
+    automatic_changes=[change for change in changes if change.get("automatic") and
+                       change.get("staff_id",person_id)==person_id and change["after"]=="RR"]
     boundary_changes=[]
     neighbor_boundaries=copy.deepcopy(snapshot.get("weekly_neighbor_boundaries",{}))
-    if person["employment"]=="part":
-        from weekly_rules import work_units
-        for change in changes:
-            boundary_key=person_id+"_"+change["day"]
-            units=work_units(change["after"])
-            for neighbor,entries in neighbor_boundaries.items():
-                if boundary_key in entries and float(entries[boundary_key])*2 != units:
-                    boundary_changes.append(dict(month=neighbor,key=boundary_key,before=entries[boundary_key],after=units/2))
-                    entries[boundary_key]=units/2
+    from weekly_rules import work_units
+    people_by_id={str(p["id"]):p for p in people}
+    for change in changes:
+        changed_id=change.get("staff_id",person_id)
+        if people_by_id[changed_id]["employment"]!="part":
+            continue
+        boundary_key=changed_id+"_"+change["day"]
+        units=work_units(change["after"])
+        for neighbor,entries in neighbor_boundaries.items():
+            if boundary_key in entries and float(entries[boundary_key])*2 != units:
+                boundary_changes.append(dict(month=neighbor,key=boundary_key,before=entries[boundary_key],after=units/2))
+                entries[boundary_key]=units/2
     snapshot=dict(snapshot,weekly_neighbor_boundaries=neighbor_boundaries)
-    audit = dict(paid_changes=paid_changes,boundary_changes=boundary_changes,automatic_rest_dates=[change["day"] for change in automatic_changes],rest_before=sum(rest_units(row[i]) for row in base["grid"])/2,
+    audit = dict(global_adjustment=global_adjustment,paid_changes=paid_changes,boundary_changes=boundary_changes,automatic_rest_dates=[change["day"] for change in automatic_changes],rest_before=sum(rest_units(row[i]) for row in base["grid"])/2,
                  rest_after=sum(rest_units(row[i]) for row in grid)/2,
                  rest_target=settings.get("targets", {}).get(person_id), staff_id=person_id, date=day, original_wish=original, remaining_wish=after,
                  work_period=period, replacement_date=swap, prior_replacement_wish=prior_replacement_wish, reason=reason.strip(),
@@ -444,22 +456,28 @@ def register_negotiated_leave(app, connect_db):
                 if fingerprint != request.form.get("fingerprint") or revision != request.form.get("revision"):
                     raise ValueError("入力や下書きが別の画面で変更されました。画面を開き直してください。")
                 base = align_helper_rows(snapshot, base)
-                updated, grid, changes, audit = change_plan(snapshot, base, values["staff"], values["day"],
-                                                            values["period"], values["swap"], values["reason"])
+                from agreed_preview import remember,recalled,forget
+                signature = digest(json.dumps([month, fingerprint, revision, values], sort_keys=True))
+                action = request.form.get("action")
+                if action=="save":
+                    if request.form.get("consent")!="yes" or session.get("agreed_change_confirmation")!=signature:
+                        raise ValueError("変更内容を確認し、本人の了承確認にチェックしてください。")
+                    updated,grid,changes,audit=recalled("agreed_change",signature)
+                else:
+                    updated, grid, changes, audit = change_plan(snapshot, base, values["staff"], values["day"],
+                                                                values["period"], values["swap"], values["reason"])
                 if scoped_days is not None and values["day"] not in scoped_days:
                     raise ValueError("不足一覧に表示された日を選んでください。")
                 warnings, shortages = diagnostics(updated, base, grid)
-                signature = digest(json.dumps([month, fingerprint, revision, values], sort_keys=True))
-                action = request.form.get("action")
                 if action == "preview":
                     preview = True
                     session["agreed_change_confirmation"] = signature
+                    remember("agreed_change",signature,(updated,grid,changes,audit))
                 elif action == "save":
-                    if request.form.get("consent") != "yes" or session.get("agreed_change_confirmation") != signature:
-                        raise ValueError("変更内容を確認し、本人の了承確認にチェックしてください。")
                     persist_agreed_change(db,updated,base,grid,changes,audit,shortages)
                     db.commit()
                     session.pop("agreed_change_confirmation", None)
+                    forget("agreed_change")
                     return redirect(url_for("agreed_wish_change",month=month,saved="1",_anchor="agreed-day-"+values["day"]),code=303)
                 else:
                     abort(400)

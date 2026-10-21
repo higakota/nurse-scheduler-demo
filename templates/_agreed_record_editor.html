@@ -3,11 +3,11 @@
 {% if record.cancelled %}<p>この了承出勤は取り消し済みです。</p>
 {% elif preview %}
 <h3>{{ '了承出勤を取り消す内容の確認' if operation == 'delete' else '了承出勤の変更内容の確認' }}</h3>
-<ul>{% for change in changes %}<li>{{ change.day|date_with_weekday }}：{{ change.before|manual_pair }} → {{ change.after|manual_pair }}</li>{% else %}<li>勤務時間帯の変更はありません。</li>{% endfor %}</ul>
+<ul>{% for change in changes %}<li>{% if change.name %}{{ change.name }} {% endif %}{{ change.day|date_with_weekday }}：{{ change.before|manual_pair }} → {{ change.after|manual_pair }}</li>{% else %}<li>勤務時間帯の変更はありません。</li>{% endfor %}</ul>
 {% if operation == 'delete' %}<p>元の希望休と勤務へ戻します。変更した履歴は残ります。</p>{% else %}<p>出勤：{{ {'full':'全日','am':'午前のみ','pm':'午後のみ'}[values.period] }}</p>{% endif %}
 {% if warnings %}<h3>確認事項</h3><ul>{% for message in warnings %}<li>{{ message }}</li>{% endfor %}</ul>{% endif %}
 {% if shortage_summary %}<details><summary>変更後の不足</summary>{% for day in shortage_summary %}<p>{{ day.date|date_with_weekday }}<br>{{ day['items']|join('、') }}</p>{% endfor %}</details>{% endif %}
-<form method="post">{% include "_manual_tokens.html" %}<input type="hidden" name="operation" value="{{ operation }}"><input type="hidden" name="period" value="{{ values.period }}"><input type="hidden" name="swap" value="{{ values.swap }}">
+<form method="post"><input type="hidden" name="plan_token" value="{{ session.get('agreed_record_plan','') }}">{% include "_manual_tokens.html" %}<input type="hidden" name="operation" value="{{ operation }}"><input type="hidden" name="period" value="{{ values.period }}"><input type="hidden" name="swap" value="{{ values.swap }}">
 <label class="checkbox"><input type="checkbox" name="consent" value="yes" required>変更内容を確認し、本人と調整済みです</label>
 <button name="action" value="save">{{ '了承出勤を取り消す' if operation == 'delete' else '変更を反映する' }}</button></form>
 <p><a href="{{ url_for('agreed_record_edit',month=month,index=record_index) }}">反映せず戻る</a></p>

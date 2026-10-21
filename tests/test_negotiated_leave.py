@@ -201,3 +201,18 @@ class NegotiatedLeaveTest(unittest.TestCase):
         db.close()
         self.assertNotIn("5_2026-02-02",saved["comparison_inputs"]["wishes"])
         self.assertEqual(saved["monthly_context"]["agreed_wish_changes"][0]["original_wish"],"full")
+
+
+    def test_save_uses_reviewed_plan_without_searching_again_and_rejects_old_preview(self):
+        from unittest.mock import patch
+        self.setup_roster()
+        fields=self.fields()
+        self.post(fields,"preview")
+        with self.client.session_transaction() as state:first=state["agreed_change_plan"]
+        self.post(fields,"preview")
+        stale=self.client.post("/schedule/agreed-change?month=2026-02",
+            data=dict(fields,action="save",consent="yes",plan_token=first))
+        self.assertIn("別の画面で調整案",stale.get_data(as_text=True))
+        with patch("negotiated_leave.change_plan",side_effect=AssertionError("保存時に再探索しない")):
+            response=self.post(fields,"save","yes")
+        self.assertEqual(response.status_code,303)

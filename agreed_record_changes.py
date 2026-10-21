@@ -19,9 +19,9 @@ def cancellation_plan(snapshot,base,index):
     changed=record.get("changes",[])
     if not changed:
         raise ValueError("元の勤務の記録がないため、自動では取り消せません。編集画面で確認してください。")
-    affected={change["day"] for change in changed}
+    affected={(change.get("staff_id",pid),change["day"]) for change in changed}
     for later in records[index+1:]:
-        if not later.get("cancelled") and str(later["staff_id"])==pid and affected & {c["day"] for c in later.get("changes",[])}:
+        if not later.get("cancelled") and affected & {(c.get("staff_id",str(later["staff_id"])),c["day"]) for c in later.get("changes",[])}:
             raise ValueError("この後に同じ日の了承変更があります。後の変更から先に取り消してください。")
     i=next((i for i,p in enumerate(base["people"]) if str(p["id"])==pid),None)
     if i is None:
@@ -30,6 +30,10 @@ def cancellation_plan(snapshot,base,index):
     delta=[]
     abstract=lambda c:"W" if c in "ABCD" else c
     for change in changed:
+        changed_id=change.get("staff_id",pid)
+        i=next((j for j,p in enumerate(base["people"]) if str(p["id"])==changed_id),None)
+        if i is None:
+            raise ValueError("調整したスタッフが見つかりません。")
         if change["day"] not in base["days"]:
             raise ValueError("変更した日が元の表にありません。")
         d=base["days"].index(change["day"])
@@ -42,7 +46,7 @@ def cancellation_plan(snapshot,base,index):
             pair[h]=change["before"][h]
         after="".join(pair)
         if grid[d][i]!=after:
-            delta.append(dict(day=change["day"],before=grid[d][i],after=after))
+            delta.append(dict(day=change["day"],before=grid[d][i],after=after,**({k:change[k] for k in ("staff_id","name") if k in change})))
         grid[d][i]=after
     settings=updated["monthly_settings"]
     wishes=settings.setdefault("wishes",{})
@@ -84,9 +88,14 @@ def record_plan(snapshot,base,index,operation,period,swap):
     new_audit["supersedes"]=index
     # 取り消し時の境界復元と、新しい出勤の境界更新を両方保存する。
     new_audit["boundary_write_months"]=list({change["month"] for change in audit["boundary_changes"]+new_audit.get("boundary_changes",[])})
-    i=next(i for i,p in enumerate(base["people"]) if str(p["id"])==str(original["staff_id"]))
-    delta=[dict(day=day,before=base["grid"][d][i],after=grid[d][i])
-           for d,day in enumerate(base["days"]) if base["grid"][d][i]!=grid[d][i]]
+    delta=[]
+    for d,day in enumerate(base["days"]):
+        for i,person in enumerate(base["people"]):
+            if base["grid"][d][i]!=grid[d][i]:
+                change=dict(day=day,before=base["grid"][d][i],after=grid[d][i])
+                if str(person["id"])!=str(original["staff_id"]):
+                    change.update(staff_id=str(person["id"]),name=person["name"])
+                delta.append(change)
     return updated,grid,delta,new_audit
 
 
@@ -130,18 +139,24 @@ def register_agreed_record_changes(app,connect_db):
                     abort(400)
                 if request.form.get("fingerprint")!=fp or request.form.get("revision")!=revision:
                     raise ValueError("入力や勤務表が変更されました。画面を開き直してください。")
-                updated,grid,changes,audit=record_plan(snapshot,base,index,operation,period,swap)
-                warnings,shortages=diagnostics(updated,base,grid)
+                from agreed_preview import remember,recalled,forget
                 signature=digest(json.dumps([month,index,fp,revision,operation,period,swap]))
+                if request.form.get("action")=="save":
+                    if request.form.get("consent")!="yes" or session.get("agreed_record_confirmation")!=signature:
+                        raise ValueError("変更内容を確認してチェックを入れてください。")
+                    updated,grid,changes,audit=recalled("agreed_record",signature)
+                else:
+                    updated,grid,changes,audit=record_plan(snapshot,base,index,operation,period,swap)
+                warnings,shortages=diagnostics(updated,base,grid)
                 if request.form.get("action")=="preview":
                     preview=True
                     session["agreed_record_confirmation"]=signature
+                    remember("agreed_record",signature,(updated,grid,changes,audit))
                 elif request.form.get("action")=="save":
-                    if request.form.get("consent")!="yes" or session.get("agreed_record_confirmation")!=signature:
-                        raise ValueError("変更内容を確認してチェックを入れてください。")
                     persist_agreed_change(db,updated,base,grid,changes,audit,shortages)
                     db.commit()
                     session.pop("agreed_record_confirmation",None)
+                    forget("agreed_record")
                     return redirect(url_for("agreed_wish_change",month=month,saved="1",_anchor="agreed-day-"+record["date"]),code=303)
                 else:
                     abort(400)

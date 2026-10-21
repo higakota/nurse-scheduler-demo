@@ -30,16 +30,16 @@
 </tbody></table></section>
 <div class="agreed-editor-column">
 {% if record_editor|default(false) %}{% include "_agreed_record_editor.html" %}{% elif preview %}<section class="panel"><h2>変更内容の確認（まだ保存していません）</h2><p><strong>{{ person_name }}</strong></p>
-<ul>{% for change in changes %}<li>{{ change.day|date_with_weekday }}：{{ change.before|manual_pair }} → {{ change.after|manual_pair }}</li>{% endfor %}</ul>
+<ul>{% for change in changes %}<li>{% if change.name %}{{ change.name }} {% endif %}{{ change.day|date_with_weekday }}：{{ change.before|manual_pair }} → {{ change.after|manual_pair }}</li>{% endfor %}</ul>
 <p>出勤する時間帯の希望休を解除します。{% if values.swap %}{{ values.swap|date_with_weekday }}は全日希望休にします。{% endif %}指定の公休日数と有給の登録は変更しません。</p>
 {% if audit.rest_target is not none %}<p><strong>公休日数：{{ audit.rest_before }}日 → {{ audit.rest_after }}日（指定：{{ audit.rest_target }}日）</strong></p>{% endif %}
-{% if audit.automatic_rest_dates %}<p>公休日数を守るため、表示した日に休みを入れます。ほかのスタッフの勤務は変えません。</p>{% endif %}
+{% if audit.global_adjustment %}<p>6連勤を避けるため、依頼済みヘルプの勤務・希望休・有給を守って全体を自動調整しました。ほかのスタッフの変更も上に表示しています。</p>{% elif audit.automatic_rest_dates %}<p>公休日数を守るため、表示した日に休みを入れます。ほかのスタッフの勤務は変えません。</p>{% endif %}
 {% if warnings %}<h3>確認が必要な条件</h3><ul>{% for warning in warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}
 {% if shortages %}<details><summary>変更後の不足</summary>{% for day in shortage_summary %}<p><strong>{{ day.date|date_with_weekday }}</strong><br>{% for item in day['items'] %}{{ item }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>{% endfor %}</details>{% else %}<p>変更後の人数不足はありません。</p>{% endif %}
 {% if audit.paid_changes %}<p>編集した表の有給も登録に反映します。</p><ul>{% for item in audit.paid_changes %}<li>{{ item.date|date_with_weekday }} {{ item.name }}：{{ {'full':'全日有給','am':'午前有給','pm':'午後有給'}.get(item.after,'有給取消') }}</li>{% endfor %}</ul>{% endif %}
 {% if audit.boundary_changes %}<p>翌月側の勤務記録も、了承した出勤に合わせて更新します。</p>{% endif %}
 <p class="hint">保存先は未確定の手動下書きです。不足や公休日数の不一致があれば、保存後に調整してください。</p>
-<form method="post"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="revision" value="{{ revision }}">
+<form method="post"><input type="hidden" name="plan_token" value="{{ session.get('agreed_change_plan','') }}"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="revision" value="{{ revision }}">
 {% for key,value in values.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
 <label class="checkbox"><input type="checkbox" name="consent" value="yes" required>本人から出勤の了承を得て、表示した希望休・勤務の変更を保存します</label><button name="action" value="save">了承済みの変更を保存</button></form>
 <p><a href="{{ url_for('agreed_wish_change',month=month,staff=values.staff,day=values.day,scope=values.scope) }}">保存せず入力し直す</a></p></section>

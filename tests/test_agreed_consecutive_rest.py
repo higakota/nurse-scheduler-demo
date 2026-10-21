@@ -56,3 +56,39 @@ class AgreedConsecutiveRestTest(unittest.TestCase):
         self.assertFalse(any(r["name"]==snapshot["staff"][0]["name"] for r in six_day_runs(prepare(updated,True),grid)))
         self.assertEqual(audit["rest_after"],22)
         self.assertFalse(verify(prepare(updated,True),grid,allow_shortages=True,max_full_days=6))
+
+
+    def test_joint_adjustment_runs_during_agreement_and_can_be_fully_cancelled(self):
+        snapshot=sample(open_days=(2,3,4,5,6,7,9),regular_count=5)
+        days=[f"2026-02-{d:02}" for d in range(1,29)]
+        grid=[["RR"]*6 for _ in days]
+        for d,active in zip(range(1,7),((1,2),(3,4),(1,3),(2,4),(1,4),(2,3))):
+            grid[d][0]="RR" if d==3 else "DO" if d==5 else "DD"
+            for i in active:
+                grid[d][i]="DO" if d==5 else "DD"
+            grid[d][5]="CO" if d==5 else "CC"
+        grid[8]=["DD"]*5+["CC"]
+        snapshot["staff"].append(dict(id=9,name="依頼済みヘルプ仮名",role="nurse",employment="full",veteran=1,is_help=1,advance_help=0,allowed_areas="ABC"))
+        snapshot["help_availability"]["9_2026-02-09"]="full"
+        for d,row in enumerate(grid):
+            row.append("DD" if d==8 else "RR")
+        snapshot["monthly_settings"]["targets"]={str(p["id"]):str(sum(pair[i].count("R") for pair in grid)/2)
+                                                for i,p in enumerate(snapshot["staff"])}
+        snapshot["monthly_settings"]["wishes"]["1_2026-02-04"]="full"
+        base=dict(days=days,people=snapshot["staff"],grid=grid)
+        updated,adjusted,changes,audit=change_plan(snapshot,base,"1","2026-02-04","full","","")
+        self.assertTrue(audit["global_adjustment"])
+        self.assertTrue(all(new[-1]==old[-1] for new,old in zip(adjusted,grid)))
+        self.assertFalse(any(r["name"]==snapshot["staff"][0]["name"] for r in six_day_runs(prepare(updated,True),adjusted)))
+        self.assertTrue(any(c.get("staff_id") for c in changes))
+        self.assertEqual(adjusted[3][0],"DD")
+        self.assertEqual(verify(prepare(updated,True),adjusted,max_full_days=6),[])
+        restored,restored_grid,_,_=cancellation_plan(updated,dict(base,grid=adjusted),0)
+        self.assertEqual(restored_grid,grid)
+        self.assertEqual(restored["monthly_settings"]["wishes"],snapshot["monthly_settings"]["wishes"])
+        changed=next(c for c in changes if c.get("staff_id"))
+        j=next(i for i,p in enumerate(base["people"]) if str(p["id"])==changed["staff_id"])
+        tampered=copy.deepcopy(adjusted)
+        tampered[days.index(changed["day"])][j]=changed["before"]
+        with self.assertRaises(ValueError):
+            cancellation_plan(updated,dict(base,grid=tampered),0)
