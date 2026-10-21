@@ -123,6 +123,14 @@
 .home-simple-links{display:flex;flex-wrap:wrap;gap:16px 28px;margin-top:24px;font-size:14px}
 @media(max-width:1000px){.home-main-actions{grid-template-columns:1fr}.home-main-actions>a{gap:8px;padding:20px}.home-main-actions>a>span:last-child{margin-top:-24px}.home-main-actions strong{font-size:18px}}
 
-.leave-candidate-action{display:inline;margin:0}.leave-candidate-action button{padding:4px 8px;font-size:13px}
+.leave-candidate-days{margin:12px 0 18px}
+.leave-candidate-day{display:grid;grid-template-columns:165px minmax(0,1fr);align-items:start;gap:16px;padding:14px 0;border-bottom:1px solid var(--line)}
+.leave-candidate-day:last-child{border-bottom:0}
+.leave-candidate-date{font-size:14px;line-height:36px;white-space:nowrap}
+.leave-candidate-people{display:flex;flex-wrap:wrap;gap:8px}
+.app-layout .leave-candidate-action{display:block;margin:0;max-width:none}
+.app-layout .leave-candidate-action .leave-candidate-person{display:block;background:#fff;color:#254c45;border:1px solid #c9d8d2;border-radius:7px;box-shadow:none;padding:8px 14px;margin:0;min-height:36px;font-size:14px;font-weight:400;line-height:1.4;white-space:nowrap}
+.app-layout .leave-candidate-action .leave-candidate-person:hover{background:#edf5f1;border-color:#6c9c8c}
+@media(max-width:650px){.leave-candidate-day{grid-template-columns:1fr;gap:8px}.leave-candidate-date{line-height:1.5}.app-layout .leave-candidate-action .leave-candidate-person{padding:8px 10px}}
 
 .input-more{position:relative;align-self:center;font-size:13px;color:var(--muted)}.input-more summary{cursor:pointer;padding:8px 13px}.input-more>div{position:absolute;right:0;z-index:20;background:white;border:1px solid var(--line);border-radius:8px;min-width:180px;padding:6px}.input-more a{display:block}
