@@ -46,6 +46,12 @@ class InputSheetTest(unittest.TestCase):
         self.assertIn('data-meeting-day="2026-10-02"',page)
         self.assertIn('id="meeting-',page)
         self.assertIn("仮名会議",page)
+        meeting_section=page.split('id="meetings"',1)[1].split('<h3>登録済み',1)[0]
+        self.assertNotIn('class="input-static-wish"',meeting_section)
+        self.assertNotIn('class="input-static-paid"',meeting_section)
+        self.assertNotIn('class="input-doctor-row"',meeting_section)
+        self.assertIn("医師予定を見る",meeting_section)
+
 
 
 class DrawingDateTest(unittest.TestCase):
