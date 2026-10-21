@@ -33,7 +33,7 @@ def preferred_help_source(snapshot, draft_raw, manual_raw):
     return max(choices)[2] if choices else "draft"
 
 
-def generate_fixed_help(snapshot, seed_raw, seconds=10, source_name="自院の仮表"):
+def generate_fixed_help(snapshot, seed_raw, seconds=10, source_name="自院の仮表", partial=False):
     seed = json.loads(seed_raw)
     if seed.get("conditions_hash") is not None and seed["conditions_hash"] != conditions_hash(snapshot):
         return dict(status="input_error", grid=None, shortages=[], messages=[
@@ -45,15 +45,17 @@ def generate_fixed_help(snapshot, seed_raw, seconds=10, source_name="自院の�
     fixed = {(day, str(person["id"])): seed["grid"][d][i]
              for d, day in enumerate(seed["days"])
              for i, person in enumerate(seed["people"]) if not person["is_help"]}
-    result = _generate(snapshot, use_help=True, seconds=seconds, fixed_regular=fixed)
+    result = _generate(snapshot, use_help=True, seconds=seconds, fixed_regular=fixed, partial=partial)
     finish_policy(result, 5)
-    if result["status"] == "success":
+    if result["status"] in ("success", "draft"):
         # 最終確認でも自院の勤務記号が変わっていないことを保証する。
         for d, day in enumerate(result["problem"]["days"]):
             for i, person in enumerate(result["problem"]["people"]):
                 if not person["is_help"] and result["grid"][d][i] != fixed[(day, str(person["id"]))]:
                     return dict(status="unknown", grid=None, shortages=[], messages=["自院勤務の維持確認に失敗したため保存しませんでした。"])
         result["messages"].append(source_name + "を維持し、承諾済みのヘルプだけを配置しました。")
+        if partial:
+            result["included_help"] = True
     else:
         result["messages"].insert(0, source_name + "は変更していません。現在の来院予定では固定した表を完成できませんでした。来院日時・職種・ベテランの条件を確認してください。")
     return result

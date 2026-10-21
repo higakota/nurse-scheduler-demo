@@ -43,6 +43,18 @@ class FixedHelpTest(unittest.TestCase):
         self.assertTrue(any("午後：看護師1人不足" in message for message in result["messages"]))
         self.assertTrue(result["shortages"])
 
+    def test_partial_help_keeps_own_roster_and_places_available_half(self):
+        snapshot,raw,seed=self.setup_case()
+        snapshot["help_availability"]={"9_2026-02-02":"am"}
+        result=generate_fixed_help(snapshot,raw,seconds=2,partial=True)
+        self.assertEqual(result["status"],"draft",result["messages"])
+        self.assertTrue(result["included_help"])
+        self.assertEqual(result["grid"][1][-1],"DR")
+        self.assertTrue(result["shortages"])
+        for d,row in enumerate(seed["grid"]):
+            self.assertEqual(list(row),list(result["grid"][d][:len(row)]))
+        self.assertEqual(verify(result["problem"],result["grid"],allow_shortages=True,max_full_days=result["max_full_days"]),[])
+
     def test_changed_own_conditions_are_rejected_and_legacy_seed_is_revalidated(self):
         snapshot, raw, seed = self.setup_case()
         snapshot["monthly_settings"]["targets"]["3"] = "26"
@@ -94,6 +106,30 @@ class FixedHelpRouteTest(unittest.TestCase):
         db.close()
         for d, row in enumerate(seed["grid"]):
             self.assertEqual(row, saved["grid"][d][:len(row)])
+
+    def test_partial_help_route_shows_shortage_grid_without_saving_complete_result(self):
+        from app import connect_db
+        seed=self.create_baseline_and_help()
+        db=connect_db()
+        db.execute("UPDATE help_availability SET data=?", (json.dumps({"9_2026-02-02":"am"}),))
+        db.commit();db.close()
+        failed=self.client.post("/schedule?month=2026-02",data=dict(self.help_fields(),mode="help"))
+        self.assertIn('value="help_draft"',failed.get_data(as_text=True))
+        response=self.client.post("/schedule?month=2026-02",data=dict(self.help_fields(),mode="help_draft"))
+        page=response.get_data(as_text=True)
+        self.assertEqual(response.status_code,200)
+        self.assertIn("登録済みヘルプを反映した仮表",page)
+        self.assertNotIn("この仮表は自院スタッフのみ",page)
+        db=connect_db()
+        draft=json.loads(db.execute("SELECT data FROM manual_schedule_seeds").fetchone()[0])
+        self.assertEqual(draft["grid"][1][-1],"DR")
+        from help_shortages import load_reference
+        self.assertEqual(load_reference(db,"2026-02")["state"],"current")
+        for d,row in enumerate(seed["grid"]):
+            self.assertEqual(row,draft["grid"][d][:len(row)])
+        if db.execute("SELECT name FROM sqlite_master WHERE name='generated_schedules'").fetchone():
+            self.assertIsNone(db.execute("SELECT data FROM generated_schedules").fetchone())
+        db.close()
 
     def test_changed_baseline_token_blocks_creation(self):
         from app import connect_db

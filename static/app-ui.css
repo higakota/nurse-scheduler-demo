@@ -79,3 +79,5 @@
 .staff-number-field label{margin:0 0 9px}.staff-number-field input{max-width:160px}
 @media(max-width:650px){.month-overview>div{display:block}.month-overview>div>a{display:flex;justify-content:space-between;align-items:center;gap:12px}.app-topbar{flex-wrap:wrap}.month-navigation{gap:4px}.month-arrow{min-width:30px}.staff-number-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.staff-number-field{padding:10px}.staff-number-field input{max-width:100%}}
 @media(max-width:380px){.staff-number-grid{grid-template-columns:1fr}}
+
+.partial-help-action{max-width:none;margin:18px 0}

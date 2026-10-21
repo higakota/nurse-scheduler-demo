@@ -71,6 +71,8 @@ def publish_reference(connect_db, snapshot, fingerprint, rows, kind="draft", out
             seed_draft(db, snapshot["month"], snapshot, fingerprint, outcome)
             stored = json.loads(db.execute("SELECT data FROM help_shortage_previews WHERE month=?", (snapshot["month"],)).fetchone()[0])
             stored["included_visits"] = included_helper_visits(outcome["problem"]["people"], outcome["problem"]["days"], outcome["grid"])
+            if expected_source and expected_source[0]=="draft":
+                stored["source_hash"] = hashlib.sha256(source_data(db, snapshot["month"], "draft").encode()).hexdigest()
             db.execute("UPDATE help_shortage_previews SET data=? WHERE month=?", (json.dumps(stored, ensure_ascii=False), snapshot["month"]))
         db.commit()
         return True
