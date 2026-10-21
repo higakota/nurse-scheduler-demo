@@ -44,6 +44,24 @@ class PreferredDailyHelpTest(unittest.TestCase):
         self.assertEqual(helper_count(result["problem"]["people"],result["grid"][1]),3)
         self.assertEqual(verify(result["problem"],result["grid"],max_full_days=result.get("max_full_days",5)),[])
 
+    def test_draft_uses_part_time_weekly_capacity_to_reduce_nurse_shortage(self):
+        for limit,expected in ((2,0),(0,1)):
+            with self.subTest(weekly_limit_units=limit):
+                data=fixtures.sample()
+                data["staff"][0].update(employment="part",weekly_limit_units=limit)
+                data["monthly_settings"]["targets"]["2"]="28"
+                problem=prepare(data)
+                grid=[tuple(["RR"]*5) for _ in problem["days"]]
+                grid[1]=allocate(problem,1,["RR","RR","WW","WW","WW"],partial=True)
+                from help_limits import helper_demand_roles
+                self.assertEqual(helper_demand_roles(problem,1,grid[1])[0],1)
+                self.assertEqual(verify(problem,grid,allow_shortages=True,max_full_days=5),[])
+                result=improve_jointly(problem,grid,allow_shortages=True,max_full_days=5,seconds=1)
+                self.assertEqual(helper_demand_roles(problem,1,result[1])[0],expected)
+                self.assertEqual(verify(problem,result,allow_shortages=True,max_full_days=5),[])
+                self.assertEqual(grid[1][0],"RR")
+                self.assertEqual(result[1][1],"RR")
+
     def test_draft_spreads_equal_total_shortages_to_stay_within_two_helpers(self):
         data=fixtures.sample(open_days=(2,24),regular_count=6)
         for i in range(1,8):
