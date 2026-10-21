@@ -68,3 +68,11 @@
 #advance-period-dialog{width:min(480px,calc(100vw - 32px));border:1px solid #ccd9d3;border-radius:14px;padding:24px}
 #advance-period-dialog::backdrop{background:#18352d66}
 #advance-period-dialog [aria-pressed=true]{outline:3px solid #d6be54}
+
+/* 事前ヘルプの入力表はフォーム共通の幅制限を受けず、利用可能な横幅を使う。 */
+#advance-availability-form{width:100%;max-width:none}
+#advance-availability-form .input-sheet-wrap{width:100%;overflow-x:auto}
+#advance-availability-form .advance-input-sheet{width:100%;min-width:calc(128px + var(--input-sheet-days)*32px);max-width:none}
+#advance-availability-form .input-sheet-name{width:128px}
+#advance-availability-form thead th{white-space:nowrap;overflow-wrap:normal;font-size:12px}
+#advance-availability-form .advance-day-cell{white-space:nowrap;overflow-wrap:normal}
