@@ -389,6 +389,29 @@ def register_negotiated_leave(app, connect_db):
             db.execute("BEGIN IMMEDIATE" if request.method == "POST" else "BEGIN")
             snapshot, fingerprint, generated = read_snapshot(db, month)
             base, revision = load_manual(db, month, snapshot, fingerprint, generated)
+            if not values["scope"]:
+                # 直接開いた場合も、最新の不足確認に使った表を選ぶ。
+                from help_shortages import load_reference, source_data
+                reference = load_reference(db, month)
+                if reference["state"] in ("current", "reference") and reference["kind"] != "verified":
+                    row = db.execute("SELECT data FROM help_shortage_previews WHERE month=?", (month,)).fetchone()
+                    checked = json.loads(row[0])
+                    kind = checked.get("source_kind", "draft")
+                    source = source_data(db, month, kind)
+                    # 旧版の仮作成は、参照元を以前の手動表のまま記録していた。
+                    seed_raw = source_data(db, month, "draft")
+                    if seed_raw:
+                        seed = json.loads(seed_raw)
+                        if (seed.get("input_hash")==checked.get("input_hash")
+                            and seed.get("created","")>=checked.get("created","")):
+                            kind, source = "draft", seed_raw
+                    if source:
+                        from itsdangerous import URLSafeSerializer
+                        from schedule_display import concise_shortages
+                        values["scope"] = URLSafeSerializer(app.secret_key, salt="agreed-shortage-days").dumps(
+                            dict(month=month, fingerprint=fingerprint, source_kind=kind,
+                                 source_hash=digest(source), days=concise_shortages(checked["rows"]),
+                                 include_help=False))
             if values["scope"]:
                 from itsdangerous import URLSafeSerializer, BadSignature
                 scoped_days = {}

@@ -37,6 +37,42 @@ class AgreedCalendarTest(unittest.TestCase):
         self.assertEqual(before,list(db.iterdump()))
         db.close()
 
+    def test_direct_calendar_uses_latest_shortage_source_instead_of_old_manual(self):
+        import copy
+        from schedule import read_snapshot
+        from manual_schedule import diagnostics
+        from help_shortages import write_reference
+        self.setup_roster()
+        db=connect_db()
+        snapshot,fp,_=read_snapshot(db,"2026-02")
+        raw=db.execute("SELECT data FROM manual_schedule_seeds").fetchone()[0]
+        seed=json.loads(raw)
+        old=copy.deepcopy(seed)
+        old["grid"][1],old["grid"][2]=old["grid"][2],old["grid"][1]
+        db.execute("CREATE TABLE manual_schedules(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
+        db.execute("INSERT INTO manual_schedules VALUES (?,?)",("2026-02",json.dumps(old)))
+        _,rows=diagnostics(snapshot,seed,seed["grid"])
+        write_reference(db,snapshot,fp,rows,source_kind="draft",source_raw=raw)
+        db.commit()
+        before=list(db.iterdump())
+        db.close()
+        page=self.client.get("/schedule/agreed-change?month=2026-02").get_data(as_text=True)
+        calendar=self.calendar(page)
+        self.assertIn("2026-02-02",calendar["editable_days"])
+        self.assertNotIn("2026-02-03",calendar["editable_days"])
+        db=connect_db()
+        self.assertEqual(before,list(db.iterdump()))
+        db.close()
+        import html
+        scope=html.unescape(re.search('name="scope" value="([^"]*)"',page)[1])
+        fields=self.fields()
+        preview=self.client.post("/schedule/agreed-change?month=2026-02",data=dict(fields,scope=scope,action="preview"))
+        self.assertIn("まだ保存していません",preview.get_data(as_text=True))
+        db=connect_db()
+        self.assertEqual(before,list(db.iterdump()))
+        db.close()
+
+
     def test_replacement_choices_follow_paid_leave_and_meeting_rules(self):
         self.setup_roster()
         text=self.client.get("/schedule/agreed-change?month=2026-02").get_data(as_text=True)

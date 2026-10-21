@@ -143,7 +143,9 @@ def register_schedule(app, connect_db):
                     manual_raw = load_manual_source(db, month)
                 finally:
                     db.close()
-                source_raw = manual_raw if help_source == "manual" else seed_raw
+                help_source = "draft"
+                source_checked = True
+                source_raw = seed_raw
                 source_token = digest(json.dumps([seed_raw, manual_raw]))
 
         current_comparison = {"wishes": snapshot.get("monthly_settings", {}).get("wishes", {}),
