@@ -144,13 +144,16 @@ def register_help_availability(app, connect_db):
                     warnings.append(day_text + "：看護師のみ対応の例外が登録されていますが、現在は休診日です。必要なら取消してください。")
             from help_shortages import load_reference
             shortages = load_reference(db,month)
+            has_advance_help = any(p.get("advance_help") for p in staff)
+            staff = [p for p in staff if not p.get("advance_help")]
+            people = {str(p["id"]): p for p in staff}
             selected = request.form.get("staff", request.args.get("staff", ""))
             if selected not in people:
                 selected = next(iter(people), "")
         finally:
             db.close()
         weeks = [[day if day.month == number else None for day in week] for week in calendar.Calendar(firstweekday=6).monthdatescalendar(year, number)]
-        return render_template("help_availability.html", shortages=shortages, month=month, data=data, staff=staff, closures=closures,
+        return render_template("help_availability.html", has_advance_help=has_advance_help, shortages=shortages, month=month, data=data, staff=staff, closures=closures,
                                exceptions=exceptions, fingerprint=fingerprint, error=error, warnings=warnings, selected=selected,
                                weeks=weeks, periods=PERIODS)
 

@@ -52,10 +52,11 @@ if(button)button.disabled=document.body.dataset.helpVisitDirty==="true"||documen
     document.getElementById("help-changes").value = JSON.stringify(changes);
   }
   function otherVisitors(day) {
-    return people.filter(person=>{
-      if(String(person.id)===staff.value)return false;
-      const key=person.id+"_"+day;
-      return Boolean(Object.hasOwn(changes,key)?changes[key]:original[key]);
+    const keys=new Set([...Object.keys(original),...Object.keys(changes)]);
+    return [...keys].filter(key=>{
+      const split=key.indexOf("_");
+      return key.slice(split+1)===day&&key.slice(0,split)!==staff.value&&
+        Boolean(Object.hasOwn(changes,key)?changes[key]:original[key]);
     }).length;
   }
   function choosePeriod(period){

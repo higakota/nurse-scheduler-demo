@@ -92,6 +92,10 @@ class AdvanceHelpRouteTest(unittest.TestCase):
         fp=re.search('name="fingerprint" value="([^"]*)"',page)[1]
         with self.client.session_transaction() as state:token=state["csrf_token"]
         response=self.client.post("/help?month=2026-02",data=dict(csrf_token=token,fingerprint=fp,return_monthly="1",changes=json.dumps({"9_2026-02-02":"full"})))
+        help_page=self.client.get("/help?month=2026-02").get_data(as_text=True)
+        self.assertIn("追加で依頼するヘルプは未登録",help_page)
+        self.assertNotIn("事前ヘルプ仮名",help_page)
+        self.assertIn("#availability",help_page)
         self.assertIn("/monthly?",response.location)
         self.assertTrue(response.location.endswith("#availability"))
         db=connect_db()
