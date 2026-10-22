@@ -117,7 +117,7 @@ class ManualScheduleTest(unittest.TestCase):
         self.assertIn('class="manual-cell"',page)
         self.assertIn('data-day="0" data-person="0"',page)
         self.assertIn('id="manual-dialog"',page)
-        sheet=page.split('class="paper-schedule"',1)[1].split('class="paper-schedule-title"',1)[0]
+        sheet=page.split('class="paper-schedule',1)[1].split('class="paper-schedule-title"',1)[0]
         self.assertIn('id="manual-bulk-edit"',sheet)
         self.assertNotIn('id="manual-day"',page)
         preview=self.post(fields,"preview",{"1_0":"DR"}).get_data(as_text=True)

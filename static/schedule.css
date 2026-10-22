@@ -241,3 +241,20 @@
   .print-sheet .comparison-result-label{display:none!important}
   .print-sheet .paper-schedule:has(tfoot.no-shortages) .paper-deficit-note{display:none}
 }
+
+/* 上段は実勤務、黄色の下段は本人の希望。了承出勤は勤務だけ赤字。 */
+.paper-schedule.comparison-enabled .paper-grid .paper-request-row td.has-request{
+  background:#fff58a;color:#172c32
+}
+.paper-schedule.comparison-enabled .paper-request-row .request-entry{color:#172c32}
+.paper-schedule.comparison-enabled .paper-grid .paper-duty-row td.has-request{
+  background:#fff;color:#172c32
+}
+.paper-schedule .paper-grid .paper-duty-row td.paper-agreed-work,
+.paper-schedule .paper-agreed-work .manual-change-after{color:#c92121!important;font-weight:700}
+.key-request{background:#fff58a}.key-agreed{color:#c92121;font-weight:700}
+@media print{
+ .print-sheet .paper-schedule.comparison-enabled .paper-grid .paper-request-row td.has-request{background:#fff58a;color:#172c32}
+ .print-sheet .paper-schedule.comparison-enabled .paper-grid .paper-duty-row td.has-request{background:#fff}
+ .print-sheet .paper-schedule.comparison-enabled .paper-request-row .request-entry{color:#172c32}
+}

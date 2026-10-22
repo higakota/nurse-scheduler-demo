@@ -92,7 +92,13 @@ def monthly_display(days, people, grid, monthly=None, targets=None, shortages=No
             request_segments = []
             if requests:
                 request_segments = [request_halves[0]] if request_halves[0] == request_halves[1] else request_halves
-            cells.append(dict(pair=pair,label=label, detail=detail, hint=hint, kind=kind, requests=requests,
+            agreed_work=any(
+                pair[h] in "ABCDMOT" and any(
+                    record.get("work_period") in ("full",half)
+                    and (record.get("original_wish") in ("full",half) or record.get("original_paid") in ("full",half))
+                    for record in records)
+                for h,half in enumerate(("am","pm")))
+            cells.append(dict(agreed_work=agreed_work,pair=pair,label=label, detail=detail, hint=hint, kind=kind, requests=requests,
                               request_segments=request_segments, has_request=bool(requests),
                               adjustment_label=adjustment_label, adjustment_hint=adjustment_hint,
                               request_hint="、".join(item["hint"] for item in requests)))
