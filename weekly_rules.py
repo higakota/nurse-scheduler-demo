@@ -34,7 +34,7 @@ def outside_sources(snapshot, person, day):
         if key in entries:
             values.append((source+"の境界入力",parse_units(entries[key])))
     if day < date.fromisoformat(snapshot["month"]+"-01"):
-        code=(snapshot.get("leave_history") or {}).get("history",{}).get(key)
+        code=dict(snapshot.get("inherited_history",{}),**(snapshot.get("leave_history") or {}).get("history",{})).get(key)
         if code in HISTORY_UNITS:
             values.append(("前月末勤務",HISTORY_UNITS[code]))
     closures=dict(snapshot.get("previous_closures") or {})

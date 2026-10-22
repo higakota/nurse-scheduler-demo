@@ -38,6 +38,9 @@ def read_snapshot(db, month):
             snapshot["weekly_neighbor_boundaries"][neighbor] = json.loads(row["data"])
     following = db.execute("SELECT data FROM monthly_settings WHERE month=?",(next_month,)).fetchone() if "monthly_settings" in tables else None
     snapshot["weekly_next_closures"] = json.loads(following["data"]).get("closures",{}) if following else {}
+    from previous_roster import inherited_history
+    inherited,_=inherited_history(db,month,snapshot["staff"])
+    if inherited:snapshot["inherited_history"]=inherited
     fingerprint = digest(json.dumps(snapshot, ensure_ascii=False, sort_keys=True))
     result = db.execute("SELECT data FROM generated_schedules WHERE month=?", (month,)).fetchone() if "generated_schedules" in tables else None
     return snapshot, fingerprint, result["data"] if result else ""

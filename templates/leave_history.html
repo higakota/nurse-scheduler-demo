@@ -4,10 +4,10 @@
 
 {% if saved %}<p class="success" role="status">保存しました。</p>{% endif %}{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 {% for warning in warnings %}<p class="error" role="alert">{{ warning }}</p>{% endfor %}
-<details class="panel history-disclosure" open><summary>前月末の勤務<small>初回の連勤判定に使います。入力するときに開いてください。</small></summary>
+<details class="panel history-disclosure" open><summary>前月末の勤務<small>月をまたぐ連勤・週上限の確認に使います。</small></summary>
 <p>自院スタッフの対象月の直前6日分です。ヘルプの前月末勤務は入力不要です。「全日勤務」には午前診療・午後会議も含みます。半日勤務・全日有給・半日有給と半日勤務の組合せは連勤をリセットします。</p>
 <p class="hint">未入力のまま保存できます。連勤数が分からない場合は未確定のままです。日曜と登録済みの休診日は全日休みで固定します。前月の祝日・年末年始は前月の月別入力で設定してください。</p>
-<p class="hint">この画面は初回導入用です。翌月以降の確定表からの自動引継ぎは、勤務表の作成・確定機能と合わせて追加します。</p>
+<p class="hint">{% if previous_source %}{{ previous_source.month }}の保存済み勤務表から自動で引き継いでいます。手入力して保存した内容があれば、そちらを優先します。{% else %}前月の保存済み勤務表がない場合は、ここから入力してください。翌月からは前月の保存済み表を使います。{% endif %}</p>
 <form method="post" class="history-form"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="action" value="history_save">
 {% for row in history_rows %}<section class="history-person"><h3>{{ row.person.name }}</h3><div class="history-days">{% for slot in row.slots %}<div>
 <label for="history_{{ slot.key }}">{{ slot.day|date_with_weekday }}</label>

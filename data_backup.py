@@ -15,7 +15,16 @@ def register_data_backup(app, connect_db):
     @app.get("/backup")
     def data_backup():
         session.setdefault("csrf_token", secrets.token_hex(32))
-        return render_template("backup.html", month=selected_month())
+        from automatic_backup import list_backups
+        return render_template("backup.html", month=selected_month(),automatic_backups=list_backups(app.config["DATABASE"]))
+
+    @app.get("/backup/automatic/<name>")
+    def download_automatic_backup(name):
+        import re
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}_(start|latest)\.sqlite3",name):abort(404)
+        path=Path(app.config["DATABASE"]).parent/"backups"/"automatic"/name
+        if not path.is_file():abort(404)
+        return send_file(path.resolve(),as_attachment=True,download_name=name,mimetype="application/octet-stream")
 
     @app.get("/backup/download")
     def download_backup():

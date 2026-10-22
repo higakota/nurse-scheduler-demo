@@ -51,7 +51,8 @@ def prepare(snapshot, use_help=False, allow_nurse_help=True):
     year, number = map(int, month.split("-"))
     days = [date(year, number, i).isoformat() for i in range(1, calendar.monthrange(year, number)[1] + 1)]
     monthly = snapshot.get("monthly_settings") or {}
-    history = snapshot.get("leave_history") or {}
+    history = dict(snapshot.get("leave_history") or {})
+    history["history"]=dict(snapshot.get("inherited_history",{}),**history.get("history",{}))
     leaves = history.get("leaves", {})
     wishes = monthly.get("wishes", {})
     closures = monthly.get("closures", {})

@@ -5,6 +5,9 @@
 <h1>データのバックアップ</h1>
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
 {% if request.args.get('restored') %}<p class="success" role="status">復元しました。開いていた他の画面は再読み込みしてください。</p>{% endif %}
+<section class="panel"><h2>自動バックアップ</h2><p>1日ごとの利用開始時と、最後に保存したデータをPC内に残します。</p>
+{% if automatic_backups %}<details><summary>保存済みバックアップを見る</summary><ul>{% for item in automatic_backups %}<li>{{ item.date }} {{ item.kind }}：<a href="{{ url_for('download_automatic_backup',name=item.name) }}">ダウンロード</a></li>{% endfor %}</ul></details>{% else %}<p class="hint">データの保存後に自動バックアップが作成されます。</p>{% endif %}
+<p class="hint">戻す場合はダウンロードして、下の復元欄から内容を確認してください。同じPC内の保存なので、PCの故障に備える分はUSBなどにもコピーしてください。</p></section>
 <section class="panel"><h2>入力したデータをまとめて保存</h2>
 <p>全月のスタッフ・医師予定・希望休・有給・会議・ヘルプの来院予定・保存済み勤務表を、1つのファイルで保存します。</p>
 <p><a class="button" href="{{ url_for('download_backup') }}">バックアップをダウンロード</a></p>

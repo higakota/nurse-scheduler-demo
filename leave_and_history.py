@@ -83,12 +83,15 @@ def register_leave_and_history(app, connect_db):
             row = db.execute("SELECT data FROM leave_history WHERE month=?", (month,)).fetchone()
             raw = row["data"] if row else ""
             data = json.loads(raw) if raw else {"leaves": {}, "history": {}}
+            stored_history=dict(data.get("history",{}))
+            from previous_roster import apply_inheritance
+            data,previous_source=apply_inheritance(db,month,staff,data)
             monthly_row = db.execute("SELECT data FROM monthly_settings WHERE month=?", (month,)).fetchone()
             monthly = json.loads(monthly_row["data"]) if monthly_row else {}
             previous = db.execute("SELECT data FROM monthly_settings WHERE month=?", (previous_month,)).fetchone()
             previous_closures = json.loads(previous["data"]).get("closures", {}) if previous else {}
             fingerprint = hashlib.sha256(json.dumps(
-                [raw, people, monthly, previous_closures], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+                [raw, people, monthly, previous_closures, data["history"]], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
             fixed_days = {day.isoformat() for day in history_days if day.weekday() == 6 or day.isoformat() in previous_closures}
             if values["staff"] not in people:
                 values["staff"] = next(iter(people), "")
@@ -162,6 +165,7 @@ def register_leave_and_history(app, connect_db):
                         data["history"] = candidate
                     else:
                         abort(400)
+                    if action!="history_save":data["history"]=stored_history
                     db.execute("INSERT INTO leave_history VALUES (?, ?) ON CONFLICT(month) DO UPDATE SET data=excluded.data",
                                (month, json.dumps(data, ensure_ascii=False)))
                     db.commit()
@@ -196,5 +200,5 @@ def register_leave_and_history(app, connect_db):
             db.close()
         return render_template("leave_history.html", month=month, staff=staff,
                                fingerprint=fingerprint, error=error, warnings=warnings,
-                               history_options=HISTORY, history_rows=history_rows,
+                               history_options=HISTORY, history_rows=history_rows, previous_source=previous_source,
                                saved=request.args.get("saved") == "1")

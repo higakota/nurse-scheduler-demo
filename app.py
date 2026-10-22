@@ -1,4 +1,5 @@
 import secrets
+import os
 import sqlite3
 from pathlib import Path
 
@@ -9,7 +10,7 @@ from flask import Flask, abort, redirect, render_template, request, session, url
 app = Flask(__name__)
 app.config.update(
     SECRET_KEY=secrets.token_hex(32),
-    DATABASE=str(Path(app.instance_path) / "staff.sqlite3"),
+    DATABASE=os.environ.get("NURSE_SCHEDULER_DATABASE",str(Path(app.instance_path) / "staff.sqlite3")),
     SESSION_COOKIE_SAMESITE="Strict",
     HELP_REQUESTS_ENABLED=False,
     MAX_CONTENT_LENGTH=6 * 1024 * 1024,
@@ -170,6 +171,13 @@ register_ui(app)
 
 from candidate_leave_apply import register_candidate_leave
 register_candidate_leave(app, connect_db)
+
+from automatic_backup import register_automatic_backup
+register_automatic_backup(app)
+
+@app.get("/health")
+def app_health():
+    return dict(app="nurse-scheduler",pid=os.getpid(),owner=os.environ.get("NURSE_SCHEDULER_OWNER",""),version=os.environ.get("NURSE_SCHEDULER_VERSION","workspace"))
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", debug=False)

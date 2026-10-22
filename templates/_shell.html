@@ -14,3 +14,5 @@
 {% if ui_tabs %}<nav class="page-subnav" aria-label="{{ '今月の入力' if ui_group=='inputs' else '勤務表' }}の画面">{% for endpoint,label in ui_tabs if endpoint not in ('weekly_settings','input_review') %}<a href="{{ url_for(endpoint,month=ui_month) }}" {% if ui_active==endpoint %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}<details class="input-more"><summary>補助メニュー</summary><div>{% for endpoint,label in ui_tabs if endpoint in ('weekly_settings','input_review') %}<a href="{{ url_for(endpoint,month=ui_month) }}">{{ label }}</a>{% endfor %}</div></details></nav>{% endif %}
 
 {% if ui_group in ("inputs","schedules","help_availability") %}{% include "_workflow_steps.html" %}{% endif %}
+
+{% if config.get('AUTO_BACKUP_ERROR') %}<p class="error" role="alert">{{ config.AUTO_BACKUP_ERROR }} <a href="{{ url_for('data_backup',month=ui_month) }}">バックアップ</a></p>{% endif %}
