@@ -22,7 +22,7 @@ def sample_data():
         for half in ("am","pm"):
             coverage[key+"_"+half]={"c":0 if closed or (half=="pm" and day.weekday()==4) else 1,"doctors":doctors[key][half]}
     return dict(month=MONTH,staff=people,doctor_plans=doctors,coverage_settings=coverage,
-        monthly_settings={"targets":{"1":"23","2":"22","3":"22","4":"22.5"},"closures":closures,"wishes":{"1_2026-11-09":"full","4_2026-11-19":"pm"},"meetings":[{"date":"2026-11-12","period":"pm","title":"サンプル研修会","participants":["2"]}],"summer_leaves":{}},
+        monthly_settings={"targets":{"1":"23","2":"22","3":"22","4":"22.5"},"closures":closures,"wishes":{"1_2026-11-09":"full","4_2026-11-19":"pm","6_2026-11-09":"full","7_2026-11-09":"full"},"meetings":[{"date":"2026-11-12","period":"pm","title":"サンプル研修会","participants":["2"]}],"summer_leaves":{}},
         leave_history={"leaves":{"3_2026-11-16":"full"},"history":{str(i)+"_"+(date(2026,11,1)-timedelta(days=k)).isoformat():"rest" for i in range(1,8) for k in range(1,7)}},
         help_availability={"8_2026-11-09":"full","8_2026-11-12":"full","9_2026-11-09":"full"},
         previous_closures={},weekly_work_boundaries={str(i)+"_2026-12-0"+str(n):"0" for i in range(5,8) for n in range(1,7)})

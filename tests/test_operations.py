@@ -112,7 +112,7 @@ class OperationsTest(unittest.TestCase):
         process=type("Process",(),{"pid":42})()
         with patch("launcher.health",side_effect=[None,{"owner":token,"version":"a"*40}]),patch("launcher.subprocess.Popen",return_value=process) as spawn,patch("automatic_backup.backup_database"):
             launcher.launch(self.root,open_browser=False)
-        self.assertEqual(spawn.call_args.kwargs["env"]["NURSE_SCHEDULER_DATABASE"],str(self.root/"instance/staff.sqlite3"))
+        self.assertEqual(Path(spawn.call_args.kwargs["env"]["NURSE_SCHEDULER_DATABASE"]).resolve(),(self.root/"instance/staff.sqlite3").resolve())
 
     def test_update_failed_tests_keeps_current_release(self):
         (self.root/"requirements.txt").write_text("same")
