@@ -6,6 +6,11 @@ import hashlib,json
 def source_token(source):
     return hashlib.sha256(json.dumps(source,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
 
+def combined_paid_period(current, added):
+    halves={"":set(),"am":{0},"pm":{1},"full":{0,1}}
+    return {frozenset({0}):"am",frozenset({1}):"pm",frozenset({0,1}):"full"}[frozenset(halves[current]|halves[added])]
+
+
 def deficit_map(problem,grid):
     return {(d,r["half"],r["area"]):r["missing"] for d,row in enumerate(grid) for r in draft_shortages(problem,d,row)}
 
@@ -35,7 +40,7 @@ def leave_candidates(snapshot, source, fingerprint):
         names = {group["period"]:[] for group in groups}
         for i, person in enumerate(problem["people"]):
             pair=grid[d][i]
-            if person["is_help"] or "P" in pair or "M" in pair:
+            if person["is_help"] or "M" in pair:
                 continue
             for group in groups:
                 period=group["period"]
@@ -43,7 +48,9 @@ def leave_candidates(snapshot, source, fingerprint):
                 if not all(pair[h] in WORK for h in halves):
                     continue
                 trial_snapshot = deepcopy(snapshot)
-                trial_snapshot.setdefault("leave_history", {}).setdefault("leaves", {})[str(person["id"]) + "_" + day] = period
+                leaves=trial_snapshot.setdefault("leave_history", {}).setdefault("leaves", {})
+                key=str(person["id"])+"_"+day
+                leaves[key]=combined_paid_period(leaves.get(key,""),period)
                 trial_problem = prepare(trial_snapshot, use_help=True)
                 trial = [list(row) for row in grid]
                 changed=list(pair)

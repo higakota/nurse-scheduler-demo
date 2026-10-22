@@ -70,6 +70,27 @@ class RosterUpdateTest(unittest.TestCase):
         base=dict(days=result["problem"]["days"],people=result["problem"]["people"],grid=result["grid"])
         self.assertEqual(shortages_from_source(snapshot,json.dumps(base)),[])
 
+    def test_partial_update_does_not_move_same_shortage_to_a_different_day(self):
+        from scheduler_engine import prepare
+        snapshot=fixtures.sample(open_days=(2,3))
+        snapshot["staff"][-1].update(employment="part",weekly_limit_units=2)
+        snapshot["monthly_settings"]["targets"].pop("5")
+        from weekly_rules import boundary_dates
+        snapshot["weekly_work_boundaries"]={"5_"+day.isoformat():"0.0" for day in boundary_dates(snapshot["month"])}
+        problem=prepare(snapshot,use_help=True)
+        grid=[["RR"]*5 for _ in problem["days"]]
+        for d in (1,2):grid[d][:4]=["DD"]*4
+        grid[1][4]="CC"
+        base=dict(days=problem["days"],people=snapshot["staff"],grid=grid)
+        other=copy.deepcopy(grid)
+        other[1][4],other[2][4]="RR","CC"
+        failed=dict(status="infeasible",grid=None,messages=[])
+        alternative=dict(status="draft",grid=other,problem=problem,messages=[])
+        with patch("roster_update.generate_fixed_help",return_value=failed), patch("scheduler_engine.prefer_five",side_effect=[failed,alternative]):
+            changed=json.loads(update_patch(snapshot,base,seconds=2))
+        self.assertEqual(changed["1_4"],"CC")
+        self.assertEqual(changed["2_4"],"RR")
+
 
 class RosterUpdateRouteTest(unittest.TestCase):
     setUp=fixtures.ScheduleRouteTest.setUp

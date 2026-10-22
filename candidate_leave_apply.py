@@ -5,7 +5,7 @@ from flask import request,session,abort,redirect,url_for,flash,render_template
 from ui import selected_month
 from schedule import digest,read_snapshot
 from help_shortages import source_data,conditions_hash,write_reference
-from leave_candidates import leave_candidates,source_token
+from leave_candidates import leave_candidates,source_token,combined_paid_period
 from scheduler_engine import prepare,draft_shortages
 from schedule_display import grouped_shortages
 
@@ -68,7 +68,7 @@ def register_candidate_leave(app,connect_db):
                 raise ValueError("編集中の勤務表が変わりました。候補から選び直してください。")
             source=aligned_source
             leaves=snapshot.setdefault("leave_history",{}).setdefault("leaves",{})
-            leaves[pid+"_"+day]=period
+            leaves[pid+"_"+day]=combined_paid_period(leaves.get(pid+"_"+day,""),period)
             db.execute("CREATE TABLE IF NOT EXISTS leave_history(month TEXT PRIMARY KEY,data TEXT NOT NULL)")
             db.execute("INSERT INTO leave_history VALUES (?,?) ON CONFLICT(month) DO UPDATE SET data=excluded.data",(month,json.dumps(snapshot["leave_history"],ensure_ascii=False)))
             updated,new_fp,_=read_snapshot(db,month)

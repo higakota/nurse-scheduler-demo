@@ -3,7 +3,7 @@ import json
 import time
 from input_reflection import reflection_patch
 from help_shortages import conditions_hash
-from scheduler_engine import prepare
+from scheduler_engine import prepare, verify, preference_metrics
 from fixed_help import generate_fixed_help
 
 
@@ -34,6 +34,22 @@ def update_patch(snapshot, base, seconds=10):
     if result.get("grid") is None:
         remaining = max(.1, seconds - (time.monotonic() - started))
         result = prefer_five(planning, use_help=True, partial=True, seconds=remaining)
+    # 同じ不足数の別配置を返すだけの再更新では、不足日を動かさない。
+    if result.get("status") != "success":
+        base_positions={str(p["id"]):i for i,p in enumerate(base["people"])}
+        current=[[row[base_positions[str(p["id"])]] for p in problem["people"]] for row in reflected]
+        for d,row in enumerate(current):
+            for i,p in enumerate(problem["people"]):
+                abstract="".join("W" if c in "ABCD" else c for c in row[i])
+                if p["is_help"] and abstract not in problem["options"][d][i] and "RR" in problem["options"][d][i]:
+                    row[i]="RR"
+        if not verify(problem,current,allow_shortages=True,max_full_days=6):
+            retained=dict(status="draft",problem=problem,grid=current)
+            def quality(value):
+                metrics=preference_metrics(value)
+                return metrics[0],metrics[2]
+            if result.get("grid") is None or quality(retained)<=quality(result):
+                result=retained
     if result.get("grid") is None:
         raise ValueError("更新できませんでした。" + " ".join(result.get("messages", [])))
     positions = {str(p["id"]): i for i, p in enumerate(result["problem"]["people"])}
