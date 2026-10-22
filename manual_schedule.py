@@ -229,9 +229,6 @@ def register_manual_schedule(app, connect_db):
                 db.execute("BEGIN")
             snapshot,fp,generated=read_snapshot(db,month)
             request_snapshot=snapshot
-            from fixed_help import load_seed, load_manual_source
-            workspace_seed_token=digest(json.dumps([load_seed(db,month),load_manual_source(db,month)]))
-            workspace_result_token=digest(generated)
             base,token=load_manual(db,month,snapshot,fp,generated)
             if {str(p["id"]) for p in base["people"] if not p["is_help"]} == {str(p["id"]) for p in snapshot["staff"] if not p["is_help"]}:
                 base=align_helper_rows(snapshot,base)
@@ -277,7 +274,10 @@ def register_manual_schedule(app, connect_db):
                             raise ValueError("取り込み元の日付が対象月と一致しません。")
                         patch=json.dumps({f"{d}_{i}":source["grid"][source_days[day]][source_people[str(person["id"])]] if str(person["id"]) in source_people else "RR"
                                           for d,day in enumerate(base["days"]) for i,person in enumerate(base["people"])})
-                    input_priority = request.form.get("input_priority")=="yes" or action=="reflect_inputs"
+                    input_priority = request.form.get("input_priority")=="yes" or action in ("reflect_inputs","update_roster")
+                    if action=="update_roster":
+                        from roster_update import update_patch
+                        patch=update_patch(snapshot,base,seconds=app.config.get("SCHEDULER_SECONDS",10))
                     if action=="reflect_inputs":
                         from input_reflection import reflection_patch
                         patch=reflection_patch(snapshot,base)
@@ -291,7 +291,7 @@ def register_manual_schedule(app, connect_db):
                         snapshot,paid_changes=synchronize_paid_inputs(snapshot,base,grid,changed_only=input_priority)
                         snapshot,help_changes=synchronize_help_inputs(snapshot,base,grid)
                     signature=digest(json.dumps([month,fp,token,patch,input_priority]))
-                    if action in ("preview","undo","import","reflect_inputs"):
+                    if action in ("preview","undo","import","reflect_inputs","update_roster"):
                         preview=True
                         session["manual_confirmation"]=signature
                     elif action=="edit":
@@ -375,6 +375,6 @@ def register_manual_schedule(app, connect_db):
         if not preview and base["input_hash"]!=fp and paid_candidates.get("message"):
             paid_candidates["message"]="この編集表は入力変更前の表です。新しい表か、入力変更を反映した表で候補を確認してください。"
         pending_token=digest(json.dumps(pending_value,sort_keys=True,ensure_ascii=False)) if pending_value else ""
-        return render_template("manual_schedule.html",workspace_seed_token=workspace_seed_token,workspace_result_token=workspace_result_token,source_view_error=bool(error and request.args.get("view_source")),pending_kind=pending_kind,pending_token=pending_token,help_changes=help_changes,paid_changes=paid_changes,paid_candidates=paid_candidates,month=month,base=base,grid=grid,display=display,
-                               input_priority=bool(request.form.get("input_priority")=="yes" or request.form.get("action")=="reflect_inputs"),fingerprint=fp,revision=token,error=error,preview=preview,changes=changes,patch=patch,initial_patch=initial_patch,
+        return render_template("manual_schedule.html",source_view_error=bool(error and request.args.get("view_source")),pending_kind=pending_kind,pending_token=pending_token,help_changes=help_changes,paid_changes=paid_changes,paid_candidates=paid_candidates,month=month,base=base,grid=grid,display=display,
+                               input_priority=bool(request.form.get("input_priority")=="yes" or request.form.get("action") in ("reflect_inputs","update_roster")),fingerprint=fp,revision=token,error=error,preview=preview,changes=changes,patch=patch,initial_patch=initial_patch,
                                warnings=warnings,shortages=shortages,codes=CODES,import_sources=import_sources,checks_incomplete=checks_incomplete,stale=base["input_hash"]!=fp)

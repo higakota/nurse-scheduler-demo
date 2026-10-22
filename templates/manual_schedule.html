@@ -2,14 +2,15 @@
 <link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='app-ui.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='schedule.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='manual_schedule.css') }}"></head>
 <body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content"><div class="editor-heading"><div><p class="eyebrow">{{ ui_month_label }} ／ 表を見ながら仕上げる</p>{% for message in get_flashed_messages(category_filter=['candidate-leave']) %}<p role="status">{{ message }}</p>{% endfor %}<h1>勤務表</h1></div><span class="status-badge muted">{{ '反映前の確認' if preview else '変更反映済み' if base.updated is defined else '編集中の勤務表' }}</span></div>
 <p class="page-description">{{ '変更後の表を確認しています。保存するまでは反映されません。' if preview else 'この表が編集・印刷の対象です。マスで修正したら、変更内容を確認して反映します。希望休からの出勤は「本人了承の変更」で入力します。' }}</p>
-{% if request.args.get("help_saved") %}<p class="success" role="status">来院予定を登録しました。この表にヘルプを反映してください。</p>{% endif %}
+
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}{% if request.args.get('saved') %}<p class="success" role="status">{{ '了承出勤を取り消した勤務表を表示しています。' if request.args.get('agreed')=='cancelled' else '了承済みの変更を勤務表に反映しました。' if request.args.get('agreed')=='changed' else '勤務表の修正を保存しました。' }}</p>{% endif %}
 {% if pending_kind and not preview and not source_view_error %}<section class="panel"><h2>新しく作った表は、まだ反映していません</h2><p>下に表示しているのは保存済みの編集表です。新しい表へ進む場合は変更箇所を確認してください。</p><a class="button-link" href="{{ url_for('manual_schedule',month=month,view_source=pending_kind,view_token=pending_token) }}">新しい表を確認して反映する</a></section>{% endif %}
 {% if source_view_error %}<p><a href="{{ url_for('schedule',month=month) }}">作成画面へ戻る</a> ／ <a href="{{ url_for('manual_schedule',month=month) }}">保存済みの編集表を開く</a></p>{% else %}
-{% if stale %}<p class="workflow-notice">入力条件が変更されています。表と確認事項を見直し、下書きを保存してください。</p>{% endif %}
-{% if not preview and stale %}<section class="panel"><h2>入力の変更をこの表に反映</h2><p>希望休・有給・会議などの変更だけ反映し、条件に合う勤務と依頼済みヘルプは維持します。変更内容を確認してから保存します。</p><form method="post">{% include "_manual_tokens.html" %}<button name="action" value="reflect_inputs">変更箇所を確認する</button></form></section>{% endif %}
-{% if not preview %}<section class="panel"><h2>ヘルプをこの勤務表に反映</h2><p>登録した来院予定で作成し、変更箇所を確認してこの表に反映します。反映前の表は履歴に残ります。</p>
-<form method="post" action="{{ url_for('schedule',month=month) }}"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="result_token" value="{{ workspace_result_token }}"><input type="hidden" name="seed_token" value="{{ workspace_seed_token }}"><input type="hidden" name="replace" value="yes"><input type="hidden" name="workspace" value="yes"><button name="mode" value="help">ヘルプを反映した表を確認</button> <a href="{{ url_for('help_availability',month=month) }}">来院予定を変更</a></form></section>{% endif %}
+{% if not preview %}<section class="panel"><h2>勤務表を更新</h2>
+{% if stale or request.args.get("help_saved") %}<p>入力に変更があります。下のボタンで勤務表に反映できます。</p>{% endif %}
+<p>希望休・有給・会議・ヘルプの最新の登録内容をまとめて反映します。</p>
+<form method="post">{% include "_manual_tokens.html" %}<button name="action" value="update_roster">最新の入力・ヘルプで勤務表を更新</button></form>
+<p class="hint">変更後の表を確認してから保存します。</p></section>{% endif %}
 {% if not preview %}<div class="editor-actionbar manual-print-actions">
 {% if base.updated is defined %}<button type="button" class="secondary" data-print-packet="manual-print">勤務表だけ印刷／PDF保存</button><form method="post" action="{{ url_for('refresh_help_shortages',month=month) }}"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><button class="secondary">この表の不足を確認してヘルプを追加 →</button></form>{% endif %}
 <a href="{{ url_for('agreed_wish_change',month=month) }}">本人の了承を得て、希望休を出勤へ変更する →</a>
@@ -49,7 +50,7 @@
 <div class="actions"><button id="manual-apply">表に反映する</button><button type="button" id="manual-cancel">キャンセル</button></div>
 <p class="hint">ここではまだ保存しません。最後にまとめて確認・保存できます。</p></form></dialog>
 {% endif %}
-<section class="panel">{% if preview %}<p class="hint">表示中の変更後の表で調べた候補です。表を反映すると、ここから有給を追加できます。</p>{% else %}<p class="hint">表示中の保存済み勤務表から候補を調べます。</p>{% endif %}{% include "_leave_candidates.html" %}{% if stale and not preview and not error %}{% if pending_kind %}<p><a class="button-link secondary" href="{{ url_for('manual_schedule',month=month,view_source=pending_kind,view_token=pending_token,paid_open='1',_anchor='paid-candidates') }}">新しい表の有給候補を確認する</a></p>{% else %}<form method="post">{% include "_manual_tokens.html" %}<button name="action" value="reflect_inputs">入力の変更を反映して候補を確認する</button></form>{% endif %}{% endif %}</section>
+<section class="panel">{% if preview %}<p class="hint">表示中の変更後の表で調べた候補です。表を反映すると、ここから有給を追加できます。</p>{% else %}<p class="hint">表示中の保存済み勤務表から候補を調べます。</p>{% endif %}{% include "_leave_candidates.html" %}{% if stale and not preview and not error %}{% if pending_kind %}<p><a class="button-link secondary" href="{{ url_for('manual_schedule',month=month,view_source=pending_kind,view_token=pending_token,paid_open='1',_anchor='paid-candidates') }}">新しい表の有給候補を確認する</a></p>{% else %}<p class="hint">ページ上部の更新ボタンで最新の入力を反映してください。</p>{% endif %}{% endif %}</section>
 <section class="panel"><h2>現在の入力条件との確認</h2>
 {% if warnings %}<details {% if preview %}open{% endif %}><summary>確認事項 {{ warnings|length }}件を見る</summary><ul class="error">{% for message in warnings %}<li>{{ message }}</li>{% endfor %}</ul></details>{% endif %}
 {% if shortages %}<details {% if preview %}open{% endif %}><summary>配置・資格の不足 {{ shortages|length }}件を見る</summary><ul>{% for row in shortages %}<li>{{ row.date|date_with_weekday }} {{ row.half }}：{{ row.area }} {{ row.missing }}人不足{% if row.veteran_missing %}（うちベテラン{{ row.veteran_missing }}人）{% endif %}</li>{% endfor %}</ul></details>{% endif %}

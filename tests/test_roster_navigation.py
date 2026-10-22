@@ -148,7 +148,7 @@ class RosterNavigationTest(unittest.TestCase):
         page=self.client.get(response.location).get_data(as_text=True)
         nav=page.split('class="journey-nav"',1)[1].split("</nav>",1)[0]
         self.assertEqual(nav.count("<li>"),4)
-        self.assertIn("ヘルプを反映した表を確認",page)
+        self.assertIn("最新の入力・ヘルプで勤務表を更新",page)
 
     def test_workspace_help_review_does_not_overwrite_saved_edits(self):
         source=self.generate()
@@ -158,12 +158,11 @@ class RosterNavigationTest(unittest.TestCase):
         before=self.dump()
         page=self.client.get("/schedule/manual?month=2026-02").get_data(as_text=True)
         fields={k:html.unescape(re.search('name="'+k+'" value="([^"]*)"',page)[1])
-                for k in ("csrf_token","fingerprint","result_token","seed_token")}
+                for k in ("csrf_token","fingerprint","revision")}
         self.assertEqual(before,self.dump())
-        response=self.client.post("/schedule?month=2026-02",data=dict(fields,mode="help",replace="yes",workspace="yes"))
-        self.assertEqual(response.status_code,302)
-        self.assertIn("view_source=generated",response.location)
-        page=self.client.get(response.location).get_data(as_text=True)
+        response=self.client.post("/schedule/manual?month=2026-02",data=dict(fields,action="update_roster"))
+        self.assertEqual(response.status_code,200)
+        page=response.get_data(as_text=True)
         self.assertIn("保存前の変更確認",page)
         db=connect_db()
         try: self.assertEqual(json.loads(db.execute("SELECT data FROM manual_schedules").fetchone()[0]),manual)
@@ -184,9 +183,9 @@ class RosterNavigationTest(unittest.TestCase):
         db.close()
         page=self.client.get("/schedule/manual?month=2026-02").get_data(as_text=True)
         fields={k:html.unescape(re.search('name="'+k+'" value="([^"]*)"',page)[1])
-                for k in ("csrf_token","fingerprint","result_token","seed_token")}
-        response=self.client.post("/schedule?month=2026-02",data=dict(fields,mode="help",replace="yes",workspace="yes"))
-        self.assertEqual(response.status_code,302)
+                for k in ("csrf_token","fingerprint","revision")}
+        response=self.client.post("/schedule/manual?month=2026-02",data=dict(fields,action="update_roster"))
+        self.assertEqual(response.status_code,200)
         db=connect_db()
         try: self.assertEqual(db.execute("SELECT data FROM help_shortage_previews").fetchone()[0],before)
         finally: db.close()
