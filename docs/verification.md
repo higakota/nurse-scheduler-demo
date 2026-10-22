@@ -41,3 +41,7 @@
 探索時間内の最適解を保証しない。認証・公開サーバーの権限管理は未実装。実運用では利用者による人数・希望・勤務条件の最終確認が必要。
 
 業務時間の削減率、利用者数、導入効果などの数値は測定していないため掲載していません。テストの件数と業務上の効果は別の確認項目です。
+
+## 自動実行
+
+GitHub ActionsのWindows / Python 3.13で、依存関係のインストール、pip check、全テスト、初回サンプル初期化とホーム表示を実行する。[成功した実行記録](https://github.com/higakota/nurse-scheduler-demo/actions/runs/39758385684)と[最新の実行一覧](https://github.com/higakota/nurse-scheduler-demo/actions/workflows/tests.yml)を公開している。

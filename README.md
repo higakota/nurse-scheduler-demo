@@ -1,10 +1,16 @@
 # 看護職員の勤務表作成支援アプリ
 
+[![Tests](https://github.com/higakota/nurse-scheduler-demo/actions/workflows/tests.yml/badge.svg)](https://github.com/higakota/nurse-scheduler-demo/actions/workflows/tests.yml)
+
 勤務希望・会議・必要人数・他施設からの応援をまとめて扱い、勤務表の作成後も変更内容を確認しながら調整できるWebアプリです。勤務表を作成する利用者からの相談・操作の感想をもとに、機能と画面を繰り返し改善しています。
 
 [開発履歴](docs/development-history.md) · [不具合と改善の事例](docs/case-studies.md) · [設計](docs/portfolio.md) · [テストと確認方法](docs/verification.md) · **[サンプルExcel](samples/sample_requests_2026-11.xlsx)**
 
-![ホーム画面（架空データ）](docs/screenshots/home.png)
+**[約80秒の操作動画を見る](docs/demo/walkthrough.mp4)** ／ [動画の説明](docs/demo/README.md)
+
+![操作の流れ（実画面の抜粋）](docs/demo/overview.gif)
+
+[ホーム画面](docs/screenshots/home.png) ／ [勤務と希望の比較](docs/screenshots/roster.png) ／ [印刷用表示](docs/screenshots/print.png)
 
 | 項目 | 内容 |
 |---|---|
@@ -71,6 +77,12 @@ py -3.13 -m venv .venv
 3. 来院予定を確認し、応援を反映した表の変更箇所を確認する。
 4. 編集画面で希望との比較、勤務の修正、印刷プレビューを試す。
 5. Excel取込は、サンプルファイルの「11月」シートを選び、確認画面で担当医・日付を見直して保存する。
+
+## 説明と再現確認
+
+- [コードを追って説明する3つの改善](docs/explain-the-code.md)
+- [新規フォルダ・新規venvでの起動確認](docs/first-run-check.md)
+- [GitHub ActionsでのWindowsテスト](https://github.com/higakota/nurse-scheduler-demo/actions/workflows/tests.yml)
 
 ## 検証と制限
 

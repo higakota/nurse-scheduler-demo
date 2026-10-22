@@ -229,3 +229,5 @@ __marimo__/
 *.pdf
 .env
 .env.*
+
+.capture-venv/
