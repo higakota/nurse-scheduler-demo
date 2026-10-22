@@ -52,6 +52,8 @@ def register_schedule(app, connect_db):
         year, number = map(int, month.split("-"))
         if not 1900 <= year <= 9998 or not 1 <= number <= 12:
             abort(400)
+        if request.method=="GET" and request.args.get("phase")=="build":
+            return redirect(url_for("manual_schedule",month=month,help_saved=request.args.get("help_saved")))
         session.setdefault("csrf_token", secrets.token_hex(32))
         db = connect_db()
         try:
@@ -60,6 +62,8 @@ def register_schedule(app, connect_db):
             seed_raw = load_seed(db, month)
             manual_raw = load_manual_source(db, month)
             help_source, source_checked = consulted_help_source(db, month, manual_raw)
+            if request.method=="POST" and request.form.get("workspace")=="yes" and manual_raw:
+                help_source,source_checked="manual",True
         finally:
             db.close()
         source_raw = manual_raw if help_source == "manual" else seed_raw
@@ -139,8 +143,11 @@ def register_schedule(app, connect_db):
                                 db.execute("INSERT INTO generated_schedules VALUES (?,?) ON CONFLICT(month) DO UPDATE SET data=excluded.data",
                                            (month,json.dumps(saved,ensure_ascii=False)))
                                 from help_shortages import write_reference
-                                write_reference(db,snapshot,fingerprint,[],kind="verified")
+                                if not (request.form.get("workspace")=="yes" and manual_raw):
+                                    write_reference(db,snapshot,fingerprint,[],kind="verified")
                                 db.commit()
+                                if request.form.get("workspace")=="yes" or use_help:
+                                    return redirect(url_for("manual_schedule",month=month,view_source="generated",view_token=digest(json.dumps(saved,sort_keys=True,ensure_ascii=False))))
                                 return redirect(url_for("schedule",month=month,saved="1",_anchor="saved-result"))
                         finally:
                             db.close()
@@ -153,7 +160,7 @@ def register_schedule(app, connect_db):
             outcome["help_preference_days"] = [day for d,day in enumerate(outcome["problem"]["days"])
                 if helper_demand(outcome["problem"],d,outcome["grid"][d]) > PREFERRED_DAILY_HELPERS]
             from help_shortages import publish_reference
-            if not publish_reference(connect_db,snapshot,fingerprint,shortage_rows,kind="draft_six" if request.form.get("mode")=="draft_six" else "draft",outcome=outcome,expected_source=(help_source,source_raw) if request.form.get("mode") in ("help_draft","rebalance_draft") and source_raw else None):
+            if not publish_reference(connect_db,snapshot,fingerprint,shortage_rows,kind="draft_six" if request.form.get("mode")=="draft_six" else "draft",outcome=outcome,activate=not (request.form.get("workspace")=="yes" and manual_raw),expected_source=(help_source,source_raw) if (request.form.get("mode") in ("help_draft","rebalance_draft") or request.form.get("workspace")=="yes") and source_raw else None):
                 outcome["messages"].append("仮作成中に入力が変わったため、来院予定画面の不足表示は更新していません。再作成してください。")
             else:
                 # この画面から続けてヘルプ込み作成する際も、新しい仮表を参照する。
@@ -167,6 +174,8 @@ def register_schedule(app, connect_db):
                 source_checked = True
                 source_raw = seed_raw
                 source_token = digest(json.dumps([seed_raw, manual_raw]))
+                if request.form.get("workspace")=="yes":
+                    return redirect(url_for("manual_schedule",month=month,view_source="draft",view_token=digest(json.dumps(json.loads(seed_raw),sort_keys=True,ensure_ascii=False))))
 
         from roster_navigation import newer
         seed_value=json.loads(seed_raw) if seed_raw else None

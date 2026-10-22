@@ -82,7 +82,7 @@
 
 /* 作業の順番を全画面でそろえる。完了判定ではなく、今の操作位置を示す。 */
 .journey-nav{margin-left:208px;padding:12px 32px;background:#fff;border-bottom:1px solid var(--line)}
-.journey-nav ol{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;list-style:none;margin:0;padding:0}
+.journey-nav ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;list-style:none;margin:0;padding:0}
 .journey-nav li{min-width:0}
 .journey-nav a{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;color:#60726a;text-decoration:none;font-size:12px;background:#f6f8f7;height:100%}
 .journey-nav a>span{display:grid;place-items:center;width:23px;height:23px;flex-shrink:0;border-radius:50%;background:#e6ece8;color:#4b6457;font-weight:700}

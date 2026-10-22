@@ -8,7 +8,7 @@
 {% elif needs_help_build %}<strong>依頼したヘルプを勤務表に反映する</strong></div><a class="button-link" href="{{ url_for('schedule',month=month,phase='build') }}">ヘルプを反映する →</a>
 {% elif shortage_days %}<strong>残っている不足を調整する</strong></div><a class="button-link" href="{{ url_for('help_availability',month=month) }}">不足と来院予定を見る →</a>
 {% elif manual_saved and not manual_stale %}<strong>調整した勤務表の続きを開く</strong></div><a class="button-link" href="{{ url_for('manual_schedule',month=month) }}">勤務表を開く →</a>
-{% elif generated_saved and not generated_stale %}<strong>作成した表を確認して仕上げる</strong></div><a class="button-link" href="{{ url_for('schedule',month=month,_anchor='saved-result') }}">作成結果を確認 →</a>
+{% elif generated_saved and not generated_stale %}<strong>作成した表を確認して仕上げる</strong></div><a class="button-link" href="{{ url_for('manual_schedule',month=month) }}">勤務表を開く →</a>
 {% elif reference_valid %}<strong>直近の仮表から続きを進める</strong></div><a class="button-link" href="{{ url_for('schedule',month=month,resume='1') }}">仮表を開く →</a>
 {% elif requested_visits %}<strong>来院OKのヘルプを勤務表に加える</strong></div><a class="button-link" href="{{ url_for('schedule',month=month) }}">ヘルプ込みで作成へ →</a>
 {% elif saved_count == 4 %}<strong>事前登録のヘルプも使って不足を確認する</strong></div><a class="button-link" href="{{ url_for('schedule',month=month) }}">勤務表を作成 →</a>

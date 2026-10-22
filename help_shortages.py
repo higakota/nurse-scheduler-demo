@@ -45,7 +45,7 @@ def write_reference(db, snapshot, fingerprint, rows, kind="draft", source_kind=N
                (snapshot["month"],json.dumps(value,ensure_ascii=False)))
 
 
-def publish_reference(connect_db, snapshot, fingerprint, rows, kind="draft", outcome=None, expected_source=None):
+def publish_reference(connect_db, snapshot, fingerprint, rows, kind="draft", outcome=None, expected_source=None, activate=True):
     from schedule import read_snapshot
     db=connect_db()
     try:
@@ -60,6 +60,12 @@ def publish_reference(connect_db, snapshot, fingerprint, rows, kind="draft", out
             if current != source_raw:
                 db.rollback()
                 return False
+        if not activate:
+            if outcome is not None:
+                from manual_schedule import seed_draft
+                seed_draft(db,snapshot["month"],snapshot,fingerprint,outcome)
+            db.commit()
+            return True
         write_reference(db,snapshot,fingerprint,rows,kind=kind,
                         source_kind=expected_source[0] if expected_source else None,
                         source_raw=expected_source[1] if expected_source else None)

@@ -58,15 +58,15 @@ class WorkflowGuidanceTest(unittest.TestCase):
         response=self.client.post("/help?month=2026-02",data=dict(csrf_token=token,fingerprint=fp,
             changes=json.dumps({"10_2026-02-02":"full"}),**{"continue":"build"}))
         self.assertIn("phase=build",response.location)
-        page=self.client.get(response.location).get_data(as_text=True)
+        page=self.client.get(response.location,follow_redirects=True).get_data(as_text=True)
         self.assertIn("来院予定を登録しました",page)
-        self.assertIn("依頼済み 1件",page)
+        self.assertIn("ヘルプを反映した表を確認",page)
         home=self.client.get("/?month=2026-02").get_data(as_text=True)
         self.assertIn("依頼したヘルプを勤務表に反映する",home)
         response=self.client.post("/schedule?month=2026-02",data=dict(self.fields(),mode="help",replace="yes"))
         self.assertEqual(response.status_code,302)
-        page=self.client.get(response.location).get_data(as_text=True)
-        self.assertIn("変更を確認して勤務表に反映",page)
+        page=self.client.get(response.location,follow_redirects=True).get_data(as_text=True)
+        self.assertIn("保存前の変更確認",page)
 
     def test_resume_draft_is_read_only_and_skips_outdated_input(self):
         self.prepare_helpers()

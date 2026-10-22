@@ -18,7 +18,7 @@ PAGE_ALIASES = {"apply_candidate_leave":"manual_schedule", "agreed_record_edit":
                 "preview_restore":"data_backup", "restore_backup":"data_backup"}
 
 PAGES = {
-    "manual_schedule": ("勤務表の編集・印刷", "下書きを修正して確認・保存します。"),
+    "manual_schedule": ("勤務表", "下書きを修正して確認・保存します。"),
     "input_review": ("入力内容の確認", "今月の保存済みの入力をまとめて確認します。"),
     "data_backup": ("データのバックアップ", "入力した全月のデータをPCに保存します。"),
     "help_requests": ("ヘルプ相談リスト", "不足から相談状況を管理し、来院が決まった人を反映します。"),

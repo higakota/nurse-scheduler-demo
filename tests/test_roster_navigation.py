@@ -139,3 +139,54 @@ class RosterNavigationTest(unittest.TestCase):
         page=self.client.get("/schedule/manual?month=2026-02").get_data(as_text=True)
         self.assertIn("新しい表の有給候補を確認する",page)
         self.assertIn("この編集表は入力変更前の表",page)
+
+    def test_workspace_uses_four_steps_and_legacy_build_opens_same_roster(self):
+        self.generate()
+        response=self.client.get("/schedule?month=2026-02&phase=build")
+        self.assertEqual(response.status_code,302)
+        self.assertIn("/schedule/manual?",response.location)
+        page=self.client.get(response.location).get_data(as_text=True)
+        nav=page.split('class="journey-nav"',1)[1].split("</nav>",1)[0]
+        self.assertEqual(nav.count("<li>"),4)
+        self.assertIn("ヘルプを反映した表を確認",page)
+
+    def test_workspace_help_review_does_not_overwrite_saved_edits(self):
+        source=self.generate()
+        manual=copy.deepcopy(source)
+        manual.update(updated=datetime.now(timezone.utc).isoformat(),history=[])
+        self.store("manual_schedules",manual)
+        before=self.dump()
+        page=self.client.get("/schedule/manual?month=2026-02").get_data(as_text=True)
+        fields={k:html.unescape(re.search('name="'+k+'" value="([^"]*)"',page)[1])
+                for k in ("csrf_token","fingerprint","result_token","seed_token")}
+        self.assertEqual(before,self.dump())
+        response=self.client.post("/schedule?month=2026-02",data=dict(fields,mode="help",replace="yes",workspace="yes"))
+        self.assertEqual(response.status_code,302)
+        self.assertIn("view_source=generated",response.location)
+        page=self.client.get(response.location).get_data(as_text=True)
+        self.assertIn("保存前の変更確認",page)
+        db=connect_db()
+        try: self.assertEqual(json.loads(db.execute("SELECT data FROM manual_schedules").fetchone()[0]),manual)
+        finally: db.close()
+
+    def test_unapplied_help_proposal_keeps_shortages_on_saved_roster(self):
+        source=self.generate()
+        source.update(updated=datetime.now(timezone.utc).isoformat(),history=[])
+        self.store("manual_schedules",source)
+        db=connect_db()
+        from schedule import read_snapshot
+        from help_shortages import write_reference
+        snapshot,fp,_=read_snapshot(db,"2026-02")
+        raw=json.dumps(source)
+        write_reference(db,snapshot,fp,[],source_kind="manual",source_raw=raw)
+        db.commit()
+        before=db.execute("SELECT data FROM help_shortage_previews").fetchone()[0]
+        db.close()
+        page=self.client.get("/schedule/manual?month=2026-02").get_data(as_text=True)
+        fields={k:html.unescape(re.search('name="'+k+'" value="([^"]*)"',page)[1])
+                for k in ("csrf_token","fingerprint","result_token","seed_token")}
+        response=self.client.post("/schedule?month=2026-02",data=dict(fields,mode="help",replace="yes",workspace="yes"))
+        self.assertEqual(response.status_code,302)
+        db=connect_db()
+        try: self.assertEqual(db.execute("SELECT data FROM help_shortage_previews").fetchone()[0],before)
+        finally: db.close()

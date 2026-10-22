@@ -51,7 +51,7 @@ class RebalanceRouteTest(unittest.TestCase):
         self.assertEqual(value["grid"][1][0],"DD")
         self.assertEqual(self.stored("manual_schedules"),manual)
         page=self.client.get(response.location).get_data(as_text=True)
-        self.assertIn("自院全体も調整した月間勤務表",page)
+        self.assertIn("保存前の変更確認",page)
         # Applying the result still requires the existing change preview.
         page=self.client.get("/schedule/manual?month=2026-02").get_data(as_text=True)
         fields={key:html.unescape(re.search('name="'+key+'"[^>]*value="([^"]*)"',page)[1])

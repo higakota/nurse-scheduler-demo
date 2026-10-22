@@ -113,4 +113,5 @@ class EditorWorkflowTest(unittest.TestCase):
             else:
                 response=self.client.post("/schedule?month=2026-02",data=dict(fields,mode="help",help_source="draft"))
         self.assertEqual(response.status_code,302,response.get_data(as_text=True))
-        self.assertIn("saved=1",response.location)
+        self.assertIn("/schedule/manual?",response.location)
+        self.assertIn("view_source=generated",response.location)
