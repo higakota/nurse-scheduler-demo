@@ -35,6 +35,41 @@ class RosterUpdateTest(unittest.TestCase):
         for d,person in enumerate(snapshot["staff"]):
             self.assertEqual(changes[f"1_{d}"],base["grid"][1][d])
 
+    def test_global_adjustment_fills_shortage_that_fixed_own_roster_cannot(self):
+        from manual_schedule import checked_patch
+        from help_shortages import shortages_from_source
+        snapshot=fixtures.sample(open_days=(2,3))
+        snapshot["staff"][-1].update(employment="part",weekly_limit_units=2)
+        snapshot["monthly_settings"]["targets"].pop("5")
+        from weekly_rules import boundary_dates
+        snapshot["weekly_work_boundaries"]={"5_"+day.isoformat():"0.0" for day in boundary_dates(snapshot["month"])}
+        snapshot["staff"].append(dict(id=9,name="技師応援仮名",role="technician",employment="full",veteran=0,is_help=1,allowed_areas="C",advance_help=0))
+        snapshot["help_availability"]={"9_2026-02-03":"full"}
+        problem=__import__("scheduler_engine").prepare(snapshot,use_help=True)
+        grid=[["RR"]*6 for _ in problem["days"]]
+        for d in (1,2):
+            grid[d][:4]=["DD"]*4
+        grid[2][4]="CC"
+        base=dict(days=problem["days"],people=snapshot["staff"],grid=grid)
+        changes=update_patch(snapshot,base,seconds=3)
+        updated,_=checked_patch(base,changes)
+        self.assertEqual(updated[1][4],"CC")
+        self.assertEqual(updated[2][5],"CC")
+        self.assertEqual(shortages_from_source(snapshot,json.dumps(dict(base,grid=updated))),[])
+
+    def test_shortage_refresh_counts_already_reflected_requested_helpers(self):
+        from help_shortages import shortages_from_source
+        snapshot=fixtures.sample()
+        snapshot["staff"].append(dict(id=9,name="応援仮名",role="nurse",employment="full",veteran=1,is_help=1,allowed_areas="ABC",advance_help=0))
+        snapshot["help_availability"]={"9_2026-02-02":"full"}
+        for pid in ("1","2"):
+            snapshot["monthly_settings"]["wishes"][pid+"_2026-02-02"]="full"
+            snapshot["monthly_settings"]["targets"][pid]="28"
+        result=generate(snapshot,use_help=True,seconds=3)
+        self.assertEqual(result["status"],"success")
+        base=dict(days=result["problem"]["days"],people=result["problem"]["people"],grid=result["grid"])
+        self.assertEqual(shortages_from_source(snapshot,json.dumps(base)),[])
+
 
 class RosterUpdateRouteTest(unittest.TestCase):
     setUp=fixtures.ScheduleRouteTest.setUp

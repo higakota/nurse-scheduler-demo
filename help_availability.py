@@ -174,12 +174,12 @@ def register_help_availability(app, connect_db):
         from scheduler_engine import generate_draft
         from schedule_display import grouped_shortages
         from help_shortages import publish_reference, shortages_from_source
-        from fixed_help import load_seed, load_manual_source, preferred_help_source
+        from fixed_help import load_seed, load_manual_source
         db=connect_db()
         try:
             snapshot,fp,_=read_snapshot(db,month)
             draft_raw, manual_raw = load_seed(db,month), load_manual_source(db,month)
-            source_kind = preferred_help_source(snapshot,draft_raw,manual_raw)
+            source_kind = "manual" if manual_raw else "draft"
             source_raw = manual_raw if source_kind == "manual" else draft_raw
         finally:
             db.close()

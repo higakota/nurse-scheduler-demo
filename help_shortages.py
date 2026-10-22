@@ -145,22 +145,22 @@ def source_data(db, month, kind):
 
 
 def shortages_from_source(snapshot, raw):
-    """保存した自院勤務を維持して不足だけを再計算する。"""
+    """保存した勤務表の自院・ヘルプ全員を数えて不足を再計算する。"""
     from scheduler_engine import prepare, verify, draft_shortages
     from schedule_display import grouped_shortages
     source = json.loads(raw)
     if source.get("conditions_hash") not in (None, conditions_hash(snapshot)):
         raise ValueError("元の勤務表の保存後に条件が変わっています。編集画面で確認・保存してから不足を更新してください。")
-    source_ids={str(p["id"]) for p in source["people"]}
-    advance={str(p["id"]) for p in snapshot["staff"] if p["is_help"] and p.get("advance_help") and str(p["id"]) in source_ids}
-    inputs=dict(snapshot,staff=[p for p in snapshot["staff"] if not p["is_help"] or str(p["id"]) in advance])
-    problem = prepare(inputs, use_help=bool(advance))
+    problem = prepare(snapshot, use_help=True)
     if problem["errors"]:
         raise ValueError(problem["errors"][0])
-    positions = {str(p["id"]): i for i, p in enumerate(source["people"]) if not p["is_help"] or str(p["id"]) in advance}
-    if set(positions) != {str(p["id"]) for p in problem["people"]} or source["days"] != problem["days"]:
+    positions = {str(p["id"]): i for i, p in enumerate(source["people"])}
+    own = {str(p["id"]) for p in snapshot["staff"] if not p["is_help"]}
+    source_own = {str(p["id"]) for p in source["people"] if not p["is_help"]}
+    if own != source_own or source["days"] != problem["days"]:
         raise ValueError("自院スタッフ・対象日が変わっています。編集画面で元の勤務表を確認してください。")
-    grid = [[rows[positions[str(p["id"])]] for p in problem["people"]] for rows in source["grid"]]
+    grid = [[rows[positions[str(p["id"])]] if str(p["id"]) in positions else "RR"
+             for p in problem["people"]] for rows in source["grid"]]
     errors = verify(problem, grid, allow_shortages=True, max_full_days=6)
     if errors:
         raise ValueError("保存した自院勤務を確認してください：" + errors[0])

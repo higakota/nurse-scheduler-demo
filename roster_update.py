@@ -1,5 +1,6 @@
 """最新の入力を表示中の表へまとめて反映する、保存前の変更案。"""
 import json
+import time
 from input_reflection import reflection_patch
 from help_shortages import conditions_hash
 from scheduler_engine import prepare
@@ -24,11 +25,15 @@ def update_patch(snapshot, base, seconds=10):
                 commitments[str(person["id"]) + "_" + day] = old
     planning = dict(snapshot, fixed_help_commitments=commitments)
     source = dict(base, grid=reflected, conditions_hash=conditions_hash(planning))
-    result = generate_fixed_help(planning, json.dumps(source), seconds=seconds,
-                                 source_name="表示中の勤務表", partial=True)
+    started = time.monotonic()
+    result = generate_fixed_help(planning, json.dumps(source), seconds=seconds * .3,
+                                 source_name="表示中の勤務表", partial=False)
+    from scheduler_engine import prefer_five
     if result.get("grid") is None:
-        from scheduler_engine import prefer_five
-        result = prefer_five(planning, use_help=True, partial=True, seconds=seconds)
+        result = prefer_five(planning, use_help=True, partial=False, seconds=seconds * .4)
+    if result.get("grid") is None:
+        remaining = max(.1, seconds - (time.monotonic() - started))
+        result = prefer_five(planning, use_help=True, partial=True, seconds=remaining)
     if result.get("grid") is None:
         raise ValueError("更新できませんでした。" + " ".join(result.get("messages", [])))
     positions = {str(p["id"]): i for i, p in enumerate(result["problem"]["people"])}
