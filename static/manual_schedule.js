@@ -55,8 +55,10 @@ for(const cell of sheet?.querySelectorAll("[data-help-summary-day]")||[]){
   if(!amWork&&!pmWork)return;
   const button=document.createElement("button");button.type="button";button.className="helper-visit "+(person.role==="technician"?"helper-tech":"helper-nurse");
   button.dataset.helperEdit=String(i);button.dataset.helperDay=String(d);button.classList.toggle("is-edited",Object.hasOwn(patch,d+"_"+i));
-  const name=document.createElement("strong");name.textContent=person.name;
-  const period=document.createElement("small");period.textContent=(person.role==="technician"?"検":"看")+"・"+(amWork&&pmWork?"全日":amWork?"午前":"午後");
+  const name=document.createElement("strong");name.textContent=person.name.trim().split(/\s+/u)[0];
+  const period=document.createElement("small");period.textContent=(person.role==="technician"?"検":"看")+" "+(amWork&&pmWork?"全日":amWork?"午前":"午後");
+  button.title=person.name+"（"+(person.role==="technician"?"検査技師":"看護師")+"・"+(amWork&&pmWork?"全日":amWork?"午前":"午後")+"）";
+  button.setAttribute("aria-label",data.days[d]+" "+button.title+"を編集");
   button.append(name,period);visits.append(button);
  });
 }
