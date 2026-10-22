@@ -1,10 +1,10 @@
 # 操作デモ
 
-**[約80秒の操作動画（MP4・音声なし）](walkthrough.mp4)** ／ [ダウンロード](https://raw.githubusercontent.com/higakota/nurse-scheduler-demo/main/docs/demo/walkthrough.mp4)
+**[約80秒の操作動画（MP4・音声なし）](https://higakota.github.io/nurse-scheduler-demo/)** ／ [ダウンロード](https://raw.githubusercontent.com/higakota/nurse-scheduler-demo/main/docs/demo/walkthrough.mp4)
 
-![操作の流れの抜粋](overview.gif)
+[![操作デモを再生](poster.png)](https://higakota.github.io/nurse-scheduler-demo/)
 
-GIFは実画面の静止画を抜粋して順番に表示したものです。MP4はブラウザでの実操作を記録した動画です。
+画像中央の再生ボタンからプレイヤーへ進み、▶を押して再生できます。READMEの画像は静止画で、自動再生しません。MP4はブラウザでの操作を記録した動画です。
 
 ## 動画の内容
 
