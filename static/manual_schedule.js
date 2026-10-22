@@ -47,21 +47,6 @@ cell.classList.add("paper-"+(pair==="RR"?"rest":pair.includes("P")?"paid":pair.i
 if(data.people[i].is_help||data.people[i].employment==="part")return;
 let units=0;for(let d=0;d<data.days.length;d++){const pair=current(d,i);units+=pair.includes("P")?(pair.includes("R")?2:0):[...pair].filter(c=>c==="R").length;}
 const old=originalTotals[i],index=old.indexOf("／");el.textContent=units/2+"日"+(index>=0?old.slice(index):"");});
-for(const cell of sheet?.querySelectorAll("[data-help-summary-day]")||[]){
- const d=+cell.dataset.helpSummaryDay,visits=cell.querySelector(".help-summary-visits");visits.replaceChildren();
- data.people.forEach((person,i)=>{
-  if(!person.is_help||person.advance_help)return;
-  const pair=current(d,i),amWork="ABCDMOT".includes(pair[0]),pmWork="ABCDMOT".includes(pair[1]);
-  if(!amWork&&!pmWork)return;
-  const button=document.createElement("button");button.type="button";button.className="helper-visit "+(person.role==="technician"?"helper-tech":"helper-nurse");
-  button.dataset.helperEdit=String(i);button.dataset.helperDay=String(d);button.classList.toggle("is-edited",Object.hasOwn(patch,d+"_"+i));
-  const name=document.createElement("strong");name.textContent=person.name.trim().split(/\s+/u)[0];
-  const period=document.createElement("small");period.textContent=(person.role==="technician"?"検":"看")+" "+(amWork&&pmWork?"全日":amWork?"午前":"午後");
-  button.title=person.name+"（"+(person.role==="technician"?"検査技師":"看護師")+"・"+(amWork&&pmWork?"全日":amWork?"午前":"午後")+"）";
-  button.setAttribute("aria-label",data.days[d]+" "+button.title+"を編集");
-  button.append(name,period);visits.append(button);
- });
-}
 const dirty=Object.keys(patch).length>0;
 if(list.closest("details"))list.closest("details").hidden=!dirty;
 document.getElementById("manual-status").textContent=Object.keys(patch).length+"件の変更（"+(dirty?"未保存":"変更なし")+"）";
@@ -69,19 +54,6 @@ document.getElementById("manual-recheck").hidden=!dirty;
 document.querySelectorAll(".manual-print-actions [data-print-packet]").forEach(button=>{button.disabled=dirty;});
 (sheet?.querySelectorAll(".paper-grid tfoot,.paper-detail-grid,.paper-deficit-note")||[]).forEach(el=>el.hidden=dirty);
 }
-let helperDay=null;
-const helperPicker=document.getElementById("manual-helper-picker");
-sheet?.addEventListener("click",event=>{
- const entry=event.target.closest("[data-helper-edit]");
- if(entry){const button=buttons.find(b=>+b.dataset.day===+entry.dataset.helperDay&&+b.dataset.person===+entry.dataset.helperEdit);if(button)edit(button);return;}
- const add=event.target.closest("[data-helper-add]");
- if(add&&helperPicker){helperDay=+add.dataset.helperAdd;helperPicker.showModal();}
-});
-helperPicker?.querySelectorAll("[data-helper-person]").forEach(choice=>choice.addEventListener("click",()=>{
- const button=buttons.find(b=>+b.dataset.day===helperDay&&+b.dataset.person===+choice.dataset.helperPerson);
- helperPicker.close();if(button)edit(button);
-}));
-document.getElementById("manual-helper-close")?.addEventListener("click",()=>helperPicker.close());
 for(const button of buttons)button.addEventListener("click",()=>{
 if(selectMode.checked){const key=keyOf(button);if(selectedCells.has(key))selectedCells.delete(key);else selectedCells.add(key);selectionChanged();}
 else edit(button);

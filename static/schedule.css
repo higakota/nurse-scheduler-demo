@@ -258,25 +258,3 @@
  .print-sheet .paper-schedule.comparison-enabled .paper-grid .paper-duty-row td.has-request{background:#fff}
  .print-sheet .paper-schedule.comparison-enabled .paper-request-row .request-entry{color:#172c32}
 }
-
-.grouped-helper-row{display:none}
-.paper-help-summary button.helper-visit{width:100%;border:0;background:transparent;padding:3px 1px;font:inherit;line-height:1.35;border-radius:4px}
-.paper-help-summary button.helper-visit:hover,.paper-help-summary button.helper-visit:focus-visible{background:#e1eee9;outline:1px solid #4c8b78}
-.paper-help-summary button.helper-visit.is-edited{background:#fff1b8}
-.paper-help-summary .helper-add{padding:2px 7px;font-size:16px;line-height:1.2;border:0;background:transparent;color:#366c60}
-#manual-helper-picker{border:1px solid #bccdc7;border-radius:12px;padding:20px;max-width:460px}
-.helper-picker-people{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
-@media print{.helper-add,#manual-helper-picker{display:none!important}}
-
-@media screen{
- .paper-help-summary td{position:relative;padding:3px 1px;vertical-align:top}
- .paper-help-summary .helper-visit,
- .paper-help-summary button.helper-visit{font-size:12px;line-height:1.35;margin:0 0 3px;padding:3px 0;color:#263d42}
- .paper-help-summary .helper-visit strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
- .paper-help-summary .helper-visit small{font-size:9px;white-space:nowrap;color:#66777c;letter-spacing:0}
- .paper-help-summary .helper-add{opacity:0;font-size:14px;padding:1px 4px;transition:opacity .12s}
- .paper-help-summary td:hover .helper-add,
- .paper-help-summary td:focus-within .helper-add{opacity:1}
- .paper-help-summary th small{font-size:10px}
-}
-@media screen and (hover:none){.paper-help-summary .helper-add{opacity:1}}

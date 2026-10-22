@@ -28,29 +28,28 @@ class PrintHelpSummaryTest(unittest.TestCase):
         self.assertEqual(display["requested_help"][2][0]["period"],"午後")
         self.assertEqual(display["requested_help"][0],[])
 
-    def render(self,editable=False,preview=False):
+    def render(self,editable=False,preview=False,printing=False):
         from flask import render_template
         with app.test_request_context("/schedule/manual?month=2026-02"):
-            return render_template("_schedule_grid.html",display=self.display(),month="2026-02",is_draft=False,manual_editable=editable,preview=preview)
+            return render_template("_schedule_grid.html",display=self.display(),month="2026-02",is_draft=False,manual_editable=editable,preview=preview,print_group_help=printing)
 
     def test_printable_view_has_one_help_row_and_separate_advance_person(self):
-        page=self.render().split('<details class="paper-placement"',1)[0]
+        page=self.render(printing=True).split('<details class="paper-placement"',1)[0]
         self.assertIn('class="paper-help-summary"',page)
         self.assertIn('<th scope="row">事前仮名',page)
         self.assertNotIn('<th scope="row">応援看護仮名',page)
         self.assertIn('<strong>応援看護仮名</strong><small>看・午前</small>',page)
         self.assertIn('<strong>応援検査仮名</strong><small>検・全日</small>',page)
 
-    def test_editor_groups_helpers_but_keeps_original_edit_targets(self):
+    def test_editor_shows_helpers_individually_and_comparison_is_optional(self):
         page=self.render(True)
-        self.assertIn('class="paper-help-summary"',page)
-        self.assertEqual(page.count('class="paper-staff-block grouped-helper-row"'),2)
+        self.assertNotIn('class="paper-help-summary"',page)
+        self.assertNotIn('class="paper-staff-block grouped-helper-row"',page)
+        self.assertIn('<th scope="row">応援看護仮名',page)
+        self.assertIn('<th scope="row">応援検査仮名',page)
         self.assertIn('data-person="6"',page)
-        self.assertIn('data-help-summary-day="1"',page)
-        self.assertIn('id="manual-helper-picker"',page)
-        self.assertIn('data-helper-person="6"',page)
+        self.assertNotIn('id="manual-helper-picker"',page)
         self.assertNotIn('data-compare-schedule="saved" checked',page)
-        self.assertIn('class="paper-schedule"',page)
 
     def test_change_review_keeps_individual_changes_visible(self):
         page=self.render(False,True)

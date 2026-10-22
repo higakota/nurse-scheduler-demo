@@ -3,7 +3,7 @@
 <header class="print-heading"><h1>{{ month[:4] }}年{{ month[5:]|int }}月　勤務表</h1><p>下書き・未確定</p></header>
 <p class="print-saved-note">希望欄は現在の入力です。了承変更前の希望も表示しています。</p>
 {% if stale %}<p class="print-warning">下書き保存後に入力条件が変わっています。修正内容と現在の条件を確認してください。</p>{% endif %}
-{% with is_draft=true, manual_editable=false %}{% include "_schedule_grid.html" %}{% endwith %}
+{% with is_draft=true, manual_editable=false, print_group_help=true %}{% include "_schedule_grid.html" %}{% endwith %}
 </section>
 {% if print_with_notes %}
 <section class="print-sheet print-new-page">

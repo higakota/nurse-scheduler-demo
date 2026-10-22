@@ -4,7 +4,7 @@
 
 {% if stale and not is_draft %}<p class="print-warning">保存後に入力が変わっています。この用紙は以前の結果で、最新の条件を反映していません。</p>{% endif %}
 {% if not is_draft and print_runs %}<p>6連勤：{% for run in print_runs %}{{ run.name }} {{ run.start }}～{{ run.end }} {% endfor %}</p>{% endif %}
-{% with display=print_display %}{% include "_schedule_grid.html" %}{% endwith %}
+{% with display=print_display, print_group_help=true %}{% include "_schedule_grid.html" %}{% endwith %}
 </section>
 {% if is_draft %}
 <section class="print-sheet print-new-page">
