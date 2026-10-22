@@ -41,10 +41,18 @@ class PrintHelpSummaryTest(unittest.TestCase):
         self.assertIn('<strong>応援看護仮名</strong><small>看・午前</small>',page)
         self.assertIn('<strong>応援検査仮名</strong><small>検・全日</small>',page)
 
-    def test_editing_and_change_review_keep_individual_rows(self):
-        for editable,preview in ((True,False),(False,True)):
-            page=self.render(editable,preview)
-            self.assertNotIn('class="paper-help-summary"',page)
-            self.assertIn('<th scope="row">応援看護仮名',page)
+    def test_editor_groups_helpers_but_keeps_original_edit_targets(self):
         page=self.render(True)
+        self.assertIn('class="paper-help-summary"',page)
+        self.assertEqual(page.count('class="paper-staff-block grouped-helper-row"'),2)
         self.assertIn('data-person="6"',page)
+        self.assertIn('data-help-summary-day="1"',page)
+        self.assertIn('id="manual-helper-picker"',page)
+        self.assertIn('data-helper-person="6"',page)
+        self.assertNotIn('data-compare-schedule="saved" checked',page)
+        self.assertIn('class="paper-schedule"',page)
+
+    def test_change_review_keeps_individual_changes_visible(self):
+        page=self.render(False,True)
+        self.assertNotIn('class="paper-help-summary"',page)
+        self.assertIn('<th scope="row">応援看護仮名',page)

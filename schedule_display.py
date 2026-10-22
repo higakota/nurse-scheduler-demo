@@ -145,7 +145,7 @@ def monthly_display(days, people, grid, monthly=None, targets=None, shortages=No
             visits.append(dict(name=p["name"],role="検" if p["role"]=="technician" else "看",
                                period="全日" if am and pm else "午前" if am else "午後"))
         requested_help.append(visits)
-    return dict(requested_help=requested_help,has_requested_help=any(requested_help),days=headers, rows=rows, deficits=deficit_rows, has_shortages=bool(shortages), comparison_available=comparison_inputs is not None, doctors_available=doctor_plans is not None)
+    return dict(has_requested_staff=any(p["is_help"] and not p.get("advance_help") for p in people),requested_help=requested_help,has_requested_help=any(requested_help),days=headers, rows=rows, deficits=deficit_rows, has_shortages=bool(shortages), comparison_available=comparison_inputs is not None, doctors_available=doctor_plans is not None)
 
 
 

@@ -258,3 +258,12 @@
  .print-sheet .paper-schedule.comparison-enabled .paper-grid .paper-duty-row td.has-request{background:#fff}
  .print-sheet .paper-schedule.comparison-enabled .paper-request-row .request-entry{color:#172c32}
 }
+
+.grouped-helper-row{display:none}
+.paper-help-summary button.helper-visit{width:100%;border:0;background:transparent;padding:3px 1px;font:inherit;line-height:1.35;border-radius:4px}
+.paper-help-summary button.helper-visit:hover,.paper-help-summary button.helper-visit:focus-visible{background:#e1eee9;outline:1px solid #4c8b78}
+.paper-help-summary button.helper-visit.is-edited{background:#fff1b8}
+.paper-help-summary .helper-add{padding:2px 7px;font-size:16px;line-height:1.2;border:0;background:transparent;color:#366c60}
+#manual-helper-picker{border:1px solid #bccdc7;border-radius:12px;padding:20px;max-width:460px}
+.helper-picker-people{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+@media print{.helper-add,#manual-helper-picker{display:none!important}}

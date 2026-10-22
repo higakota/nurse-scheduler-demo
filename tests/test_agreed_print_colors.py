@@ -18,7 +18,8 @@ class AgreedPrintColorsTest(unittest.TestCase):
             page=render_template("_schedule_grid.html",month="2026-09",display=display,is_draft=False)
         self.assertIn("paper-agreed-work",page)
         self.assertIn('paper-request-wish">(休)</span>',page)
-        self.assertIn("comparison-enabled",page)
+        self.assertNotIn('class="paper-schedule comparison-enabled"',page)
+        self.assertNotIn('data-compare-schedule="saved" checked',page)
         self.assertNotIn('class="request-agreed-note"',page)
 
     def test_cancelled_or_non_working_changes_are_not_marked_red(self):
