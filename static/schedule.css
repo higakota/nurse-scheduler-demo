@@ -192,3 +192,52 @@
 
 .request-agreed-note{display:block;margin-top:3px;padding:2px 0;border:1px solid #977021;border-radius:3px;background:#fff1c9;color:#684b15;font-size:9px;line-height:1.2;overflow-wrap:anywhere}
 @media print{.print-sheet .request-agreed-note{font-size:6px;padding:1px 0;margin-top:1px;print-color-adjust:exact}}
+
+/* 依頼後のヘルプは日付ごとにまとめ、事前登録の人は個別行に残す。 */
+.print-key{display:none}
+.paper-help-summary th{background:#edf4f3!important}
+.paper-help-summary td{vertical-align:top;background:#f8fbfa;padding:4px 2px}
+.helper-visit{display:block;margin:2px 0 6px;line-height:1.35}
+.helper-visit strong{font-weight:600}
+.helper-visit small{display:block;font-size:.8em}
+.helper-tech{color:#634579}.helper-nurse{color:#23675b}
+@media print{
+  .print-sheet,.print-sheet *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .print-sheet .paper-legend,.print-sheet .comparison-legend{display:none!important}
+  .print-sheet .print-key{display:block;font-size:8px;line-height:1.6;margin:4px 0}
+  .print-key span{padding:1px 4px;border-radius:2px}
+  .key-wish{background:#e1f1e4;color:#225d3c}.key-paid{background:#fce5ed;color:#a12456}
+  .key-meeting{background:#fff0bb}.key-summer{background:#eee6f6}.key-support{background:#e1edf9}
+  .print-sheet .paper-grid th,.print-sheet .paper-grid td{border:.35pt solid #a5b1b5}
+  .print-sheet .paper-grid thead th{background:#fff2cb;color:#253a40}
+  .print-sheet .paper-grid .paper-closed{background:#e9edef;color:#536367}
+  .print-sheet .paper-grid .paper-saturday{color:#245dae}
+  .print-sheet .paper-grid .paper-paid{background:#fce5ed;color:#a12456}
+  .print-sheet .paper-grid .paper-meeting{background:#fff0bb}
+  .print-sheet .paper-grid .paper-half{background:#f0f5fa}
+  .print-sheet .paper-shift[data-pair*="S"]{background:#eee6f6;color:#634579}
+  .print-sheet .paper-shift[data-pair*="T"]{background:#e1edf9;color:#215c91}
+  .print-sheet .paper-schedule.comparison-enabled .paper-staff-block{border-top:.75pt solid #7b8e95;border-bottom:0}
+  .print-sheet .comparison-enabled .paper-duty-row td.has-request,
+  .print-sheet .comparison-enabled .paper-request-row td.has-request{border:.35pt solid #a5b1b5}
+  .print-sheet .comparison-enabled .paper-request-row td,
+  .print-sheet .comparison-enabled .paper-request-row th{background:#f6f8fa;border-top:.35pt dashed #c5cfd2;font-size:8px}
+  .print-sheet .comparison-enabled .paper-request-row td:has(.paper-request-wish){background:#e1f1e4}
+  .print-sheet .comparison-enabled .paper-request-row td:has(.paper-request-paid){background:#fce5ed}
+  .print-sheet .paper-request-wish{color:#225d3c}.print-sheet .paper-request-paid{color:#a12456}
+  .print-sheet .paper-doctors td{background:#fffaf0}
+  .print-sheet .doctor-half{font-size:8px;line-height:1.15}
+  .print-sheet .paper-meetings td{background:#fff7dd;font-size:8px}
+  .print-sheet .paper-help-summary{border-top:.75pt solid #7b8e95}
+  .print-sheet .helper-visit{font-size:8px;margin:1px 0 4px}
+  .print-sheet .helper-visit small{font-size:7px}
+  .print-sheet tfoot.no-shortages{display:none}
+}
+
+@media print{
+  .print-sheet .paper-grid thead th{font-size:9px;line-height:1.3}
+  .print-sheet .paper-grid .paper-shift{font-size:10px;line-height:1.3}
+  .print-sheet .comparison-enabled .paper-shift{height:4.8mm}
+  .print-sheet .comparison-result-label{display:none!important}
+  .print-sheet .paper-schedule:has(tfoot.no-shortages) .paper-deficit-note{display:none}
+}

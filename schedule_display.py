@@ -92,7 +92,7 @@ def monthly_display(days, people, grid, monthly=None, targets=None, shortages=No
             request_segments = []
             if requests:
                 request_segments = [request_halves[0]] if request_halves[0] == request_halves[1] else request_halves
-            cells.append(dict(label=label, detail=detail, hint=hint, kind=kind, requests=requests,
+            cells.append(dict(pair=pair,label=label, detail=detail, hint=hint, kind=kind, requests=requests,
                               request_segments=request_segments, has_request=bool(requests),
                               adjustment_label=adjustment_label, adjustment_hint=adjustment_hint,
                               request_hint="、".join(item["hint"] for item in requests)))
@@ -105,7 +105,7 @@ def monthly_display(days, people, grid, monthly=None, targets=None, shortages=No
             total = str(rests / 2) + "日"
             if str(person["id"]) in targets:
                 total += "／" + str(targets[str(person["id"])]) + "日"
-        rows.append(dict(id=person["id"], name=person["name"], is_help=person["is_help"], cells=cells, total=total))
+        rows.append(dict(id=person["id"], name=person["name"], is_help=person["is_help"], advance_help=bool(person.get("advance_help")), cells=cells, total=total))
     deficit_rows = []
     for half in ("午前", "午後"):
         cells = []
@@ -128,7 +128,18 @@ def monthly_display(days, people, grid, monthly=None, targets=None, shortages=No
                     labels.append(short + str(item["missing"]) + "人")
             cells.append(dict(label="・".join(labels) if labels else "—", missing=bool(items)))
         deficit_rows.append(dict(half=half, cells=cells))
-    return dict(days=headers, rows=rows, deficits=deficit_rows, has_shortages=bool(shortages), comparison_available=comparison_inputs is not None, doctors_available=doctor_plans is not None)
+    requested_help=[]
+    for d,day in enumerate(days):
+        visits=[]
+        for i,p in enumerate(people):
+            if not p["is_help"] or p.get("advance_help"):continue
+            pair=grid[d][i]
+            am,pm=(pair[h] in "ABCDMOT" for h in (0,1))
+            if not (am or pm):continue
+            visits.append(dict(name=p["name"],role="検" if p["role"]=="technician" else "看",
+                               period="全日" if am and pm else "午前" if am else "午後"))
+        requested_help.append(visits)
+    return dict(requested_help=requested_help,has_requested_help=any(requested_help),days=headers, rows=rows, deficits=deficit_rows, has_shortages=bool(shortages), comparison_available=comparison_inputs is not None, doctors_available=doctor_plans is not None)
 
 
 

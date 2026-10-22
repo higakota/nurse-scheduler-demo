@@ -1,7 +1,7 @@
 <section id="{{ manual_print_id }}" class="print-packet" aria-hidden="true">
 <section class="print-sheet print-monthly-sheet">
-<header class="print-heading"><h1>{{ month }} 手動修正した勤務表</h1><p>下書き・未確定 ／ 保存済みの手動修正を印刷</p></header>
-<p>保存日時：{{ base.updated }}<br>医師予定・会議・希望休等の表示と下の確認事項は、この画面を開いた時点の入力に基づきます。</p>
+<header class="print-heading"><h1>{{ month[:4] }}年{{ month[5:]|int }}月　勤務表</h1><p>下書き・未確定</p></header>
+<p class="print-saved-note">希望欄は現在の入力です。了承変更前の希望も表示しています。</p>
 {% if stale %}<p class="print-warning">下書き保存後に入力条件が変わっています。修正内容と現在の条件を確認してください。</p>{% endif %}
 {% with is_draft=true, manual_editable=false %}{% include "_schedule_grid.html" %}{% endwith %}
 </section>
