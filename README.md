@@ -6,7 +6,7 @@
 
 [開発履歴](docs/development-history.md) · [不具合と改善の事例](docs/case-studies.md) · [設計](docs/portfolio.md) · [テストと確認方法](docs/verification.md) · **[サンプルExcel](samples/sample_requests_2026-11.xlsx)**
 
-**[約80秒の操作動画を見る](https://higakota.github.io/nurse-scheduler-demo/)** ／ [動画の説明](docs/demo/README.md)
+**[約5分48秒の操作動画を見る](https://higakota.github.io/nurse-scheduler-demo/)** ／ [動画の説明](docs/demo/README.md)
 
 [![操作デモを再生](docs/demo/poster.png)](https://higakota.github.io/nurse-scheduler-demo/)
 
