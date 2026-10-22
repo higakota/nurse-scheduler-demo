@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>スタッフ設定 | 看護師勤務表</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"></head>
+<body class="app-layout">{% include "_shell.html" %}
+
+<main class="container app-main" id="main-content">
+  {% include "_page_intro.html" %}<h1>スタッフ設定</h1>
+  <p>勤務表に載せるスタッフを登録します。名前や勤務区分は後から変更できます。</p><p class="hint">他院ヘルプは不足時に追加します。登録だけでは毎日の勤務対象にせず、<a href="{{ url_for('help_availability', month=ui_month) }}">来院が決まった日・午前午後</a>を別に指定します。</p>
+  {% if request.args.get('deleted') == '1' %}<p class="success" role="status">スタッフを削除しました。会議の参加者を確認し、勤務表を再作成してください。</p>{% endif %}
+  {% if saved %}<p class="success" role="status">保存しました。担当範囲を変更した場合は、勤務表を再作成してください。</p>{% endif %}
+{% if edit_id %}{% include "_staff_form.html" %}{% endif %}
+  <section class="panel" aria-labelledby="list-title">
+    <h2 id="list-title">登録済みスタッフ <span class="count">{{ staff|length }}人</span></h2>
+    {% if staff %}
+    <div class="table-wrap"><table>
+      <thead><tr><th>名前</th><th>職種</th><th>勤務区分</th><th>担当可能な配置</th><th>ベテラン看護師</th><th>変更</th></tr></thead>
+      <tbody>{% for person in staff %}<tr>
+        <td>{{ person.name }}{% if person.is_help %}（他院ヘルプ）{% endif %}</td>
+        <td>{{ '看護師' if person.role == 'nurse' else '検査技師' }}</td>
+        <td>{{ '非常勤' if person.employment == 'part' else '常勤' }}</td>
+        <td>{% for area, label in [('A','A：受付'),('B','B：診察室'),('C','C：検査室')] %}{% if area in person.allowed_areas %}{{ label }} {% endif %}{% endfor %}</td>
+        <td>{{ ('はい' if person.veteran else 'いいえ') if person.role == 'nurse' else '対象外' }}</td>
+        <td><a href="{{ url_for('staff_settings', edit=person.id) }}#staff-form" aria-label="{{ person.name }}を編集">編集</a> ／ <a href="{{ url_for('staff_delete', staff_id=person.id, month=ui_month) }}" aria-label="{{ person.name }}の削除を確認">削除</a></td>
+      </tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="empty">まだ登録されていません。下の欄からスタッフを追加してください。</p>{% endif %}
+  </section>
+{% if not edit_id %}{% include "_staff_form.html" %}{% endif %}
+  <p class="hint">現在はスタッフ設定が利用できます。月別入力から希望休や会議を設定できます。勤務表の自動作成は共通メニューから開けます。</p>
+</main>
+<script src="{{ url_for('static', filename='staff.js') }}"></script>
+</body>
+</html>

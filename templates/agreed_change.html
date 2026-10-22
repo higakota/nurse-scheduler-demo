@@ -1,0 +1,57 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>本人了承による希望休の変更</title><link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='app-ui.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='agreed_change.css') }}"></head>
+<body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content"><h1>本人了承による希望休の変更</h1>
+<p>カレンダーの名前を選び、本人が了承した出勤への変更を入力します。元の希望と変更履歴は記録に残ります。</p>
+{% if request.args.get("saved") %}<p class="success" role="status">了承出勤の変更を反映しました。</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<div class="agreed-layout">
+<section class="panel agreed-calendar-panel" aria-labelledby="agreed-calendar-title">
+<div class="agreed-calendar-heading"><h2 id="agreed-calendar-title">{{ ui_month_label }}の不足日・了承出勤</h2><span class="hint">緑：希望休 ／ 桃色：有給</span></div>
+{% if calendar_data.scoped %}<p><strong>不足日の希望休を変更できます。了承出勤にした人も残り、名前から変更・取り消しできます。</strong></p>{% endif %}
+<p id="agreed-calendar-status" role="status">{{ '変更する日と代わりの休みを色で表示しています。' if preview else '希望休の名前を押して、変更する人と日を選んでください。' }}</p>
+{% if not calendar_data.shortages_checked %}<p class="hint">入力が不足しているため、不足人数はまだ確認できません。</p>{% elif not calendar_data.shortages %}<p class="hint">この表に人数不足はありません。</p>{% endif %}
+<table class="agreed-calendar"><caption class="sr-only">{{ month }}の不足日だけ希望休・有給を表示</caption><thead><tr>{% for label in '日月火水木金土' %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead><tbody>
+{% for week in calendar_data.weeks %}<tr>{% for day in week %}{% if day %}
+<td data-agreed-date="{{ day }}" class="{{ 'is-closed' if day in calendar_data.closed else '' }} {{ 'has-shortage' if calendar_data.shortages.get(day) else '' }} {{ 'is-change' if preview and day in changes|map(attribute='day')|list else '' }}" id="agreed-day-{{ day }}">
+<div class="agreed-day-heading"><span>{{ day[-2:]|int }}</span>{% if day in calendar_data.closed %}<small>休診</small>{% endif %}</div>
+{% if calendar_data.shortages.get(day) %}<div class="agreed-shortage" aria-label="人員不足"><strong>人員不足</strong>{% for item in calendar_data.shortages[day] %}<span>{{ item }}</span>{% endfor %}</div>{% endif %}
+{% for item in calendar_data.entries[day] if day in calendar_data.visible_days %}
+{% if item.wish and day not in calendar_data.closed and day in calendar_data.editable_days and not preview %}<a class="agreed-request" href="{{ url_for('agreed_wish_change',month=month,staff=item.staff,day=day,period=item.wish,scope=values.scope) }}" data-agreed-staff="{{ item.staff }}" data-agreed-day="{{ day }}" data-agreed-period="{{ item.wish }}"><strong>{{ item.name }}</strong><span>{{ item.wish_label }}希望休</span>{% if item.amended %}<small>了承変更あり</small>{% endif %}</a>
+{% elif item.wish %}<div class="agreed-request is-readonly"><strong>{{ item.name }}</strong><span>{{ item.wish_label }}希望休</span></div>
+{% endif %}
+{% if item.paid_label %}{% if day in calendar_data.editable_days and day not in calendar_data.closed and not preview %}<a class="agreed-paid" href="{{ url_for('agreed_wish_change',month=month,staff=item.staff,day=day,period=item.paid,scope=values.scope) }}" data-agreed-staff="{{ item.staff }}" data-agreed-day="{{ day }}" data-agreed-period="{{ item.paid }}"><strong>{{ item.name }}</strong><span>{{ item.paid_label }}有給</span></a>{% else %}<div class="agreed-paid"><strong>{{ item.name }}</strong><span>{{ item.paid_label }}有給</span></div>{% endif %}{% endif %}
+{% for saved in item.records %}{% if not preview %}<a class="agreed-amended agreed-record-link" href="{{ url_for('agreed_record_edit',month=month,index=saved.index) }}">{% else %}<div class="agreed-amended">{% endif %}<strong>{{ item.name }}</strong><span>了承出勤（{{ saved.label }}）</span>{% if not preview %}<small>変更・取り消し</small></a>{% else %}</div>{% endif %}{% endfor %}
+{% endfor %}
+{% if day in calendar_data.editable_days and not calendar_data.entries[day] %}<small class="agreed-no-requests">希望休なし</small>{% endif %}
+{% if not preview %}<button type="button" class="agreed-swap-day" data-agreed-swap="{{ day }}" hidden>この日を代わりの休みにする</button>{% endif %}
+{% if preview and day == values.day %}<p class="agreed-change-label">{{ person_name }}：出勤へ変更</p>{% endif %}
+{% if preview and audit and day in audit.automatic_rest_dates %}<p class="agreed-change-label">{{ person_name }}：自動調整の休み</p>{% endif %}
+{% if preview and day == values.swap %}<p class="agreed-change-label">{{ person_name }}：代わりの全日希望休</p>{% endif %}
+</td>{% else %}<td class="agreed-calendar-empty"></td>{% endif %}{% endfor %}</tr>{% endfor %}
+</tbody></table></section>
+<div class="agreed-editor-column">
+{% if record_editor|default(false) %}{% include "_agreed_record_editor.html" %}{% elif preview %}<section class="panel"><h2>変更内容の確認（まだ保存していません）</h2><p><strong>{{ person_name }}</strong></p>
+<ul>{% for change in changes %}<li>{% if change.name %}{{ change.name }} {% endif %}{{ change.day|date_with_weekday }}：{{ change.before|manual_pair }} → {{ change.after|manual_pair }}</li>{% endfor %}</ul>
+<p>出勤する時間帯の希望休を解除します。{% if values.swap %}{{ values.swap|date_with_weekday }}は全日希望休にします。{% endif %}指定の公休日数を守り、出勤する時間帯の有給は取り消します。元の希望・有給は変更履歴に残します。</p>
+{% if audit.rest_target is not none %}<p><strong>公休日数：{{ audit.rest_before }}日 → {{ audit.rest_after }}日（指定：{{ audit.rest_target }}日）</strong></p>{% endif %}
+{% if audit.global_adjustment %}<p>6連勤を避けるため、依頼済みヘルプの勤務・希望休・有給を守って全体を自動調整しました。ほかのスタッフの変更も上に表示しています。</p>{% elif audit.automatic_rest_dates %}<p>公休日数を守るため、表示した日に休みを入れます。ほかのスタッフの勤務は変えません。</p>{% endif %}
+{% if warnings %}<h3>確認が必要な条件</h3><ul>{% for warning in warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% endif %}
+{% if shortages %}<details><summary>変更後の不足</summary>{% for day in shortage_summary %}<p><strong>{{ day.date|date_with_weekday }}</strong><br>{% for item in day['items'] %}{{ item }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>{% endfor %}</details>{% else %}<p>変更後の人数不足はありません。</p>{% endif %}
+{% if audit.paid_changes %}<p>編集した表の有給も登録に反映します。</p><ul>{% for item in audit.paid_changes %}<li>{{ item.date|date_with_weekday }} {{ item.name }}：{{ {'full':'全日有給','am':'午前有給','pm':'午後有給'}.get(item.after,'有給取消') }}</li>{% endfor %}</ul>{% endif %}
+{% if audit.boundary_changes %}<p>翌月側の勤務記録も、了承した出勤に合わせて更新します。</p>{% endif %}
+<p class="hint">保存すると、変更を反映した月間勤務表を表示します。</p>
+<form method="post"><input type="hidden" name="plan_token" value="{{ session.get('agreed_change_plan','') }}"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="revision" value="{{ revision }}">
+{% for key,value in values.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+<label class="checkbox"><input type="checkbox" name="consent" value="yes" required>本人から出勤の了承を得て、表示した希望休・勤務の変更を保存します</label><button name="action" value="save">了承済みの変更を保存</button></form>
+<p><a href="{{ url_for('agreed_wish_change',month=month,staff=values.staff,day=values.day,scope=values.scope) }}">保存せず入力し直す</a></p></section>
+{% else %}<section class="panel agreed-editor" id="agreed-editor"><p id="agreed-empty">カレンダーの希望休の名前を選んでください。有給も本人了承で出勤へ変更できます。</p><div id="agreed-editor-content"><h2 id="agreed-selection">変更する希望休</h2><p class="hint" id="agreed-selection-note"></p><form method="post" id="agreed-form"><input type="hidden" name="scope" value="{{ values.scope }}">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="revision" value="{{ revision }}">
+<div data-agreed-fallback><label for="agreed-staff">出勤をお願いしたスタッフ</label><select id="agreed-staff" name="staff" required><option value="">選択してください</option>{% for person in staff %}<option value="{{ person.id }}" {% if values.staff == person.id|string %}selected{% endif %}>{{ person.name }}（{{ '検査技師' if person.role == 'technician' else '看護師' }}）</option>{% endfor %}</select>
+<label for="agreed-day">希望休から出勤へ変更する日</label><select id="agreed-day" name="day" required><option value="">選択してください</option>{% for day in days if day in calendar_data.editable_days %}<option value="{{ day }}" {% if values.day == day %}selected{% endif %}>{{ day|date_with_weekday }}</option>{% endfor %}</select>
+</div><label for="agreed-period">了承を得た出勤時間帯</label><select id="agreed-period" name="period">{% for value,label in [('full','全日'),('am','午前のみ'),('pm','午後のみ')] %}<option value="{{ value }}" {% if values.period == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+<div data-agreed-fallback><label for="agreed-swap">代わりに希望休にする日（全日・任意）</label><select id="agreed-swap" name="swap"><option value="">自動で調整する</option>{% for day in days %}<option value="{{ day }}" {% if values.swap == day %}selected{% endif %}>{{ day|date_with_weekday }}</option>{% endfor %}</select>
+</div><div id="agreed-swap-tools" hidden><label>代わりの休み（指定しなければ自動調整）</label><div class="actions"><button type="button" class="secondary" id="agreed-pick-swap">カレンダーで選ぶ</button><button type="button" class="secondary" id="agreed-clear-swap" hidden>取消</button></div><p id="agreed-swap-status" class="hint">指定なし</p></div><p class="hint">代わりの休みは、会議・有給のない全日勤務の日から選べます。指定しなければ、公休日数を守るための休みを自動で探します。変更する日は反映前に確認できます。</p>
+<input type="hidden" id="agreed-reason" name="reason" value="">
+<button name="action" value="preview">変更内容・公休日数・不足を確認する</button></form></div></section>{% endif %}
+</div></div><p><a href="{{ url_for('manual_schedule',month=month) }}">勤務表の編集へ戻る</a></p>
+{% if records %}<details class="panel"><summary>本人了承による変更の記録（{{ records|length }}件）</summary><ul>{% for item in records %}<li>{{ item.date|date_with_weekday }} {{ staff|selectattr('id','equalto',item.staff_id|int)|map(attribute='name')|first|default('削除済みスタッフ') }}：{% if item.cancelled %}【取り消し済み】{% endif %}元の希望休 {{ {'full':'全日','am':'午前','pm':'午後'}.get(item.original_wish,item.original_wish) }}／出勤 {{ {'full':'全日','am':'午前','pm':'午後'}.get(item.work_period,item.work_period) }}{% if item.replacement_date %}／代わりの全日希望休 {{ item.replacement_date }}{% endif %}{% if item.automatic_rest_dates %}／自動調整の休み {{ item.automatic_rest_dates|join("、") }}{% endif %}。{{ item.reason }}（{{ item.created }}）</li>{% endfor %}</ul></details>{% endif %}
+</main>{% if not preview %}<script id="agreed-calendar-data" type="application/json">{{ {'replacements':calendar_data.replacements,'entries':calendar_data.entries,'editable_days':calendar_data.editable_days|list}|tojson }}</script><script src="{{ url_for('static',filename='agreed_change.js') }}"></script>{% endif %}</body></html>

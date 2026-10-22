@@ -1,0 +1,82 @@
+/* Monthly input sheets. Requests fit the screen; meetings can scroll. */
+.absence-view-switch{display:inline-flex;gap:3px;padding:3px;background:#edf3ef;border-radius:9px;margin:12px 0}
+.absence-view-switch button{padding:7px 13px;border:0}
+.absence-view-switch button[aria-pressed=true]{background:var(--teal);color:#fff}
+.input-sheet-legend{font-size:12px;color:var(--muted);line-height:1.8}
+.input-sheet-wrap{width:100%;overflow-x:auto;margin:16px 0;overscroll-behavior-x:contain;border-radius:8px}
+.input-sheet{table-layout:fixed;width:calc(144px + var(--input-sheet-days) * 96px);min-width:100%;white-space:normal;font-size:12px;border:1px solid #c8d4cd}
+.input-sheet-name{width:144px}
+.input-sheet th,.input-sheet td{padding:4px 2px;text-align:center;border:1px solid #d4ddd7;overflow-wrap:anywhere;vertical-align:middle}
+.input-sheet thead th{background:#fff2d1;font-size:12px;color:#304e43}
+.input-sheet small{display:block;font-size:10px;font-weight:400}
+.input-sheet tbody th{background:#f4f8f5;font-size:12px;padding:8px;white-space:normal}
+.input-sheet tr>th:first-child{position:sticky;left:0;z-index:2;box-shadow:1px 0 0 #c8d4cd}
+.input-sheet thead tr>th:first-child{z-index:3}
+.input-sheet .input-closed{background:#edf0ee}
+.input-sheet tbody tr:nth-child(even)>td:not(.input-closed){background:#fcfdfc}
+.input-sheet .input-active-date{box-shadow:none}
+.input-sheet tbody tr.input-active-row>th{background:#dfeee5;color:#16513e}
+.input-sheet thead th.input-active-date{background:#dfeee5}
+.app-layout .input-absence-cell,.app-layout .input-attendance-cell{display:block;width:100%;min-height:44px;padding:4px 0;border-radius:3px;background:transparent;color:var(--ink);font-size:11px;font-weight:500}
+.app-layout .input-absence-cell:hover{background:#dceee4}
+.app-layout .input-absence-cell.has-wish{background:#e3f0df;color:#305b30}
+.app-layout .input-absence-cell.has-paid{background:#ffedf3;color:#a12858}
+.app-layout .input-absence-cell.is-dirty{box-shadow:inset 0 0 0 2px #cc901a}
+.input-absence-cell:empty::after{content:"·";color:#a6b3ac}
+.input-absence-cell{white-space:pre-line}
+.app-layout .input-attendance-cell:hover{background:#fff0be}
+.app-layout .input-attendance-cell:disabled{background:transparent;color:var(--muted)}
+.input-participating{display:inline-block;min-width:25px;padding:3px;background:#fff0be;border-radius:4px;color:#71551e}
+.input-meeting-row td{background:#fffaeb!important;vertical-align:top;padding:6px}
+.app-layout .input-day-meeting-title{display:block;width:100%;padding:7px 4px;background:transparent;color:var(--teal);font-size:12px;font-weight:500;white-space:normal;overflow-wrap:anywhere;text-align:left;line-height:1.7;border-radius:4px}
+.app-layout .input-day-meeting-title:hover{background:#f4e7bf}
+.input-day-meeting-title+.input-day-meeting-title{border-top:1px dotted #ddcfaa}
+.input-day-meeting-title small{color:#806631}
+.app-layout .input-meeting-add{padding:3px 8px;background:transparent;color:var(--teal);font-size:17px;border:1px dashed #cfdbc9;margin-top:5px}
+.app-layout .input-date-attendance{background:transparent;color:var(--teal);padding:3px 0;font-size:12px;width:100%;border-radius:0}
+.input-doctor-disclosure{margin:12px 0;color:var(--muted);font-size:13px}
+.input-doctor-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;margin:12px 0}
+.input-doctor-list>div{padding:10px 12px;background:#f7faf8;border:1px solid var(--line);border-radius:6px}
+.input-doctor-list span{display:block;overflow-wrap:anywhere}
+.input-sheet-fit{overflow:visible;min-width:0}
+.input-sheet-fit .input-sheet{width:100%;min-width:0;max-width:100%}
+.input-sheet-fit .input-sheet-name{width:clamp(60px,9vw,132px)}
+.input-sheet-fit .input-sheet th,.input-sheet-fit .input-sheet td{min-width:0;padding:3px 0;overflow-wrap:anywhere}
+.input-sheet-fit .input-sheet tbody th{padding:6px 3px;font-size:clamp(8px,.85vw,12px)}
+.input-sheet-fit .input-sheet thead th{font-size:clamp(7px,.85vw,12px)}
+.input-sheet-fit .input-sheet thead small{font-size:clamp(6px,.7vw,10px)}
+.input-sheet-fit .input-absence-cell{font-size:clamp(6px,.75vw,11px)}
+.input-doctor-inline td{background:#fffaea!important;vertical-align:top}
+.input-doctor-inline td>div{display:flex;justify-content:center;align-items:flex-start;gap:1px;padding:5px 0}
+.input-doctor-inline td span{writing-mode:vertical-rl;text-orientation:upright;white-space:nowrap;line-height:1.15;font-size:clamp(4px,.65vw,10px)}
+.input-doctor-inline td span+span{border-left:1px dotted #d8d5c3;padding-left:1px}
+#input-absence-dialog,#meeting-add-dialog,#meeting-attendance-dialog{width:min(520px,92vw);max-width:520px;max-height:90vh;overflow:auto;border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:0 20px 60px #173d2926}
+#input-absence-dialog::backdrop,#meeting-add-dialog::backdrop,#meeting-attendance-dialog::backdrop{background:#142e2866}
+#input-absence-description{color:var(--muted);margin-top:0}
+.input-absence-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.input-absence-options button{padding:10px 3px;background:#f0f5f1;color:var(--teal);border:1px solid #d4e1d8}
+.input-absence-options button[aria-pressed=true]{background:var(--teal);color:#fff;border-color:var(--teal)}
+#attendance-choices .checkbox{padding:12px;border:1px solid var(--line);border-radius:8px;margin:8px 0;white-space:normal;font-weight:500}
+#attendance-choices .checkbox:has(input:checked){background:#edf6ef;border-color:#85b49b}
+@media(max-width:500px){.absence-view-switch{display:flex}.absence-view-switch button{flex:1;padding:8px 6px;font-size:12px}#input-absence-dialog,#meeting-add-dialog,#meeting-attendance-dialog{padding:18px}}
+
+.advance-input-sheet .advance-day-cell{display:block;width:100%;min-height:54px;padding:3px 1px;border:0;border-radius:0;background:transparent;color:#245b4d;font-size:12px;cursor:pointer}
+.advance-input-sheet .advance-day-cell.has-availability{background:#e6f1eb;font-weight:600}
+.advance-input-sheet .advance-day-cell.is-pending{background:#fff0c2}
+.advance-input-sheet .advance-day-cell:disabled{cursor:default;background:transparent}
+.advance-input-sheet .advance-day-cell:not(:disabled):hover{background:#f1f5f3}
+#advance-period-dialog{width:min(480px,calc(100vw - 32px));border:1px solid #ccd9d3;border-radius:14px;padding:24px}
+#advance-period-dialog::backdrop{background:#18352d66}
+#advance-period-dialog [aria-pressed=true]{outline:3px solid #d6be54}
+
+/* 事前ヘルプの入力表はフォーム共通の幅制限を受けず、利用可能な横幅を使う。 */
+#advance-availability-form{width:100%;max-width:none}
+#advance-availability-form .input-sheet-wrap{width:100%;min-width:0;overflow:visible}
+#advance-availability-form .advance-input-sheet{width:100%;min-width:0;max-width:100%;table-layout:fixed}
+#advance-availability-form .input-sheet-name{width:clamp(60px,9vw,128px)}
+#advance-availability-form thead th{white-space:nowrap;overflow-wrap:normal;font-size:clamp(7px,.85vw,12px)}
+#advance-availability-form .advance-day-cell{white-space:nowrap;overflow-wrap:normal;font-size:clamp(6px,.8vw,12px);padding:3px 0}
+
+.input-absence-cell.has-summer{background:#eee9f8;color:#5c4579}.input-absence-cell.has-support{background:#e4effa;color:#285a81}#input-absence-dialog{max-height:85vh;overflow:auto}
+
+.input-attendance-cell.is-dirty{box-shadow:inset 0 0 0 2px #d4a343;background:#fff7dc}

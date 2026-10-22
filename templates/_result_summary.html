@@ -1,0 +1,22 @@
+{% set summary = namespace(halves=[], helper=false) %}
+{% set wishes = result.get('comparison_inputs', {}).get('wishes', {}) %}
+{% for day in result.days %}{% set d = loop.index0 %}
+{% for person in result.people %}{% set pair = result.grid[d][loop.index0] %}
+{% if person.is_help %}{% if pair[0] in 'ABCDMO' or pair[1] in 'ABCDMO' %}{% set summary.helper = true %}{% endif %}
+{% elif pair.count('R') == 1 and (pair[0] in 'ABCDMOW' or pair[1] in 'ABCDMOW') and wishes.get(person.id|string ~ '_' ~ day) not in ['am','pm'] %}
+{% set summary.halves = summary.halves + [{'name':person.name, 'day':day}] %}
+{% endif %}{% endfor %}{% endfor %}
+<div class="result-brief">
+<p>保存時に登録条件を検証した結果です。{% if stale %}現在の入力条件とは異なります。{% endif %}</p>
+<ul><li>全日6連勤：{{ result.get('six_day_runs', [])|length }}件</li>
+{% if result.get('comparison_inputs') is not none %}<li>希望していない半休：{{ summary.halves|length }}回</li>{% else %}<li>半休の希望との比較：再作成して確認してください。</li>{% endif %}
+<li>{{ '登録済みのヘルプを使用' if summary.helper else 'ヘルプの配置なし' }}</li></ul>
+</div>
+{% if result.get('six_day_runs') or summary.halves %}
+<details class="schedule-result-notes"><summary>確認が必要な箇所を見る</summary>
+{% if result.get('six_day_runs') %}<h3>6連勤になるスタッフ・期間</h3><p class="hint">例外の理由は「作成時の検証記録・制限」を確認してください。</p><ul>{% for run in result.six_day_runs %}<li>{{ run.name }}：{{ run.start|date_with_weekday }} ～ {{ run.end|date_with_weekday }}</li>{% endfor %}</ul>{% endif %}
+{% if summary.halves %}<h3>希望していない半休</h3><ul>{% for half in summary.halves %}<li>{{ half.day|date_with_weekday }}：{{ half.name }}</li>{% endfor %}</ul>{% endif %}</details>
+{% endif %}
+{% set pending = result.get('weekly_summary', [])|selectattr('pending')|list %}
+{% if pending %}<details class="schedule-result-notes"><summary>翌月へ引き継ぐ週の残り枠（{{ pending|length }}人）</summary><p class="hint">翌月の未定日は休みとして確定していません。</p><ul>{% for row in pending %}<li>{{ row.name }}：{{ row.start }}〜{{ row.end }}、残り{{ row.remaining }}日</li>{% endfor %}</ul></details>{% endif %}
+{% if result.get('notes') %}<details class="schedule-result-notes"><summary>作成時の検証記録・制限</summary>{% for note in result.notes %}<p class="hint">{{ note }}</p>{% endfor %}</details>{% endif %}

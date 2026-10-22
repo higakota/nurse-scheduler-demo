@@ -1,0 +1,12 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>スタッフの削除</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"></head><body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content"><h1>スタッフの削除</h1>
+<section class="panel"><h2>{{ person.name }}さんを削除しますか？</h2>
+<p>このスタッフ本人の、すべての月の入力を次のとおり削除します。他のスタッフの入力は維持します。</p>
+<ul>{% for key,label in [('targets','月の休日日数'),('wishes','希望休'),('leaves','有給'),('history','前月末勤務'),('visits','ヘルプの来院予定'),('meetings','会議の参加指定'),('weekly','非常勤の月境界勤務日数')] %}<li>{{ label }}：{{ counts[key] }}件</li>{% endfor %}</ul>
+<p>会議そのものと他の参加者は残します。この人だけが参加していた会議は参加者未設定となるため、会議を見直してください。</p>
+<p>保存済みの勤務表は過去の結果として残し、最新のスタッフで再作成が必要になります。</p>
+<p class="hint">削除前のスタッフと関連入力の控えを、このPC内のデータベースに保存します。復元ボタンはまだありません。</p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}">
+<label class="checkbox"><input type="checkbox" name="confirmed" value="yes" required>{{ person.name }}さんと上記の対象データを削除します</label>
+<div class="actions"><button type="submit">このスタッフを削除する</button><a href="{{ url_for('staff_settings',month=ui_month) }}">削除せず戻る</a></div></form>
+</section></main></body></html>

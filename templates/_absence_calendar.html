@@ -1,0 +1,29 @@
+<section class="panel" id="wishes" data-month-panel="wishes">
+<div class="absence-heading"><div><h2>希望休・有給カレンダー</h2><p class="hint">全員の希望を見ながら、マスを押して入力します。変更は最後にまとめて保存できます。</p></div>{% if staff %}<button type="button" id="absence-expand" class="secondary" aria-pressed="false">カレンダーを大きく表示</button>{% endif %}</div>
+<p class="hint"><a href="{{ url_for('agreed_wish_change',month=month) }}">本人了承による希望休の変更・記録</a></p>
+<details class="absence-guide"><summary>休日日数の数え方</summary><p>希望休と有給は別々に保持します。有給単独は指定休日日数に含めません。半日有給＋反対側の半日休みは1日と数えます。夏季休暇は公休・有給に含めず、あおば支援は勤務扱いですがみどりの人数には数えません。重なった場合は自動で取り消さず、保存後に警告を表示します。</p></details>
+{% if staff %}
+<form method="post" id="absence-form">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="action" value="absence_save">
+<input type="hidden" name="absence_fingerprint" value="{{ absence_fingerprint }}"><input type="hidden" name="absence_changes" id="absence-changes">
+<div class="absence-view-switch" role="group" aria-label="入力の表示"><button type="button" class="secondary" data-absence-view="sheet" aria-pressed="true">全員を一覧で入力</button><button type="button" class="secondary" data-absence-view="person" aria-pressed="false">1人ずつ入力</button></div>
+<div id="absence-sheet-view"><p class="input-sheet-legend">マスを押して入力。緑：希望休 ／ 桃色：有給 ／ 紫：夏季休暇 ／ 青：あおば支援 ／ 黄枠：未保存。半日は左が午前／右が午後。「—」と空欄は希望の登録なしです。</p>{% with absence_grid=true %}{% include "_monthly_input_grid.html" %}{% endwith %}</div>
+<div id="absence-person-view" hidden><div class="absence-staff-bar"><label for="absence-staff">スタッフ</label><select id="absence-staff" name="absence_staff">{% for person in staff %}<option value="{{ person.id }}" {% if request.form.get('absence_staff', request.args.get('staff', '')) == person.id|string %}selected{% endif %}>{{ person.name }}</option>{% endfor %}</select><span class="absence-month">{{ month[:4] }}年{{ month[5:]|int }}月</span></div>
+<table class="leave-calendar"><caption class="sr-only">{{ month }}の希望休・有給</caption><thead><tr>{% for day in '日月火水木金土' %}<th scope="col">{{ day }}</th>{% endfor %}</tr></thead><tbody>
+{% for week in absence_weeks %}<tr>{% for day in week %}{% if day %}
+<td><details class="calendar-picker" data-absence-day="{{ day.isoformat() }}"><summary><span class="calendar-date">{{ day.day }}</span><span class="calendar-badge"></span><span class="calendar-pending"></span></summary>
+<div class="calendar-options">{% for kind, title in [('wishes','希望休'), ('leaves','有給'), ('summer','夏季休暇'), ('support','あおば支援')] %}<strong>{{ title }}</strong><div role="group" aria-label="{{ day.isoformat() }}の{{ title }}">
+{% for period, label in [('full','全日'),('am','午前'),('pm','午後'),('','取消')] %}<button type="button" data-kind="{{ kind }}" data-period="{{ period }}">{{ label }}{% if period %}{{ title }}{% endif %}</button>{% endfor %}
+</div>{% endfor %}</div></details></td>
+{% else %}<td class="calendar-empty"></td>{% endif %}{% endfor %}</tr>{% endfor %}
+</tbody></table></div>
+<dialog id="input-absence-dialog" aria-labelledby="input-absence-title"><h2 id="input-absence-title">希望休・有給を入力</h2><p id="input-absence-description"></p>
+{% for kind,title in [('wishes','希望休'),('leaves','有給'),('summer','夏季休暇'),('support','あおば支援')] %}<h3>{{ title }}</h3><div class="input-absence-options" role="group" aria-label="{{ title }}">{% for value,label in [('full','全日'),('am','午前'),('pm','午後'),('','取り消す')] %}<button type="button" data-grid-kind="{{ kind }}" data-grid-period="{{ value }}">{{ label }}</button>{% endfor %}</div>{% endfor %}
+<p class="hint">選択は一覧に反映されます。最後に「希望休・有給をまとめて保存」を押してください。</p><button type="button" id="input-absence-close" class="secondary">一覧に戻る</button></dialog>
+<div class="save-bar"><p id="absence-status" role="status">休む日だけ選んでください。</p><button id="absence-save" disabled>希望休・有給をまとめて保存</button></div>
+<noscript><p>カレンダーでの入力にはJavaScriptを有効にしてください。</p></noscript>
+</form>
+<script type="application/json" id="absence-original">{{ {'wishes':data.wishes, 'leaves':absence_leaves, 'summer':data.get('summer',{}), 'support':data.get('support',{})}|tojson }}</script>
+<script type="application/json" id="absence-pending">{{ request.form.get('absence_changes', '')|tojson }}</script>
+{% else %}<p><a href="{{ url_for('staff_settings') }}">先にスタッフを登録してください。</a></p>{% endif %}
+</section>

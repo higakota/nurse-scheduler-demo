@@ -1,0 +1,34 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ヘルプ相談リスト</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='help_requests.css') }}"></head><body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content">
+<h1>{{ month }}のヘルプ相談リスト</h1><p>ヘルプさんを選ぶ → 来られる日をカレンダーで選ぶ → まとめて反映。返事が来た分だけ入力すれば大丈夫です。</p>
+<p><a href="{{ url_for('schedule', month=month) }}">勤務表・不足を再確認</a> ／ <a href="{{ url_for('help_availability', month=month) }}">来院予定を修正</a> ／ <a href="{{ url_for('staff_settings',month=month) }}">ヘルプスタッフを登録</a></p>
+{% if request.args.get('saved') %}<p class="success" role="status">保存しました。来院予定に反映した後は、ヘルプ込みで勤務表を再作成してください。</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }} 今回の変更は保存していません。</p>{% endif %}
+{% if data.experimental %}<p class="error">以前の6連勤までの仮表に基づく相談です。最新の条件で不足を再確認してください。</p>{% endif %}
+{% if changed %}<p class="error">リスト作成後に入力・来院予定が変わっています。最新の不足は勤務表を再作成して確認してください。</p>{% endif %}
+{% if data.slots %}
+<form method="post" id="help-bulk-form">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="token" value="{{ token }}"><input type="hidden" name="action" value="bulk">
+<section class="panel bulk-settings"><h2>返事が来た分をまとめて入力</h2>
+<div class="bulk-fields">
+<label>ヘルプさん<select name="person" id="bulk-person"><option value="">指定しない（状況だけ変更）</option>{% for person in staff %}<option value="{{ person.id }}" data-role="{{ person.role }}" data-veteran="{{ person.veteran }}" {% if error and request.form.get('person') == person.id|string %}selected{% endif %}>{{ person.name }}（{{ '検査技師' if person.role == 'technician' else '看護師' }}{{ '・ベテラン' if person.veteran else '' }}）</option>{% endfor %}</select></label>
+<label>相談状況<select name="status" id="bulk-status">{% for value in ['waiting','ok','no','new'] %}<option value="{{ value }}" {% if error and request.form.get('status') == value %}selected{% endif %}>{{ statuses[value] }}</option>{% endfor %}</select></label>
+<label>承諾された来院区分<select name="period" id="bulk-period"><option value="requested">選んだ午前・午後だけ</option><option value="full" {% if error and request.form.get('period') == 'full' %}selected{% endif %}>選んだ日は全日</option></select></label>
+</div><p class="hint">日付の「この日を選ぶ」でまとめて選択できます。午前だけ・午後だけ選ぶときは、その日の「時間帯を選ぶ」を開いてください。★はベテランが必要な枠です。</p>
+<div class="bulk-shortcuts"><button type="button" class="button-quiet" id="bulk-select-all">選べる日をまとめて選択</button><button type="button" class="button-quiet" id="bulk-clear">選択を解除</button></div>
+</section>
+<table class="consultation-calendar"><caption>不足のある日だけ表示しています。人数は仮表に基づく相談候補です。</caption><thead><tr>{% for label in '日月火水木金土' %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead><tbody>
+{% for week in weeks %}<tr>{% for day in week %}<td>{% if day %}<span class="consultation-date">{{ day.number }}</span>{% if day.info %}
+{% for summary in day.info.summaries %}<p class="shortage-summary">{{ summary }}</p>{% endfor %}
+<button type="button" class="day-toggle button-quiet" data-date="{{ day.date }}">この日を選ぶ</button>
+<details class="slot-details"><summary>時間帯を選ぶ</summary>
+{% for item in day.info.slots %}<label class="consultation-slot {% if item.applied %}slot-applied{% endif %}"><input type="checkbox" name="keys" value="{{ item.key }}" data-date="{{ item.date }}" data-half="{{ item.half }}" data-role="{{ item.role }}" data-veteran="{{ 1 if item.veteran else 0 }}" data-applied="{{ 1 if item.applied else 0 }}" {% if item.key in selected_keys %}checked{% endif %}><span>{{ '午前' if item.half == 'am' else '午後' }} {{ '看護師' if item.role == 'nurse' else '技師' }}{{ '★' if item.veteran else '' }}<small>{{ '来院反映済' if item.applied else statuses[item.status] }}{% if item.person %}{% for person in staff %}{% if person.id|string == item.person %}・{{ person.name }}{% endif %}{% endfor %}{% endif %}</small></span></label>{% endfor %}
+</details>{% else %}<span class="no-shortage">—</span>{% endif %}{% endif %}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table>
+<div class="save-bar consultation-save"><p id="bulk-count" role="status">変更する日を選んでください。</p><div class="bulk-actions"><button name="operation" value="save">選択分の相談状況を保存</button><button name="operation" value="apply" id="bulk-apply">来院OKとしてまとめて反映</button></div><small>「反映」で来院予定を登録した後、勤務表を再作成してください。外部へは送信しません。</small></div>
+<noscript><p>各日の「時間帯を選ぶ」でチェックし、相談状況を選んで保存してください。来院反映時は「来院OK」を選んでください。</p></noscript>
+</form>
+<details class="panel"><summary>相談文の下書き・以前の相談記録</summary><p>下書きを確認してコピーできます。自動送信しません。</p><textarea rows="7" aria-label="相談文の下書き">{{ copy_text }}</textarea>
+{% for key,item in data.slots|dictsort %}{% if item.obsolete %}<p class="hint">{{ item.date|date_with_weekday }}・{{ '午前' if item.half == 'am' else '午後' }} {{ '看護師' if item.role == 'nurse' else '検査技師' }}：最新の仮表では不要。以前の相談状況：{{ statuses[item.status] }}。来院予定は自動取消しません。</p>{% endif %}{% endfor %}
+</details>
+{% else %}<section class="panel"><p>相談リストはまだありません。勤務表で「不足を残して仮作成」した後、「この不足からヘルプ相談リストを作る」を押してください。</p></section>{% endif %}
+</main><script src="{{ url_for('static',filename='help_requests.js') }}"></script></body></html>

@@ -1,0 +1,40 @@
+  <section class="panel" id="staff-form" aria-labelledby="form-title">
+    <h2 id="form-title">{{ values.name ~ 'さんの設定を編集' if edit_id else 'スタッフを追加' }}</h2>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="{{ url_for('staff_settings') }}">
+      <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+      <input type="hidden" name="id" value="{{ edit_id if edit_id is not none else '' }}">
+      <label for="name">名前 <span class="required">必須</span></label>
+      <input id="name" name="name" value="{{ values.name }}" maxlength="50" required placeholder="例：看護 花子">
+      <label for="role">職種</label>
+      <select id="role" name="role">
+        <option value="nurse" {% if values.role == 'nurse' %}selected{% endif %}>看護師</option>
+        <option value="technician" {% if values.role == 'technician' %}selected{% endif %}>検査技師</option>
+      </select>
+      <label class="checkbox"><input id="is-help" type="checkbox" name="is_help" value="1" {% if values.is_help %}checked{% endif %}>他院からのヘルプ</label>
+      <label class="checkbox" id="advance-help-field"><input type="checkbox" name="advance_help" value="1" {% if values.advance_help|default(false) %}checked{% endif %}>勤務可能日が先に分かり、依頼前から配置してよい</label>
+      <p class="hint">対象の人は、ヘルプのカレンダーに登録した日を最初の仮作成から使えます。</p>
+      <p class="hint">ヘルプの看護師は全員A（受付）・B（診察室）・C（検査室）を担当でき、勤務時間は常勤と同じです。配置の選択は不要です。</p>
+      <div id="nurse-fields">
+        <label for="employment">勤務区分</label>
+        <select id="employment" name="employment">
+          <option value="full" {% if values.employment in ('full','') %}selected{% endif %}>常勤</option>
+          <option value="part" {% if values.employment == 'part' %}selected{% endif %}>非常勤</option>
+        </select>
+        <div id="weekly-fields"><label for="weekly-limit-days">週の勤務上限（日）</label><input type="number" id="weekly-limit-days" name="weekly_limit_days" min="0" max="7" step="0.5" value="{{ request.form.get('weekly_limit_days', values.weekly_limit_units / 2 if values.weekly_limit_units|default(none) is not none else '') }}"><p class="hint">非常勤の週上限は、登録後に<a href="{{ url_for('monthly_settings', month=ui_month, _anchor='targets') }}">休日日数・週上限</a>でも変更できます。</p></div>
+        <label class="checkbox"><input type="checkbox" name="veteran" value="1" {% if values.veteran %}checked{% endif %}> ベテラン看護師として数える</label>
+        <fieldset id="no-c-field">
+          <legend>担当できる場所</legend>
+          <label for="clinical-scope">診療の担当範囲</label>
+          <select id="clinical-scope" name="no_c">
+            <option value="0" {% if 'C' in values.allowed_areas %}selected{% endif %}>受付・診察室・検査室（ABC）</option>
+            <option value="1" {% if 'C' not in values.allowed_areas %}selected{% endif %}>受付・診察室のみ（検査室は不可）</option>
+          </select>
+          <p class="hint">検査室に入れない方は「受付・診察室のみ」を選んで保存してください。</p>
+        </fieldset>
+      </div>
+      <p class="hint">検査技師は検査室のみ担当し、診療側のベテラン人数には数えません。</p>
+      <div class="actions"><button type="submit">{{ '変更を保存' if edit_id else '登録する' }}</button>
+      {% if edit_id %}<a href="{{ url_for('staff_settings') }}">編集をやめる</a>{% endif %}</div>
+    </form>
+  </section>
