@@ -1,8 +1,9 @@
+<link rel="stylesheet" href="{{ url_for('static',filename='ui-refresh.css') }}">
 <a class="skip-link" href="#main-content">本文へ移動</a>
 <aside class="app-sidebar" aria-label="メインメニュー">
-<a class="app-logo" href="{{ url_for('index',month=ui_month) }}"><span class="logo-mark" aria-hidden="true">▦</span><span>看護師勤務表<small>毎月の勤務を、ひとつの場所で。</small></span></a>
+<a class="app-logo" href="{{ url_for('index',month=ui_month) }}"><span class="logo-mark" aria-hidden="true">▦</span><span>看護師勤務表<small>勤務表の作成と管理</small></span></a>
 <nav class="side-nav">
-{% for endpoint,label,group,mark in [('index','ホーム','index','⌂'),('monthly_settings','今月の入力','inputs','01'),('manual_schedule','勤務表','schedules','02'),('help_availability','ヘルプ依頼・登録','help_availability','03'),('staff_settings','スタッフ','staff_settings','⚙')] %}
+{% for endpoint,label,group,mark in [('index','ホーム','index','⌂'),('monthly_settings','今月の入力','inputs','▦'),('manual_schedule','勤務表','schedules','▤'),('help_availability','ヘルプ依頼・登録','help_availability','＋'),('staff_settings','スタッフ','staff_settings','⚙')] %}
 <a href="{{ url_for(endpoint,month=ui_month) }}" {% if ui_group==group %}aria-current="page"{% endif %}><span class="nav-number" aria-hidden="true">{{ mark }}</span>{{ label }}</a>
 {% endfor %}
 </nav>

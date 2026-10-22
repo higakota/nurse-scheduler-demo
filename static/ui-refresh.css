@@ -1,0 +1,78 @@
+/* 画面共通の見た目。印刷とカレンダーの列幅には適用しない。 */
+@media screen{
+ body.app-layout{--ink:#24383f;--muted:#687b82;--teal:#216a5b;--line:#dce5e8;--canvas:#f3f6f8;background:var(--canvas);color:var(--ink);font-family:"Yu Gothic UI","Meiryo",system-ui,sans-serif;line-height:1.65}
+ .app-layout .app-sidebar{background:#fff;border-right-color:var(--line);padding-top:26px}
+ .app-layout .app-logo{font-size:16px;gap:10px;padding-bottom:28px}
+ .app-layout .logo-mark{display:grid;place-items:center;background:#e9f3ef;width:36px;height:36px;border-radius:11px;font-size:25px}
+ .app-layout .side-nav{gap:5px}
+ .app-layout .side-nav a{padding:12px 11px;font-size:14px;color:#5a6e76}
+ .app-layout .side-nav a[aria-current=page]{background:#e7f2ed;color:#185b4d;box-shadow:inset 3px 0 #287563}
+ .app-layout .nav-number{font-size:17px;opacity:1}
+ .app-layout .app-topbar{min-height:70px;padding-top:12px;padding-bottom:12px}
+ .app-layout .app-topbar>strong{font-size:15px;color:#3e555e}
+ .app-layout .page-subnav{padding-top:6px;padding-bottom:6px}
+ .app-layout .page-subnav a{font-size:13px}
+ .app-layout .journey-nav{background:#f9fbfc;padding-top:12px;padding-bottom:12px}
+ .app-layout .journey-nav ol{gap:10px}
+ .app-layout .journey-nav a{background:transparent;border:1px solid transparent;color:#71828a;padding:10px 12px;font-size:13px}
+ .app-layout .journey-nav a[aria-current=step]{background:#fff;border-color:#d8e6df;color:#185b4d;box-shadow:0 2px 5px #233e3510}
+ .app-layout .journey-nav a[aria-current=step]>span{background:#216a5b;color:#fff}
+ .app-layout .journey-nav a>span{width:25px;height:25px;font-size:12px;background:#eaf0f2}
+ .app-layout main.app-main{max-width:none;padding-top:28px!important}
+ .app-layout h1{font-size:27px;letter-spacing:.02em;font-weight:700}
+ .app-layout h2{font-size:19px;margin-top:0}
+ .app-layout h3{font-size:15px}
+ .app-layout .page-description{font-size:14px;line-height:1.8;color:#63767f;max-width:1000px}
+ .app-layout .panel{border-color:var(--line);border-radius:14px;padding:24px;margin-top:18px;margin-bottom:18px}
+ .app-layout .eyebrow{font-size:11px;letter-spacing:.07em;color:#6a807b;margin-bottom:5px}
+ .app-layout button,.app-layout .button-link{border-radius:8px;min-height:40px;line-height:1.5;letter-spacing:.01em}
+ .app-layout button:not(.manual-cell):not(.secondary):not(.button-quiet):not(:disabled):hover,.app-layout .button-link:not(.secondary):hover{background:#195445}
+ .app-layout .secondary{border-color:#cbd8dc}
+ .app-layout .hint{line-height:1.7}
+ .app-layout .success{background:#edf6f0;border-left:3px solid #4b8b68;padding:12px 16px}
+ .app-layout .error[role=alert]{border-left:3px solid #bb674d;padding:12px 16px}
+ .app-layout .workflow-callout{border-radius:12px;border:1px solid #d5e5dc;background:#edf5f1;padding:20px 22px;gap:24px}
+ .app-layout .workflow-callout .hint{margin:5px 0 0}
+ .app-layout .month-tabs{display:flex;gap:5px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding:0 0 10px}
+ .app-layout .month-tabs a{border-radius:7px;padding:9px 13px;text-decoration:none;font-size:13px}
+ .app-layout .month-tabs a[aria-selected=true],.app-layout .month-tabs a[aria-current]{background:#e6f0ed;color:#185b4d}
+ [data-home-dashboard] .home-heading{margin-bottom:20px}
+ [data-home-dashboard] .workflow-callout{background:#fff;border:1px solid #cddfd6;border-left:4px solid #397e68;padding:25px 28px;margin-bottom:26px}
+ [data-home-dashboard] .workflow-callout strong{font-size:22px}
+ [data-home-dashboard] .home-main-actions{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+ [data-home-dashboard] .home-main-actions>a{padding:24px 20px;gap:12px;min-height:190px;border-radius:13px;transition:background .15s,border-color .15s}
+ [data-home-dashboard] .home-main-actions>a:hover{background:#fbfdfc;border-color:#8faf9f}
+ [data-home-dashboard] .home-action-number{font-size:12px;color:#5d8577;background:#eef5f1;border-radius:6px;padding:4px 8px}
+ [data-home-dashboard] .home-main-actions strong{font-size:18px}
+ [data-home-dashboard] .home-main-actions small{font-size:12px;line-height:1.8}
+ [data-home-dashboard] .home-simple-links{display:flex;gap:20px;justify-content:flex-end;font-size:13px;margin-top:20px}
+ .app-layout .roster-update-panel{display:flex;justify-content:space-between;align-items:center;gap:28px;padding:18px 22px;background:#fff}
+ .app-layout .roster-update-panel h2{margin:0 0 4px;font-size:17px}
+ .app-layout .roster-update-panel p{margin:3px 0;font-size:13px}
+ .app-layout .roster-update-panel form{flex-shrink:0;margin:0;max-width:none}
+ .app-layout .editor-actionbar{border-top:0;border-bottom:1px solid var(--line);padding-top:0;padding-bottom:16px;margin-bottom:18px}
+ .app-layout .editor-actionbar>a{font-size:13px}
+ .app-layout .save-bar,.app-layout .manual-savebar{box-shadow:0 -3px 12px #253e3510;border-color:#d3e0da}
+ .app-layout dialog{border-color:#cad9d4;border-radius:14px;box-shadow:0 16px 60px #203b3720}
+ .app-layout dialog::backdrop{background:#1b333a60}
+}
+@media screen and (max-width:1100px){
+ [data-home-dashboard] .home-main-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .app-layout .roster-update-panel{flex-wrap:wrap;gap:12px}
+}
+@media screen and (max-width:800px){
+ .app-layout .app-sidebar{padding-top:12px}
+ .app-layout .app-logo{padding-bottom:8px}
+ .app-layout .journey-nav{margin-left:0;padding:8px 12px}
+ .app-layout .journey-nav ol{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+ .app-layout .journey-nav a{font-size:12px;padding:8px}
+ .app-layout .app-topbar{padding:12px 16px;min-height:62px}
+ .app-layout main.app-main{padding-top:20px!important}
+ .app-layout .workflow-callout{flex-wrap:wrap;gap:14px;padding:18px}
+ [data-home-dashboard] .home-main-actions>a{min-height:150px;padding:18px 16px}
+}
+@media screen and (max-width:480px){
+ [data-home-dashboard] .home-main-actions{grid-template-columns:1fr}
+ [data-home-dashboard] .home-main-actions>a{min-height:0}
+ .app-layout .roster-update-panel form,.app-layout .roster-update-panel button{width:100%}
+}

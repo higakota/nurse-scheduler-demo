@@ -6,11 +6,10 @@
 {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}{% if request.args.get('saved') %}<p class="success" role="status">{{ '了承出勤を取り消した勤務表を表示しています。' if request.args.get('agreed')=='cancelled' else '了承済みの変更を勤務表に反映しました。' if request.args.get('agreed')=='changed' else '勤務表の修正を保存しました。' }}</p>{% endif %}
 {% if pending_kind and not preview and not source_view_error %}<section class="panel"><h2>新しく作った表は、まだ反映していません</h2><p>下に表示しているのは保存済みの編集表です。新しい表へ進む場合は変更箇所を確認してください。</p><a class="button-link" href="{{ url_for('manual_schedule',month=month,view_source=pending_kind,view_token=pending_token) }}">新しい表を確認して反映する</a></section>{% endif %}
 {% if source_view_error %}<p><a href="{{ url_for('schedule',month=month) }}">作成画面へ戻る</a> ／ <a href="{{ url_for('manual_schedule',month=month) }}">保存済みの編集表を開く</a></p>{% else %}
-{% if not preview %}<section class="panel"><h2>勤務表を更新</h2>
-{% if stale or request.args.get("help_saved") %}<p>入力に変更があります。下のボタンで勤務表に反映できます。</p>{% endif %}
+{% if not preview %}<section class="panel roster-update-panel"><div><h2>勤務表を更新</h2>
+{% if stale or request.args.get("help_saved") %}<p>入力が変更されています。更新すると勤務表に反映できます。</p>{% endif %}
 <p>希望休・有給・会議・ヘルプの最新の登録内容をまとめて反映します。</p>
-<form method="post">{% include "_manual_tokens.html" %}<button name="action" value="update_roster">最新の入力・ヘルプで勤務表を更新</button></form>
-<p class="hint">変更後の表を確認してから保存します。</p></section>{% endif %}
+<p class="hint">変更後の表を確認してから保存します。</p></div><form method="post">{% include "_manual_tokens.html" %}<button name="action" value="update_roster">最新の入力・ヘルプで勤務表を更新</button></form></section>{% endif %}
 {% if not preview %}<div class="editor-actionbar manual-print-actions">
 {% if base.updated is defined %}<button type="button" class="secondary" data-print-packet="manual-print">勤務表だけ印刷／PDF保存</button><form method="post" action="{{ url_for('refresh_help_shortages',month=month) }}"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><button class="secondary">この表の不足を確認してヘルプを追加 →</button></form>{% endif %}
 <a href="{{ url_for('agreed_wish_change',month=month) }}">本人の了承を得て、希望休を出勤へ変更する →</a>

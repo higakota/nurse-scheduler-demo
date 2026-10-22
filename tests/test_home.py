@@ -140,7 +140,7 @@ class AdjacentMonthNavigationTest(unittest.TestCase):
         before=list(db.iterdump())
         page=self.client.get("/?month=2026-11").get_data(as_text=True)
         status=page.split('class="home-main-actions"',1)[1].split("</section>",1)[0]
-        self.assertEqual(status.count("<a "),3)
+        self.assertEqual(status.count("<a "),4)
         self.assertIn('/help?month=2026-11',page)
         self.client.get("/?month=2026-12")
         self.assertEqual(before,list(db.iterdump()))
