@@ -3,6 +3,7 @@ import calendar
 import hashlib
 import json
 import secrets
+import time
 from datetime import date, datetime, timezone
 from flask import abort, redirect, render_template, request, session, url_for
 from ui import selected_month
@@ -215,6 +216,7 @@ def register_manual_schedule(app, connect_db):
         error=None
         paid_changes=[]
         help_changes=[]
+        auto_update=False
         preview=False
         changes=[]
         patch="{}"
@@ -243,7 +245,22 @@ def register_manual_schedule(app, connect_db):
             from roster_navigation import pending_source,import_patch
             if "updated" in base:
                 pending_kind,pending_value=pending_source(base,import_sources,fp)
-            if request.method=="GET" and request.args.get("view_source"):
+            if request.method=="GET" and request.args.get("update_token"):
+                intent=session.get("help_roster_update",{})
+                if (not secrets.compare_digest(str(intent.get("nonce","")).encode(),request.args["update_token"].encode())
+                        or intent.get("month")!=month or time.time()-intent.get("created",0)>900):
+                    raise ValueError("更新の確認画面を開き直してください。来院予定画面からもう一度進めます。")
+                if intent.get("fingerprint")!=fp or intent.get("revision")!=token:
+                    raise ValueError("登録後に入力または勤務表が変更されています。最新の内容で勤務表を更新してください。")
+                auto_update=True
+                from roster_update import update_patch
+                patch=update_patch(snapshot,base,seconds=app.config.get("SCHEDULER_SECONDS",10))
+                grid,changes=checked_patch(base,patch)
+                snapshot,paid_changes=synchronize_paid_inputs(snapshot,base,grid,changed_only=True)
+                snapshot,help_changes=synchronize_help_inputs(snapshot,base,grid)
+                session["manual_confirmation"]=digest(json.dumps([month,fp,token,patch,True]))
+                preview=True
+            elif request.method=="GET" and request.args.get("view_source"):
                 kind=request.args["view_source"]
                 source=import_sources.get(kind)
                 if not source or digest(json.dumps(source,sort_keys=True,ensure_ascii=False))!=request.args.get("view_token"):
@@ -327,7 +344,7 @@ def register_manual_schedule(app, connect_db):
                     else:
                         abort(400)
         except ValueError as exc:
-            error=str(exc)
+            error=("来院予定は保存済みです。勤務表は更新できませんでした：" if auto_update else "")+str(exc)
             snapshot=request_snapshot
         finally:
             db.close()
@@ -376,5 +393,5 @@ def register_manual_schedule(app, connect_db):
             paid_candidates["message"]="この編集表は入力変更前の表です。新しい表か、入力変更を反映した表で候補を確認してください。"
         pending_token=digest(json.dumps(pending_value,sort_keys=True,ensure_ascii=False)) if pending_value else ""
         return render_template("manual_schedule.html",source_view_error=bool(error and request.args.get("view_source")),pending_kind=pending_kind,pending_token=pending_token,help_changes=help_changes,paid_changes=paid_changes,paid_candidates=paid_candidates,month=month,base=base,grid=grid,display=display,
-                               input_priority=bool(request.form.get("input_priority")=="yes" or request.form.get("action") in ("reflect_inputs","update_roster")),fingerprint=fp,revision=token,error=error,preview=preview,changes=changes,patch=patch,initial_patch=initial_patch,
+                               input_priority=bool(auto_update or request.form.get("input_priority")=="yes" or request.form.get("action") in ("reflect_inputs","update_roster")),fingerprint=fp,revision=token,error=error,preview=preview,changes=changes,patch=patch,initial_patch=initial_patch,
                                warnings=warnings,shortages=shortages,codes=CODES,import_sources=import_sources,checks_incomplete=checks_incomplete,stale=base["input_hash"]!=fp)

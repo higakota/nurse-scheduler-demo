@@ -1,6 +1,6 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ヘルプの来院予定</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='app-ui.css') }}"><link rel="stylesheet" href="{{ url_for('static',filename='help_availability.css') }}"></head><body class="app-layout">{% include "_shell.html" %}<main class="container app-main" id="main-content"><h1>ヘルプの相談・来院登録</h1>
 <p class="page-description">追加で必要な人数を見ながら、依頼したヘルプの来院予定を登録します。</p>
-<div class="workflow-callout"><div><strong>不足を見て相談 → 来院OKの予定を登録</strong><p class="hint">依頼は電話など、アプリ外で行います。登録したら、次の「ヘルプを反映」で勤務表を作成します。</p></div><a class="button-link secondary" href="{{ url_for('schedule',month=month,phase='build') }}">登録したヘルプを反映する →</a></div>
+<div class="workflow-callout"><div><strong>不足を見て相談 → 来院OKの予定を登録</strong><p class="hint">依頼は電話など、アプリ外で行います。ボタンを押すと来院予定を保存し、更新後の勤務表を確認できます。</p></div>{% if staff %}<button class="secondary" form="help-calendar-form" name="continue" value="build">登録したヘルプを反映する →</button>{% else %}<a href="{{ url_for('manual_schedule',month=month) }}">勤務表を開く →</a>{% endif %}</div>
 
 
 {% if request.args.get('saved') == '1' %}<p class="success" role="status">来院予定を登録しました。</p>{% endif %}
@@ -23,7 +23,7 @@
 <form method="post" action="{{ url_for('refresh_help_shortages',month=month) }}"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><button class="button-quiet" id="refresh-shortages">不足を表示・更新</button></form>
 </section>
 {% if staff %}<form method="post" id="help-calendar-form">
-<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="changes" id="help-changes">
+<input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><input type="hidden" name="fingerprint" value="{{ fingerprint }}"><input type="hidden" name="changes" id="help-changes" value="{}">
 <div class="help-calendar-toolbar"><div><label for="help-staff">来院OKのヘルプ</label><select id="help-staff" name="staff">{% for person in staff %}<option value="{{ person.id }}" data-role="{{ person.role }}" {% if person.id|string == selected %}selected{% endif %}>{{ person.name }}（{{ '検査技師' if person.role == 'technician' else '看護師' }}{{ '・事前配置OK' if person.advance_help else '' }}）</option>{% endfor %}</select></div><div><strong>{{ month[:4] }}年{{ month[5:]|int }}月</strong><p class="hint">日付を押して入力できます</p></div></div><p class="help-calendar-legend"><span>茶色：追加で必要な人数</span><span>緑：表に反映済み ／ 青：追加予定・未反映</span><a href="{{ url_for('staff_settings',month=month) }}#staff-form">ヘルプのスタッフを追加・編集 →</a></p>
 {% else %}<p>{{ '追加で依頼するヘルプは未登録です。' if has_advance_help else 'ヘルプスタッフは未登録です。' }}<a href="{{ url_for('staff_settings',month=month) }}">スタッフを登録する →</a></p>{% endif %}
 <table class="leave-calendar help-visits-calendar"><caption>{{ month[:4] }}年{{ month[5:]|int }}月：追加で必要なヘルプと来院予定</caption><thead><tr>{% for label in '日月火水木金土' %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead><tbody>
@@ -34,8 +34,8 @@
 {% else %}<div class="help-readonly-day"><span class="calendar-date">{{ day.day }}</span>{{ shortage_lines(text) }}</div>{% endif %}
 </td>{% else %}<td class="calendar-empty"></td>{% endif %}{% endfor %}</tr>{% endfor %}
 </tbody></table>
-{% if staff %}<div class="save-bar"><p id="help-status" role="status">来院が決まった日だけ選んでください。</p><button id="help-save" name="continue" value="build" disabled>登録して勤務表の作成へ →</button></div><p class="hint">登録した予定は、次の作成で反映されます。茶色の不足表示はまだ再計算していません。</p><noscript><p>入力にはJavaScriptを有効にしてください。</p></noscript></form>
-<dialog id="help-visit-dialog" aria-labelledby="help-visit-title"><h2 id="help-visit-title">来院予定を入力</h2><p id="help-visit-person"></p><div id="help-visit-shortage"></div><p id="help-visit-note" class="hint"></p><div class="help-period-buttons">{% for value,label in [('full','全日来院'),('am','午前のみ'),('pm','午後のみ'),('','予定を取り消す')] %}<button type="button" data-help-period="{{ value }}">{{ label }}</button>{% endfor %}</div><p class="hint">時間帯を選んだら、カレンダー下の「登録して勤務表の作成へ」で登録してください。</p><button type="button" id="help-visit-close" class="secondary">変更せず閉じる</button></dialog>
+{% if staff %}<div class="save-bar"><p id="help-status" role="status">来院が決まった日だけ選んでください。</p><button id="help-save" name="continue" value="build" disabled>登録して勤務表を更新 →</button></div><p class="hint">更新後の表を確認してから保存します。</p><noscript><p>入力にはJavaScriptを有効にしてください。</p></noscript></form>
+<dialog id="help-visit-dialog" aria-labelledby="help-visit-title"><h2 id="help-visit-title">来院予定を入力</h2><p id="help-visit-person"></p><div id="help-visit-shortage"></div><p id="help-visit-note" class="hint"></p><div class="help-period-buttons">{% for value,label in [('full','全日来院'),('am','午前のみ'),('pm','午後のみ'),('','予定を取り消す')] %}<button type="button" data-help-period="{{ value }}">{{ label }}</button>{% endfor %}</div><p class="hint">時間帯を選んだら、「登録して勤務表を更新」で登録してください。</p><button type="button" id="help-visit-close" class="secondary">変更せず閉じる</button></dialog>
 <script type="application/json" id="help-included">{{ shortages.get("included_visits", {})|tojson }}</script>
 <script type="application/json" id="help-people">{{ staff|tojson }}</script>
 <script type="application/json" id="help-original">{{ data|tojson }}</script><script type="application/json" id="help-pending">{{ request.form.get('changes', '')|tojson }}</script>{% endif %}

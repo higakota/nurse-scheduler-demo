@@ -89,7 +89,17 @@ if(button)button.disabled=document.body.dataset.helpVisitDirty==="true"||documen
   modal.querySelectorAll("[data-help-period]").forEach(button=>button.addEventListener("click",()=>choosePeriod(button.dataset.helpPeriod)));
   document.getElementById("help-visit-close").addEventListener("click",()=>modal.close());
   staff.addEventListener("change", () => { days.forEach(p => { p.open = false; }); render(); });
-  form.addEventListener("submit", () => { submitting = true; });
+  form.addEventListener("submit", event => {
+    if(submitting){event.preventDefault();return;}
+    if(document.body.dataset.helpExceptionDirty==="true"){
+      event.preventDefault();
+      document.getElementById("help-status").textContent="看護師のみ対応の変更を先に保存してください。";
+      return;
+    }
+    submitting=true;
+    form.setAttribute("aria-busy","true");
+    document.getElementById("help-status").textContent="来院予定を保存して、勤務表を更新しています…";
+  });
   window.addEventListener("beforeunload", event => { if (dirty && !submitting) { event.preventDefault(); event.returnValue = ""; } });
   render();
 })();

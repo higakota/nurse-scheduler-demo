@@ -57,10 +57,10 @@ class WorkflowGuidanceTest(unittest.TestCase):
         with self.client.session_transaction() as state:token=state["csrf_token"]
         response=self.client.post("/help?month=2026-02",data=dict(csrf_token=token,fingerprint=fp,
             changes=json.dumps({"10_2026-02-02":"full"}),**{"continue":"build"}))
-        self.assertIn("phase=build",response.location)
+        self.assertIn("/schedule/manual?",response.location)
+        self.assertIn("update_token=",response.location)
         page=self.client.get(response.location,follow_redirects=True).get_data(as_text=True)
-        self.assertIn("入力に変更があります",page)
-        self.assertIn("最新の入力・ヘルプで勤務表を更新",page)
+        self.assertIn("保存前の変更確認",page)
         home=self.client.get("/?month=2026-02").get_data(as_text=True)
         self.assertIn("依頼したヘルプを勤務表に反映する",home)
         response=self.client.post("/schedule?month=2026-02",data=dict(self.fields(),mode="help",replace="yes"))

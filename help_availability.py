@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import secrets
+import time
 from datetime import date
 from flask import abort, flash, redirect, render_template, request, session, url_for
 
@@ -129,7 +130,15 @@ def register_help_availability(app, connect_db):
                     if request.form.get("return_monthly") == "1":
                         return redirect(url_for("monthly_settings", month=month, saved="1", _anchor="availability"))
                     if request.form.get("continue")=="build":
-                        return redirect(url_for("schedule",month=month,phase="build",help_saved="1"))
+                        from schedule import read_snapshot
+                        from manual_schedule import load_manual
+                        db.execute("BEGIN")
+                        snapshot,fp,generated=read_snapshot(db,month)
+                        _,revision=load_manual(db,month,snapshot,fp,generated)
+                        nonce=secrets.token_hex(24)
+                        session["help_roster_update"]=dict(month=month,fingerprint=fp,revision=revision,
+                                                           nonce=nonce,created=time.time())
+                        return redirect(url_for("manual_schedule",month=month,update_token=nonce))
                     return redirect(url_for("help_availability", month=month, staff=request.form.get("staff", ""), saved="1"))
                 except ValueError as exc:
                     db.rollback()
