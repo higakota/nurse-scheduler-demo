@@ -4,8 +4,8 @@
 <aside class="app-sidebar" aria-label="メインメニュー">
 <a class="app-logo" href="{{ url_for('index',month=ui_month) }}"><span class="logo-mark" aria-hidden="true">▦</span><span>看護師勤務表<small>勤務表の作成と管理</small></span></a>
 <nav class="side-nav">
-{% for endpoint,label,group,mark in [('index','ホーム','index','⌂'),('doctor_import','今月の入力','inputs','▦'),('manual_schedule','勤務表','schedules','▤'),('help_availability','ヘルプ依頼・登録','help_availability','＋'),('staff_settings','スタッフ','staff_settings','⚙')] %}
-<a href="{{ url_for(endpoint,month=ui_month) }}" {% if ui_group==group %}aria-current="page"{% endif %}><span class="nav-number" aria-hidden="true">{{ mark }}</span>{{ label }}</a>
+{% for endpoint,label,group,mark in [('index','ホーム','index','⌂'),('doctor_import','今月の入力','inputs','▦'),('schedule','不足を確認','schedule','◎'),('help_availability','ヘルプ依頼・登録','help_availability','＋'),('manual_schedule','勤務表・印刷','manual_schedule','▤'),('staff_settings','スタッフ','staff_settings','⚙')] %}
+<a href="{{ url_for(endpoint,month=ui_month,phase='plan') if endpoint=='schedule' else url_for(endpoint,month=ui_month) }}" {% if ui_group==group or ui_active==group %}aria-current="page"{% endif %}><span class="nav-number" aria-hidden="true">{{ mark }}</span>{{ label }}</a>
 {% endfor %}
 </nav>
 <div class="sidebar-bottom"><a class="backup-nav {% if ui_active=='data_backup' %}is-current{% endif %}" href="{{ url_for('data_backup',month=ui_month) }}">バックアップ・復元</a><div class="sidebar-note"><span class="local-dot"></span> {% if config.WEB_DEMO %}ブラウザごとに一時保存{% else %}このPC内に保存{% endif %}</div></div>

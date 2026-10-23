@@ -20,6 +20,24 @@ class WorkflowGuidanceTest(unittest.TestCase):
             self.assertTrue(entries)
             self.assertTrue(all("/doctors?month=2026-02" == html.unescape(href) for href in entries))
 
+    def test_sidebar_matches_workflow_and_highlights_current_page(self):
+        expected=["ホーム","今月の入力","不足を確認","ヘルプ依頼・登録","勤務表・印刷","スタッフ"]
+        for url,selected in [("/?month=2026-02","ホーム"),("/monthly?month=2026-02","今月の入力"),
+                             ("/schedule?month=2026-02&phase=plan","不足を確認"),
+                             ("/help?month=2026-02","ヘルプ依頼・登録"),
+                             ("/schedule/manual?month=2026-02","勤務表・印刷")]:
+            response=self.client.get(url)
+            self.assertEqual(response.status_code,200,url)
+            page=response.get_data(as_text=True)
+            nav=re.search(r'<nav class="side-nav">(.*?)</nav>',page,re.S)[1]
+            links=re.findall(r'<a ([^>]+)>(.*?)</a>',nav,re.S)
+            labels=[re.sub(r"<span[^>]*>.*?</span>","",label,flags=re.S).strip() for attrs,label in links]
+            self.assertEqual(labels,expected)
+            current=[label for (attrs,_),label in zip(links,labels) if 'aria-current="page"' in attrs]
+            self.assertEqual(current,[selected])
+            href=html.unescape(re.search(r'href="([^"]+)"',links[2][0])[1])
+            self.assertEqual(href,"/schedule?month=2026-02&phase=plan")
+
     def prepare_helpers(self):
         db=connect_db()
         for pid,advance in ((9,1),(10,0)):
