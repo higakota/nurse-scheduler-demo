@@ -54,5 +54,10 @@ class PortfolioDemoTest(unittest.TestCase):
                     self.assertIn(response.status_code,(200,302),endpoint)
                     if response.status_code==200:
                         self.assertIn("サンプル環境",response.get_data(as_text=True))
+                monthly=client.get("/monthly?month=2026-11#meetings").get_data(as_text=True)
+                for meeting in sample_data()["monthly_settings"]["meetings"]:
+                    key=meeting["id"]
+                    self.assertIn('data-meeting-edit="'+key+'"',monthly)
+                    self.assertIn('id="meeting-'+key+'"',monthly)
         finally:
             app.config.clear();app.config.update(saved)

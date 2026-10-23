@@ -12,7 +12,7 @@ def capture(root,base,output):
         raise ValueError("ローカルのサンプル環境だけを撮影できます。")
     output.mkdir(parents=True,exist_ok=True)
     shots=output.parent/"screenshots";shots.mkdir(exist_ok=True)
-    report={"stages":[],"javascript_errors":[],"server_errors":[],"kind":"実際のブラウザ操作。サンプルExcelの読取結果は確認まで。保存済みの架空予定で作成。"}
+    report={"stages":[],"javascript_errors":[],"server_errors":[],"kind":"実際のブラウザ操作。対象月切替・Excel確認保存・各入力保存・仮表確認・ヘルプ入力反映を実操作。"}
     frames=[]
     with tempfile.TemporaryDirectory() as temp, sync_playwright() as p:
         browser=p.chromium.launch(channel="msedge",headless=True)
@@ -45,6 +45,7 @@ def capture(root,base,output):
             setTimeout(()=>ring.remove(),1100);
           },true);
         })()""")
+        report["saved_steps"]=[]
         position=[320,180]
         clock_start=time.monotonic()
         report["chapters"]=[]
@@ -101,89 +102,131 @@ def capture(root,base,output):
             navigates=locator.evaluate("(el)=>(el.tagName==='A'&&!el.getAttribute('href').startsWith('#'))||(el.tagName==='BUTTON'&&el.type==='submit')")
             if navigates:
                 with page.expect_navigation(wait_until="networkidle"):
-                    page.mouse.down();wait(.18);page.mouse.up()
+                    locator.click(delay=20 if os.environ.get("CAPTURE_QUICK") else 120)
             else:
-                page.mouse.down();wait(.18);page.mouse.up()
+                locator.click(delay=20 if os.environ.get("CAPTURE_QUICK") else 120)
                 page.wait_for_load_state("networkidle")
             wait(2)
         def nav(label):
             click(page.locator(".side-nav a").filter(has_text=label).first)
             if not page.get_by_text("サンプル環境",exact=False).first.is_visible():
                 raise ValueError("サンプル環境ではない画面への遷移を止めました。")
+        def saved(label):
+            marker=page.locator(".success").first
+            marker.wait_for(state="visible")
+            marker.evaluate("(el)=>el.scrollIntoView({block:'center'})")
+            stage(5,label+"を保存しました","保存完了の表示を確認してから、次の入力へ進みます。",5)
+            report["saved_steps"].append(label)
         def point(locator,title,detail,seconds=10):
             caption(title,detail);move(locator);wait(seconds)
-        go("/?month=2026-11")
-        stage(1,"この動画で見る流れ","希望・医師予定を確認し、仮作成します。不足を応援で埋め、保存・比較・印刷まで、マウス操作で進めます。",14,"home")
-        point(page.locator(".side-nav a").filter(has_text="スタッフ").first,"まず、登録済みのスタッフを確認","左の「スタッフ」をクリックします。黄色い枠が、これから操作する場所です。",7)
+        go("/?month=2026-10")
+        stage(1,"スタッフ確認から印刷まで","対象月を選び、Excelと入力内容を保存。仮表と不足を確認し、来院OKのヘルプを登録して勤務表へ反映します。",10,"home")
         nav("スタッフ")
         for name in ("看護スタッフ01","検査スタッフ02","応援スタッフ02"):
-            if page.get_by_text(name,exact=False).count()==0:raise ValueError("架空のスタッフ構成を確認できません。")
-        stage(2,"職種と勤務条件を分けて管理","看護師・検査技師、常勤・非常勤、応援を区別しています。この動画で表示する情報はすべて架空です。",13,"staff")
-        caption("ホームから①今月の入力へ","スタッフ設定を確認したらホームへ戻り、今月の入力を開きます。")
+            if page.get_by_text(name,exact=False).count()==0:raise ValueError("架空スタッフを確認できません。")
+        stage(2,"はじめにスタッフを確認","サンプルは登録済みです。看護師・検査技師、常勤・非常勤、事前に来られるヘルプを分けて登録します。",10,"staff")
         nav("ホーム")
-        point(page.locator('main a').filter(has_text="今月の入力").first,"①今月の入力を開く","医師予定から始め、希望・必要人数・前月末勤務の順に入力します。",6)
+        point(page.locator("#nav-month"),"スタッフの次に対象月を選ぶ","今回は2026年11月を作ります。上の対象月を変更し、「切替」でその月を開きます。",8)
+        click(page.locator("#nav-month"))
+        page.locator("#nav-month").fill("2026-11");page.keyboard.press("Escape")
+        click(page.locator(".topbar-month button"))
+        if "month=2026-11" not in page.url:raise ValueError("対象月を切り替えられません。")
+        stage(3,"2026年11月に切り替えました","ホームの「今月の入力」から、医師予定へ進みます。",6)
         click(page.locator('main a').filter(has_text="今月の入力").first)
-        if "/doctors" not in page.url:raise ValueError("今月の入力の入口が医師予定ではありません。")
-        stage(4,"サンプルExcelを選択する","日付は4行目、医師は6行目の形式です。ここでは架空のサンプルファイルを選びます。",11)
+        stage(4,"医師予定のExcelを読み込む","対象月を確認してからファイルを選びます。読んだだけでは保存されないので、最後まで進めます。",8)
         page.locator("details:has(input[type=file])").evaluate_all("(items)=>items.forEach(item=>item.open=true)")
         file_input=page.locator('input[type="file"][name="workbook"]')
         move(file_input)
-        with page.expect_file_chooser() as chooser:
-            page.mouse.click(*position)
+        with page.expect_file_chooser() as chooser:page.mouse.click(*position)
         chooser.value.set_files(str(root/"samples/sample_requests_2026-11.xlsx"))
-        wait(3)
-        point(page.locator("form[enctype] button"),"ファイル名を確認して読み込む","選択したファイル名を確認します。「このExcelを読み込む」をクリックします。",8)
         click(page.locator("form[enctype] button"))
-        stage(4,"対象月とシートを確認する","対象は2026年11月です。シートも「11月」になっていることを確認し、読み取りへ進みます。",11)
-        point(page.get_by_role("button",name="医師・休診日・会議の候補を読み取る",exact=True),"読み取り結果は、すぐには保存しません","このボタンで候補を読み取り、次の画面で午前・午後の担当医を確認します。",7)
+        stage(4,"対象月とシートを確認","2026年11月・11月シートを確認し、医師・休診日・会議の候補を読み取ります。",7)
         click(page.get_by_role("button",name="医師・休診日・会議の候補を読み取る",exact=True))
-        page.get_by_role("heading",name="3. 確認・修正して保存").evaluate("(el)=>el.scrollIntoView({behavior:'smooth',block:'start'})")
-        wait(2)
-        stage(4,"読み取り候補を確認する","午前・午後を元のExcelと照合してから保存する仕組みです。今回は候補を保存せず、登録済みの架空予定で作成します。",16,"excel")
-        caption("次は希望休・会議・事前ヘルプ","医師予定の確認後、上のタブから月別の入力へ進みます。")
+        page.get_by_role("heading",name="3. 確認・修正して保存").evaluate("(el)=>el.scrollIntoView({block:'start'})")
+        stage(4,"読み取り候補を元のExcelと照合","午前・午後の担当医を確認します。「個別確認」の日は、その日の確認チェックも入れます。",10,"excel")
+        for field in page.locator('input[name^="review_"]:visible').all():
+            if not field.is_checked():click(field)
+        for key in ("replace","confirmed"):
+            field=page.locator('input[name="'+key+'"]')
+            if field.count():click(field)
+        point(page.get_by_role("button",name="確認した医師予定を保存",exact=True),"確認した医師予定を保存","最後の保存ボタンまで押します。これで読み取り結果が、この月の医師予定として登録されます。",8)
+        click(page.get_by_role("button",name="確認した医師予定を保存",exact=True))
+        saved("医師予定")
         click(page.locator(".page-subnav a").filter(has_text="希望休・会議・事前ヘルプ").first)
-        stage(5,"希望休・有給を入力する","サンプルは登録済みです。11月9日は検査技師2人が希望休。休む人・日付・時間帯を選び、まとめて保存します。",10,"wishes")
-        for key,title,detail in [
-            ("targets","休日日数・週上限を確認","常勤の休日日数、非常勤の週上限を個人ごとに入力します。サンプルの設定値を確認します。"),
-            ("closures","休診日を確認","日曜・祝日など診療しない日を確認します。サンプルは流れを見やすくするため診療日を絞っています。"),
-            ("meetings","会議を確認","会議の予定と参加者を入力します。参加者の変更は最後にまとめて保存できます。"),
-            ("availability","事前に来られるヘルプを登録","依頼前から自院へ来られる日が決まっている人を入力します。追加で相談して決まるヘルプとは分けて扱います。")
-        ]:
-            caption(title,"入力項目を左から順に確認します。")
-            click(page.locator('[data-month-tab="'+key+'"]'))
-            stage(5,title,detail,9,key)
-        caption("必要人数を確認する","上のタブから、診療に必要な人数を確認します。")
+        stage(5,"希望休・有給を入力","希望のあるスタッフと日付のマスを押します。今回は検査スタッフ02の11月9日に全日希望休を入力します。",9,"wishes")
+        click(page.locator('[data-input-person="7"][data-input-day="2026-11-09"]'))
+        click(page.locator('[data-grid-kind="wishes"][data-grid-period="full"]'))
+        click(page.locator("#input-absence-close"))
+        point(page.locator("#absence-save"),"希望休・有給をまとめて保存","マスを選んだ段階では未保存です。このボタンを押して、保存完了を確認します。",7)
+        click(page.locator("#absence-save"));saved("希望休・有給")
+        click(page.locator('[data-month-tab="targets"]'))
+        stage(5,"休日日数・週上限を確認して保存","常勤の休日日数と、非常勤の週上限を確認します。入力後は下の保存ボタンを押します。",7,"targets")
+        click(page.locator('[data-month-save] button'));saved("休日日数・週上限")
+        click(page.locator('[data-month-tab="closures"]'))
+        stage(5,"休診日を確認して保存","日曜・祝日などを確認し、保存します。サンプルは操作例を見やすくするため診療日を絞っています。",7,"closures")
+        click(page.locator('[data-month-save] button'));saved("休診日")
+        click(page.locator('[data-month-tab="meetings"]'))
+        stage(5,"会議も変更後に保存する","登録済みの会議名を開き、名称を変更して保存する例です。参加者を変更した場合も、最後にまとめて保存します。",8,"meetings")
+        click(page.locator('[data-meeting-edit]').first)
+        title=page.locator('.meeting-editor-dialog[open] input[name="title"]')
+        move(title);title.fill("サンプル研修会（確認済み）");wait(3)
+        click(page.locator('.meeting-editor-dialog[open] form').first.locator('button'))
+        saved("会議")
+        click(page.locator('[data-month-tab="availability"]'))
+        stage(5,"事前に来られるヘルプを入力","依頼前から来られる日が決まっている人を入力します。今回は応援スタッフ01の11月12日を全日で登録します。",8,"availability")
+        click(page.locator('[data-advance-cell="8_2026-11-12"]'))
+        click(page.locator('[data-advance-period="full"]'))
+        click(page.locator("#advance-availability-save"));saved("事前ヘルプ")
         click(page.locator(".page-subnav a").filter(has_text="必要人数").first)
-        stage(6,"必要人数を確認する","医師予定に対応する診療人数と、検査室に必要な人数を確認します。サンプルでは登録済みの値を使います。",10,"coverage")
-        caption("最後に前月末勤務を確認","月をまたぐ連勤を確認するため、前月末の勤務を入力します。")
+        stage(6,"必要人数を確認して保存","医師予定と検査室に必要な人数を確認します。入力値を確認したら、下のボタンで保存します。",8,"coverage")
+        click(page.get_by_role("button",name="検査室の必要人数を保存",exact=True));saved("必要人数")
         click(page.locator(".page-subnav a").filter(has_text="前月末勤務").first)
-        stage(6,"前月末勤務を確認する","初回は直前6日分を入力します。前月の保存済み表があれば自動で引き継ぎ、手入力した内容を優先します。",10,"history")
-        caption("ホームから不足確認へ進む","左の「ホーム」に戻り、「不足確認・作成」を開きます。")
-        nav("ホーム")
-        click(page.locator('main a[href*="/schedule"]').filter(has_text="不足確認").first)
-        point(page.locator('button[name="mode"][value="advance_draft"]'),"事前に来られる人も含めて仮作成","まだ追加の応援を依頼する前の表です。このボタンで、登録した条件から仮配置を作ります。",11)
+        stage(6,"前月末勤務を確認して保存","月をまたぐ連勤の確認に使います。初回は直前6日分を入力し、前月末の勤務を保存します。",8,"history")
+        click(page.get_by_role("button",name="前月末の勤務を保存",exact=True));saved("前月末勤務")
+        point(page.locator(".journey-nav a").filter(has_text="不足を確認"),"手順②「不足を確認」へ進む","入力の保存が終わったら、画面上の手順バーから不足確認へ進みます。ホームへ戻る必要はありません。",7)
+        click(page.locator(".journey-nav a").filter(has_text="不足を確認"))
+        point(page.locator('button[name="mode"][value="advance_draft"]'),"事前ヘルプも使って仮作成","保存した入力をもとに、追加で相談する人数を確認するための仮表を作ります。",8)
         click(page.locator('button[name="mode"][value="advance_draft"]'))
-        if page.locator(".paper-schedule").count()==0:raise ValueError("仮作成の表が表示されません。")
-        stage(5,"仮表の不足を確認する","11月9日は検査技師が不足します。足りない職種・時間帯を見て、ほかの施設へ相談します。相談はアプリ外で行います。",15,"draft")
-        point(page.locator(".side-nav a").filter(has_text="ヘルプ依頼").first,"来院予定を確認する","相談後、実際に来られることが決まった応援を登録する画面へ進みます。",7)
-        nav("ヘルプ依頼")
-        stage(6,"来院OKの予定を確認する","サンプルでは「応援スタッフ02」の11月9日の全日来院を登録済みです。この予定を、次に勤務表へ反映します。",15,"help")
-        point(page.locator(".side-nav a").filter(has_text="勤務表").first,"同じ勤務表で更新する","左の「勤務表」へ進みます。登録した予定を反映した変更案を確認します。",7)
-        nav("勤務表")
-        point(page.locator('button[name="action"][value="update_roster"]'),"最新の入力・応援で更新","ボタンを押すと、保存前の変更確認が開きます。ここではまだ勤務表は保存されません。",10)
-        click(page.locator('button[name="action"][value="update_roster"]'))
-        stage(7,"保存する前に変更箇所を確認する","変更前と変更後を確認します。希望・有給などの確認事項も見てから、保存へ進みます。",14)
+        grid=page.locator(".paper-schedule").first
+        if not grid.count():raise ValueError("仮表がありません。")
+        grid.evaluate("(el)=>el.scrollIntoView({block:'start'})")
+        stage(7,"不足確認で作った勤務表を見る","まず仮の勤務表を見ます。上段の医師予定と、自院・事前ヘルプの勤務が表示されています。",12,"draft")
+        page.mouse.wheel(0,440);wait(2)
+        stage(7,"表の下で不足を確認する","11月9日は検査技師が不足します。職種と午前・午後の人数を確認して、アプリ外でヘルプを相談します。",12,"draft-shortage")
+        report["draft_grid_shown"]=True
+        point(page.get_by_role("link",name="決まったヘルプの来院予定を登録する",exact=True),"来院が決まったら、このボタンへ","相談・依頼は電話などで行います。来られる人と日が決まったら、このボタンから登録へ進みます。",8)
+        click(page.get_by_role("link",name="決まったヘルプの来院予定を登録する",exact=True))
+        point(page.locator("#help-staff"),"来院OKの人を選ぶ","検査技師の応援スタッフ02を選びます。不足と予定を同じカレンダーで見ながら登録できます。",7)
+        click(page.locator("#help-staff"));page.locator("#help-staff").select_option("9");page.keyboard.press("Escape")
+        page.locator('[data-help-day="2026-11-09"]').evaluate("(el)=>el.scrollIntoView({block:'center'})")
+        stage(8,"ヘルプ登録のカレンダーを見る","日付ごとに不足と来院予定が表示されます。11月9日に来院OKの予定を入力します。",12,"help")
+        report["help_calendar_shown"]=True
+        click(page.locator('[data-help-day="2026-11-09"] > summary'))
+        click(page.locator('[data-help-period="full"]'))
+        stage(8,"入力した来院予定はまだ未保存","11月9日の全日来院が未保存として表示されます。「登録したヘルプを反映する」で登録し、勤務表の変更確認へ進みます。",8)
+        point(page.locator('button[form="help-calendar-form"][name="continue"]'),"登録したヘルプを反映する","このボタンで予定を保存し、勤務表・印刷の画面へ進みます。左メニューから探し直す必要はありません。",8)
+        click(page.locator('button[form="help-calendar-form"][name="continue"]'))
+        if "/schedule/manual" not in page.url:raise ValueError("勤務表の変更確認へ遷移できません。")
+        report["saved_steps"].append("依頼後のヘルプ来院予定")
+        stage(9,"勤務表へ反映する変更を確認","ヘルプを登録すると、保存前の変更確認が開きます。希望休・有給・配置の変更を見てから、この勤務表を保存します。",12)
         confirmation=page.locator('input[name="confirm"][value="yes"]')
         point(confirmation,"確認してから保存する","変更内容を確認したチェックを入れます。この動画は架空データなので、内容を確認してそのまま保存します。",8)
         click(confirmation)
         point(page.locator('button[name="action"][value="save"]'),"この変更を勤務表に反映","チェックを入れた後、このボタンをクリックして保存します。",7)
         click(page.locator('button[name="action"][value="save"]'))
+        report["saved_steps"].append("勤務表")
         connection=sqlite3.connect((root/"instance/demo.sqlite3").resolve().as_uri()+"?mode=ro",uri=True)
         try:
             saved=json.loads(connection.execute("SELECT data FROM manual_schedules WHERE month='2026-11'").fetchone()[0])
             i=next(i for i,p in enumerate(saved["people"]) if p["id"]==9)
             if saved["grid"][saved["days"].index("2026-11-09")][i]=="RR":
                 raise ValueError("登録済みの応援が勤務表に反映されていません。")
+            monthly=json.loads(connection.execute("SELECT data FROM monthly_settings WHERE month='2026-11'").fetchone()[0])
+            visits=json.loads(connection.execute("SELECT data FROM help_availability WHERE month='2026-11'").fetchone()[0])
+            assert monthly["wishes"]["7_2026-11-09"]=="full"
+            assert any(m["title"]=="サンプル研修会（確認済み）" for m in monthly["meetings"])
+            assert visits["8_2026-11-12"]=="full" and visits["9_2026-11-09"]=="full"
+            report["input_saves_verified"]=True
             report["requested_helper_applied"]=True
         finally:connection.close()
         stage(7,"更新した表を保存できました","登録済みの応援が配置されたことも確認しています。次は、勤務表と希望休・有給を比較します。",10)
@@ -223,5 +266,9 @@ if __name__=="__main__":
     parser.add_argument("--base-url",default="http://127.0.0.1:5001")
     parser.add_argument("--root",type=Path,default=Path(__file__).resolve().parents[1])
     parser.add_argument("--output",type=Path,default=Path(__file__).resolve().parents[1]/"docs/demo")
+    parser.add_argument("--prepare-inputs",action="store_true",help=".runtime内の撮影用コピーを架空の入力例へ初期化します")
     args=parser.parse_args()
+    if args.prepare_inputs:
+        from prepare_walkthrough import prepare
+        prepare(args.root)
     capture(args.root.resolve(),args.base_url,args.output.resolve())

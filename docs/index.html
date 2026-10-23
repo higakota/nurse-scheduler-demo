@@ -18,13 +18,13 @@ video{display:block;width:100%;height:auto;max-height:78vh;aspect-ratio:1280/888
 <body><main>
 <header><small>看護職員の勤務表作成支援アプリ</small><h1>勤務表作成の操作デモ</h1><p>中央の▶を押すと再生します。停止・再開・全画面は、動画下部のコントロールから操作できます。</p></header>
 <div class="player">
-<video id="demo" controls playsinline preload="metadata" poster="demo/opening.png?v=0af3eb2074fa" aria-label="勤務表作成の操作デモ">
-<source src="demo/walkthrough.mp4?v=0af3eb2074fa" type="video/mp4">動画を再生できない場合は、下のダウンロードをご利用ください。
+<video id="demo" controls playsinline preload="metadata" poster="demo/opening.png?v=d6fa9342f0a5" aria-label="勤務表作成の操作デモ">
+<source src="demo/walkthrough.mp4?v=d6fa9342f0a5" type="video/mp4">動画を再生できない場合は、下のダウンロードをご利用ください。
 </video>
 <button class="play" id="play" aria-label="操作デモを再生"></button>
 </div>
 <div class="speed"><label for="speed">再生速度</label><select id="speed"><option value="0.75">0.75倍</option><option value="1" selected>1倍（標準）</option><option value="1.25">1.25倍</option><option value="1.5">1.5倍</option><option value="2">2倍</option></select></div>
-<div class="links"><a href="https://nurse-scheduler-demo.onrender.com/?month=2026-11">ブラウザでアプリを試す →</a><a href="https://raw.githubusercontent.com/higakota/nurse-scheduler-demo/main/samples/sample_requests_2026-11.xlsx" download>サンプルExcelをダウンロード</a><a href="https://github.com/higakota/nurse-scheduler-demo">GitHubへ戻る</a><a href="demo/walkthrough.mp4" download>動画をダウンロード</a></div>
+<div class="links"><a href="https://nurse-scheduler-demo.onrender.com/?month=2026-11" target="_blank" rel="noopener noreferrer" title="別タブで開きます">ブラウザでアプリを試す →</a><a href="https://raw.githubusercontent.com/higakota/nurse-scheduler-demo/main/samples/sample_requests_2026-11.xlsx" download>サンプルExcelをダウンロード</a><a href="https://github.com/higakota/nurse-scheduler-demo">GitHubへ戻る</a><a href="demo/walkthrough.mp4" download>動画をダウンロード</a></div>
 <p class="note">表示する人名・施設・勤務予定はすべて架空です。字幕で操作を説明します。</p>
 </main><script>
 const video=document.getElementById("demo"),play=document.getElementById("play");

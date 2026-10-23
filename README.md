@@ -4,7 +4,7 @@
 
 勤務希望・会議・必要人数・他施設からの応援をまとめて扱い、勤務表の作成後も変更内容を確認しながら調整できるWebアプリです。勤務表を作成する利用者からの相談・操作の感想をもとに、機能と画面を繰り返し改善しています。
 
-**[約5分27秒の操作動画を見る](https://higakota.github.io/nurse-scheduler-demo/)** ／ [動画の説明](docs/demo/README.md)
+**[約8分19秒の操作動画を見る](https://higakota.github.io/nurse-scheduler-demo/)** ／ [動画の説明](docs/demo/README.md)
 
 [![操作デモを再生](docs/demo/poster.png)](https://higakota.github.io/nurse-scheduler-demo/)
 
@@ -28,7 +28,7 @@
 |---|---|
 | 技術 | Python / Flask / SQLite / HTML / CSS / JavaScript |
 | 元の開発記録 | 2026年10月16日〜22日の67コミットを匿名化して収録 |
-| 動作検証 | 仮名・一時DBを使う509件の自動テスト |
+| 動作検証 | 仮名・一時DBを使う510件の自動テスト |
 | データ | 職員9人・医師予定・勤務希望を新規作成した架空データ |
 | 実行環境 | ブラウザ体験版：Render / Linux。ローカル：Windows / Python 3.13 |
 
