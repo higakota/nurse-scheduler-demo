@@ -4,13 +4,19 @@
 
 勤務希望・会議・必要人数・他施設からの応援をまとめて扱い、勤務表の作成後も変更内容を確認しながら調整できるWebアプリです。勤務表を作成する利用者からの相談・操作の感想をもとに、機能と画面を繰り返し改善しています。
 
-[開発履歴](docs/development-history.md) · [不具合と改善の事例](docs/case-studies.md) · [設計](docs/portfolio.md) · [テストと確認方法](docs/verification.md) · **[サンプルExcel](samples/sample_requests_2026-11.xlsx)**
-
 **[約5分27秒の操作動画を見る](https://higakota.github.io/nurse-scheduler-demo/)** ／ [動画の説明](docs/demo/README.md)
 
 [![操作デモを再生](docs/demo/poster.png)](https://higakota.github.io/nurse-scheduler-demo/)
 
+## サンプルExcelを試す
+
+**[Excelをダウンロード](https://raw.githubusercontent.com/higakota/nurse-scheduler-demo/main/samples/sample_requests_2026-11.xlsx)** ／ [ファイルの場所](samples/sample_requests_2026-11.xlsx) ／ [使い方](samples/README.md)
+
+2026年11月の医師予定と、職員9人の希望欄を含む架空の入力見本です。曜日・希望欄の色分けと固定見出しを付けています。Excelファイルだけでは、全機能のデータは設定されません。初回起動で作成する架空DBと組み合わせて試せます。
+
 初回は **スタッフ → ホーム → ①今月の入力（医師予定から）→ ②不足を確認 → ③ヘルプを依頼・登録 → ④勤務表・印刷** の順に進みます。動画の再生速度はプレイヤー下で変更できます。
+
+[開発履歴](docs/development-history.md) · [不具合と改善の事例](docs/case-studies.md) · [設計](docs/portfolio.md) · [テストと確認方法](docs/verification.md)
 
 [ホーム画面](docs/screenshots/home.png) ／ [勤務と希望の比較](docs/screenshots/roster.png) ／ [印刷用表示](docs/screenshots/print.png)
 
@@ -50,15 +56,14 @@
 
 各段階の変更は [67件の開発履歴一覧](docs/development-history.md) と [development-historyブランチ](https://github.com/higakota/nurse-scheduler-demo/commits/development-history/) から確認できます。現在のサンプル版は `main` ブランチです。
 
-## サンプルExcelを試す
+## 自分のPCで試す
 
-**[Excelをダウンロード](https://raw.githubusercontent.com/higakota/nurse-scheduler-demo/main/samples/sample_requests_2026-11.xlsx)** ／ [ファイルの場所](samples/sample_requests_2026-11.xlsx) ／ [使い方](samples/README.md)
+初回だけPython 3.13の準備と、以下のセットアップを行います。**2回目からはフォルダ内の `start_demo.bat` をダブルクリックするだけ**で、アプリとブラウザが開きます。毎回PowerShellへコマンドを入力する必要はありません。
 
-2026年11月の医師予定と、職員9人の希望欄を含む架空の入力見本です。曜日・希望欄の色分けと固定見出しを付けています。Excelファイルだけでは、全機能のデータは設定されません。初回起動で作成する架空DBと組み合わせて試せます。
+<details>
+<summary>初回のセットアップ手順（Windows）</summary>
 
-## 起動する
-
-Python 3.13を利用します。Windows PowerShellで次を実行します。
+Windows PowerShellで次を実行します。
 
 ```powershell
 git clone https://github.com/higakota/nurse-scheduler-demo.git
@@ -68,17 +73,19 @@ py -3.13 -m venv .venv
 .\.venv\Scripts\python.exe demo_run.py
 ```
 
-ブラウザで http://127.0.0.1:5001/?month=2026-11 を開きます。初回は架空データを自動作成します。変更は `instance/demo.sqlite3` に保存します。終了は起動した端末で Ctrl+C です。セットアップ後は `start_demo.bat` からも起動できます。
+ブラウザで http://127.0.0.1:5001/?month=2026-11 を開きます。初回は架空データを自動作成します。変更は `instance/demo.sqlite3` に保存します。終了は起動した端末で Ctrl+C です。次回からは `start_demo.bat` をダブルクリックします。
+
+</details>
 
 サンプルは短時間で操作を試せるよう、診療日を8日に絞った簡略例です。公休日数や休日設定も架空の条件に合わせており、実在する施設の勤務条件を表していません。
 
 ### 操作の流れ
 
-1. 2026年11月のホームからスタッフ・希望休・会議を確認する。
-2. 「事前登録のヘルプも使って仮作成」で勤務表と不足を確認する。
-3. 来院予定を確認し、応援を反映した表の変更箇所を確認する。
-4. 編集画面で希望との比較、勤務の修正、印刷プレビューを試す。
-5. Excel取込は、サンプルファイルの「11月」シートを選び、確認画面で担当医・日付を見直して保存する。
+1. スタッフ設定を確認し、ホームへ戻る。
+2. ①今月の入力：医師予定 → 希望休・会議・事前ヘルプ → 必要人数 → 前月末勤務。
+3. ②事前登録ヘルプも使って仮作成し、不足を確認する。
+4. ③ほかの施設へ相談し、来院が決まったヘルプを登録する。
+5. ④ヘルプを反映し、勤務の調整・希望との比較・印刷を行う。
 
 ## 説明と再現確認
 

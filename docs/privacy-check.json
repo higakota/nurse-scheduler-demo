@@ -4,7 +4,7 @@
   "source_database_copied": false,
   "original_git_objects_copied": false,
   "anonymized_history_commits": 67,
-  "historical_text_blobs_checked": 587,
+  "historical_text_blobs_checked": 599,
   "original_excel_copied": false,
   "demo_media": "架空DBの実操作から生成し目視確認。動画・画像は文字列照合の対象外。",
   "tests_passed": 502,
