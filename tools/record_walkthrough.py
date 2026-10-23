@@ -52,7 +52,7 @@ def capture(root,base,output):
         report["click_highlight"]=True
         report["capture_method"]="Playwrightのマウス入力を記録。カーソルとクリック強調、説明字幕を重ねた自動操作。"
         def wait(seconds):
-            page.wait_for_timeout(120 if os.environ.get("CAPTURE_QUICK") else int(seconds*800))
+            page.wait_for_timeout(120 if os.environ.get("CAPTURE_QUICK") else int(seconds*600))
         def go(path):
             page.goto(base+path,wait_until="networkidle")
             if not page.get_by_text("サンプル環境",exact=False).first.is_visible():
@@ -70,7 +70,7 @@ def capture(root,base,output):
             }""",[title,detail])
         def stage(number,title,detail,seconds=12,image=None):
             report["chapters"].append({"title":title,"seconds":round(time.monotonic()-clock_start,1)})
-            caption(str(number).zfill(2)+"  "+title,detail)
+            caption(title,detail)
             wait(seconds)
             if image:
                 path=Path(temp)/(image+".png");page.screenshot(path=str(path))
@@ -81,13 +81,13 @@ def capture(root,base,output):
             locator.wait_for(state="visible")
             box=locator.bounding_box()
             if box and (box["y"]<130 or box["y"]+box["height"]>page.viewport_size["height"]-190):
-                locator.evaluate("(el)=>el.scrollIntoView({behavior:'smooth',block:'center',inline:'center'})")
+                locator.evaluate("(el)=>el.scrollIntoView({behavior:'instant',block:'center',inline:'center'})")
                 wait(1.5)
                 box=locator.bounding_box()
             if not box:raise ValueError("操作対象の位置を取得できません。")
             target=(box["x"]+box["width"]/2,box["y"]+box["height"]/2)
             x,y=position
-            steps=1 if abs(target[0]-x)+abs(target[1]-y)<4 else (3 if os.environ.get("CAPTURE_QUICK") else 45)
+            steps=1 if abs(target[0]-x)+abs(target[1]-y)<4 else (3 if os.environ.get("CAPTURE_QUICK") else 32)
             for n in range(1,steps+1):
                 t=n/steps;ease=t*t*(3-2*t)
                 page.mouse.move(x+(target[0]-x)*ease,y+(target[1]-y)*ease)
@@ -98,7 +98,7 @@ def capture(root,base,output):
             wait(1)
         def click(locator):
             move(locator)
-            navigates=locator.evaluate("(el)=>el.tagName==='A'||(el.tagName==='BUTTON'&&el.type==='submit')")
+            navigates=locator.evaluate("(el)=>(el.tagName==='A'&&!el.getAttribute('href').startsWith('#'))||(el.tagName==='BUTTON'&&el.type==='submit')")
             if navigates:
                 with page.expect_navigation(wait_until="networkidle"):
                     page.mouse.down();wait(.18);page.mouse.up()
@@ -119,11 +119,11 @@ def capture(root,base,output):
         for name in ("看護スタッフ01","検査スタッフ02","応援スタッフ02"):
             if page.get_by_text(name,exact=False).count()==0:raise ValueError("架空のスタッフ構成を確認できません。")
         stage(2,"職種と勤務条件を分けて管理","看護師・検査技師、常勤・非常勤、応援を区別しています。この動画で表示する情報はすべて架空です。",13,"staff")
-        point(page.locator(".side-nav a").filter(has_text="今月の入力").first,"次に、今月の入力を確認","「今月の入力」をクリックします。希望休・有給・会議などを月ごとに確認する画面です。",7)
-        nav("今月の入力")
-        stage(3,"入力した希望を確認する","サンプルでは11月9日に自院の検査技師2人が休みを希望しています。この日を応援で補う流れを見ていきます。",14)
-        caption("医師予定のExcel取込へ","上の「医師予定」をクリックします。")
-        click(page.locator(".page-subnav a").filter(has_text="医師予定").first)
+        caption("ホームから①今月の入力へ","スタッフ設定を確認したらホームへ戻り、今月の入力を開きます。")
+        nav("ホーム")
+        point(page.locator('main a').filter(has_text="今月の入力").first,"①今月の入力を開く","医師予定から始め、希望・必要人数・前月末勤務の順に入力します。",6)
+        click(page.locator('main a').filter(has_text="今月の入力").first)
+        if "/doctors" not in page.url:raise ValueError("今月の入力の入口が医師予定ではありません。")
         stage(4,"サンプルExcelを選択する","日付は4行目、医師は6行目の形式です。ここでは架空のサンプルファイルを選びます。",11)
         page.locator("details:has(input[type=file])").evaluate_all("(items)=>items.forEach(item=>item.open=true)")
         file_input=page.locator('input[type="file"][name="workbook"]')
@@ -140,6 +140,24 @@ def capture(root,base,output):
         page.get_by_role("heading",name="3. 確認・修正して保存").evaluate("(el)=>el.scrollIntoView({behavior:'smooth',block:'start'})")
         wait(2)
         stage(4,"読み取り候補を確認する","午前・午後を元のExcelと照合してから保存する仕組みです。今回は候補を保存せず、登録済みの架空予定で作成します。",16,"excel")
+        caption("次は希望休・会議・事前ヘルプ","医師予定の確認後、上のタブから月別の入力へ進みます。")
+        click(page.locator(".page-subnav a").filter(has_text="希望休・会議・事前ヘルプ").first)
+        stage(5,"希望休・有給を入力する","サンプルは登録済みです。11月9日は検査技師2人が希望休。休む人・日付・時間帯を選び、まとめて保存します。",10,"wishes")
+        for key,title,detail in [
+            ("targets","休日日数・週上限を確認","常勤の休日日数、非常勤の週上限を個人ごとに入力します。サンプルの設定値を確認します。"),
+            ("closures","休診日を確認","日曜・祝日など診療しない日を確認します。サンプルは流れを見やすくするため診療日を絞っています。"),
+            ("meetings","会議を確認","会議の予定と参加者を入力します。参加者の変更は最後にまとめて保存できます。"),
+            ("availability","事前に来られるヘルプを登録","依頼前から自院へ来られる日が決まっている人を入力します。追加で相談して決まるヘルプとは分けて扱います。")
+        ]:
+            caption(title,"入力項目を左から順に確認します。")
+            click(page.locator('[data-month-tab="'+key+'"]'))
+            stage(5,title,detail,9,key)
+        caption("必要人数を確認する","上のタブから、診療に必要な人数を確認します。")
+        click(page.locator(".page-subnav a").filter(has_text="必要人数").first)
+        stage(6,"必要人数を確認する","医師予定に対応する診療人数と、検査室に必要な人数を確認します。サンプルでは登録済みの値を使います。",10,"coverage")
+        caption("最後に前月末勤務を確認","月をまたぐ連勤を確認するため、前月末の勤務を入力します。")
+        click(page.locator(".page-subnav a").filter(has_text="前月末勤務").first)
+        stage(6,"前月末勤務を確認する","初回は直前6日分を入力します。前月の保存済み表があれば自動で引き継ぎ、手入力した内容を優先します。",10,"history")
         caption("ホームから不足確認へ進む","左の「ホーム」に戻り、「不足確認・作成」を開きます。")
         nav("ホーム")
         click(page.locator('main a[href*="/schedule"]').filter(has_text="不足確認").first)

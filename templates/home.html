@@ -15,7 +15,7 @@
 {% else %}<strong>今月の入力を準備する</strong></div><a class="button-link" href="{{ url_for(next_card.endpoint,month=month) }}">入力を続ける →</a>{% endif %}
 </section>{% endif %}
 <section class="home-main-actions" aria-label="主な操作">
-<a href="{{ url_for('monthly_settings',month=month) }}"><span class="home-action-number">01</span><strong>今月の入力</strong><small>医師予定・希望休・有給・会議</small><span aria-hidden="true">→</span></a>
+<a href="{{ url_for('doctor_import',month=month) }}"><span class="home-action-number">01</span><strong>今月の入力</strong><small>医師予定・希望休・有給・会議</small><span aria-hidden="true">→</span></a>
 <a href="{{ url_for('schedule',month=month,phase='plan') }}"><span class="home-action-number">02</span><strong>不足確認・作成</strong><small>仮作成して、必要なヘルプを確認</small><span aria-hidden="true">→</span></a>
 <a href="{{ url_for('help_availability',month=month) }}"><span class="home-action-number">03</span><strong>ヘルプの来院登録</strong><small>相談して決まった予定を登録・反映</small><span aria-hidden="true">→</span></a>
 <a href="{{ url_for('manual_schedule',month=month) }}"><span class="home-action-number">04</span><strong>勤務表を開く</strong><small>勤務の調整・有給候補・印刷</small><span aria-hidden="true">→</span></a>

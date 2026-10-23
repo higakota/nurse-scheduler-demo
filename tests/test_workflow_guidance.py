@@ -10,6 +10,16 @@ class WorkflowGuidanceTest(unittest.TestCase):
     setUp=fixtures.ScheduleRouteTest.setUp
     tearDown=fixtures.ScheduleRouteTest.tearDown
 
+    def test_monthly_entries_start_with_doctors_and_follow_input_order(self):
+        from ui import STEPS, INPUT_TABS
+        self.assertEqual([item[0] for item in STEPS], [item[0] for item in INPUT_TABS[:4]])
+        for url in ("/?month=2026-02", "/monthly?month=2026-02"):
+            page=self.client.get(url).get_data(as_text=True)
+            links=re.findall(r'<a\b[^>]*href="([^"]+)"[^>]*>(.*?)</a>',page,re.S)
+            entries=[href for href,label in links if re.sub(r"<[^>]+>", "", label).strip().endswith("今月の入力")]
+            self.assertTrue(entries)
+            self.assertTrue(all("/doctors?month=2026-02" == html.unescape(href) for href in entries))
+
     def prepare_helpers(self):
         db=connect_db()
         for pid,advance in ((9,1),(10,0)):

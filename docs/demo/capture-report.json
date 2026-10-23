@@ -2,10 +2,16 @@
   "stages": [
     "この動画で見る流れ",
     "職種と勤務条件を分けて管理",
-    "入力した希望を確認する",
     "サンプルExcelを選択する",
     "対象月とシートを確認する",
     "読み取り候補を確認する",
+    "希望休・有給を入力する",
+    "休日日数・週上限を確認",
+    "休診日を確認",
+    "会議を確認",
+    "事前に来られるヘルプを登録",
+    "必要人数を確認する",
+    "前月末勤務を確認する",
     "仮表の不足を確認する",
     "来院OKの予定を確認する",
     "保存する前に変更箇所を確認する",
@@ -20,61 +26,92 @@
   "chapters": [
     {
       "title": "この動画で見る流れ",
-      "seconds": 2.5
+      "seconds": 2.1
     },
     {
       "title": "職種と勤務条件を分けて管理",
-      "seconds": 25.9
-    },
-    {
-      "title": "入力した希望を確認する",
-      "seconds": 48.8
+      "seconds": 19.9
     },
     {
       "title": "サンプルExcelを選択する",
-      "seconds": 66.8
+      "seconds": 41.8
     },
     {
       "title": "対象月とシートを確認する",
-      "seconds": 94.0
+      "seconds": 62.6
     },
     {
       "title": "読み取り候補を確認する",
-      "seconds": 117.9
+      "seconds": 80.7
+    },
+    {
+      "title": "希望休・有給を入力する",
+      "seconds": 95.9
+    },
+    {
+      "title": "休日日数・週上限を確認",
+      "seconds": 105.8
+    },
+    {
+      "title": "休診日を確認",
+      "seconds": 115.1
+    },
+    {
+      "title": "会議を確認",
+      "seconds": 124.1
+    },
+    {
+      "title": "事前に来られるヘルプを登録",
+      "seconds": 133.3
+    },
+    {
+      "title": "必要人数を確認する",
+      "seconds": 144.0
+    },
+    {
+      "title": "前月末勤務を確認する",
+      "seconds": 155.5
     },
     {
       "title": "仮表の不足を確認する",
-      "seconds": 160.9
+      "seconds": 184.8
     },
     {
       "title": "来院OKの予定を確認する",
-      "seconds": 185.2
+      "seconds": 203.3
     },
     {
       "title": "保存する前に変更箇所を確認する",
-      "seconds": 227.2
+      "seconds": 235.8
     },
     {
       "title": "更新した表を保存できました",
-      "seconds": 264.4
+      "seconds": 264.5
     },
     {
       "title": "勤務は上段、希望は下段",
-      "seconds": 287.2
+      "seconds": 281.7
     },
     {
       "title": "入力から印刷まで確認できました",
-      "seconds": 326.2
+      "seconds": 311.2
     }
   ],
   "visible_cursor": true,
   "click_highlight": true,
   "capture_method": "Playwrightのマウス入力を記録。カーソルとクリック強調、説明字幕を重ねた自動操作。",
   "requested_helper_applied": true,
-  "duration_seconds": 348.1,
-  "snapshot_count": 6,
+  "duration_seconds": 327.3,
+  "snapshot_count": 13,
   "viewport": "1440x1000",
   "sample_month": "2026-11",
   "player_autoplay": false,
-  "audio": "なし。説明字幕あり。"
+  "audio": "なし。説明字幕あり。",
+  "playback_speeds": [
+    0.75,
+    1,
+    1.25,
+    1.5,
+    2
+  ]
 }

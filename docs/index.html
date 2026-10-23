@@ -11,21 +11,24 @@ video{display:block;width:100%;height:auto;max-height:78vh;aspect-ratio:1280/888
 .play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:108px;height:108px;border-radius:50%;border:3px solid #206c5b;background:#fffffff2;cursor:pointer;box-shadow:0 4px 20px #0003}
 .play:before{content:"";display:block;width:0;height:0;border-top:24px solid transparent;border-bottom:24px solid transparent;border-left:38px solid #206c5b;margin-left:32px}
 .play:hover{background:white;box-shadow:0 5px 28px #0005}.play:focus-visible{outline:4px solid #e7b34d;outline-offset:5px}.play[hidden]{display:none}
+.speed{display:flex;align-items:center;gap:12px;margin-top:18px}.speed select{font:inherit;color:#183d34;border:1px solid #a9c4b8;border-radius:8px;padding:8px 14px;background:white}
 .links{display:flex;gap:20px;flex-wrap:wrap;margin-top:20px}a{color:#206c5b;text-underline-offset:4px}.note{font-size:13px}
 </style>
 </head>
 <body><main>
 <header><small>看護職員の勤務表作成支援アプリ</small><h1>勤務表作成の操作デモ</h1><p>中央の▶を押すと再生します。停止・再開・全画面は、動画下部のコントロールから操作できます。</p></header>
 <div class="player">
-<video id="demo" controls playsinline preload="metadata" poster="demo/opening.png?v=71fdd7217576" aria-label="勤務表作成の操作デモ">
-<source src="demo/walkthrough.mp4?v=71fdd7217576" type="video/mp4">動画を再生できない場合は、下のダウンロードをご利用ください。
+<video id="demo" controls playsinline preload="metadata" poster="demo/opening.png?v=0af3eb2074fa" aria-label="勤務表作成の操作デモ">
+<source src="demo/walkthrough.mp4?v=0af3eb2074fa" type="video/mp4">動画を再生できない場合は、下のダウンロードをご利用ください。
 </video>
 <button class="play" id="play" aria-label="操作デモを再生"></button>
 </div>
+<div class="speed"><label for="speed">再生速度</label><select id="speed"><option value="0.75">0.75倍</option><option value="1" selected>1倍（標準）</option><option value="1.25">1.25倍</option><option value="1.5">1.5倍</option><option value="2">2倍</option></select></div>
 <div class="links"><a href="https://github.com/higakota/nurse-scheduler-demo">GitHubへ戻る</a><a href="demo/walkthrough.mp4" download>動画をダウンロード</a></div>
 <p class="note">表示する人名・施設・勤務予定はすべて架空です。字幕で操作を説明します。</p>
 </main><script>
 const video=document.getElementById("demo"),play=document.getElementById("play");
+document.getElementById("speed").addEventListener("change",event=>{video.playbackRate=Number(event.target.value)});
 play.addEventListener("click",()=>video.play().catch(()=>{play.hidden=false}));
 video.addEventListener("play",()=>{play.hidden=true});
 video.addEventListener("pause",()=>{play.hidden=false});

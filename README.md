@@ -6,9 +6,11 @@
 
 [開発履歴](docs/development-history.md) · [不具合と改善の事例](docs/case-studies.md) · [設計](docs/portfolio.md) · [テストと確認方法](docs/verification.md) · **[サンプルExcel](samples/sample_requests_2026-11.xlsx)**
 
-**[約5分48秒の操作動画を見る](https://higakota.github.io/nurse-scheduler-demo/)** ／ [動画の説明](docs/demo/README.md)
+**[約5分27秒の操作動画を見る](https://higakota.github.io/nurse-scheduler-demo/)** ／ [動画の説明](docs/demo/README.md)
 
 [![操作デモを再生](docs/demo/poster.png)](https://higakota.github.io/nurse-scheduler-demo/)
+
+初回は **スタッフ → ホーム → ①今月の入力（医師予定から）→ ②不足を確認 → ③ヘルプを依頼・登録 → ④勤務表・印刷** の順に進みます。動画の再生速度はプレイヤー下で変更できます。
 
 [ホーム画面](docs/screenshots/home.png) ／ [勤務と希望の比較](docs/screenshots/roster.png) ／ [印刷用表示](docs/screenshots/print.png)
 
@@ -16,7 +18,7 @@
 |---|---|
 | 技術 | Python / Flask / SQLite / HTML / CSS / JavaScript |
 | 元の開発記録 | 2026年10月16日〜22日の67コミットを匿名化して収録 |
-| 動作検証 | 仮名・一時DBを使う501件の自動テスト |
+| 動作検証 | 仮名・一時DBを使う502件の自動テスト |
 | データ | 職員9人・医師予定・勤務希望を新規作成した架空データ |
 | 実行環境 | ローカルPCのブラウザ。現在の確認環境はWindows / Python 3.13 |
 

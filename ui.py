@@ -9,8 +9,8 @@ from doctor_import import IMPORT_VERSION
 STEPS = [
     ("doctor_import", "医師予定", "Excelから担当医を取り込む"),
     ("monthly_settings", "希望休・会議・事前ヘルプ", "希望休・有給、休日日数、会議、事前に来られる日"),
-    ("leave_history", "前月末勤務", "月をまたぐ連勤を確認"),
     ("coverage_settings", "必要人数", "診療に必要な最低人数を確認"),
+    ("leave_history", "前月末勤務", "月をまたぐ連勤を確認"),
 ]
 INPUT_TABS = [("doctor_import","医師予定"),("monthly_settings","希望休・会議・事前ヘルプ"),("coverage_settings","必要人数"),
               ("leave_history","前月末勤務"),("weekly_settings","月をまたぐ週"),("input_review","入力一覧")]
@@ -115,10 +115,10 @@ def render_home(connect_db):
                  detail=f"{len(doctors)}日分の医師予定" if doctors else "いつものExcelを用意してください"),
             dict(saved=bool(snapshots["monthly_settings"]), attention=False,
                  detail=f"休日日数 {len(monthly.get('targets', {}))}人分 · 有給 {len(leave.get('leaves', {}))}件 · 会議 {len(monthly.get('meetings', []))}件"),
+            dict(saved=bool(snapshots["coverage_settings"]), attention=False,
+                 detail="A・B番は自動表示。C番は1人／2人を指定"),
             dict(saved=bool(leave.get("history")), attention=False,
                  detail="前月末勤務の入力"),
-            dict(saved=bool(snapshots["coverage_settings"]), attention=False,
-                 detail="A・B番は自動表示、C番は1人／2人を指定"),
         ]
     finally:
         db.close()
