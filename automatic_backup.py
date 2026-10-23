@@ -1,3 +1,4 @@
+from storage import database_path
 """1日の利用開始時と最後に保存した状態をSQLiteのbackup APIで保管する。"""
 import os,secrets,sqlite3
 from pathlib import Path
@@ -43,7 +44,7 @@ def register_automatic_backup(app):
     def before_write_backup():
         if enabled() and request.method=="POST":
             try:
-                backup_database(app.config["DATABASE"],"start")
+                backup_database(database_path(app.config),"start")
                 g.backup_started=True
             except (OSError,sqlite3.Error):
                 app.logger.exception("Automatic backup before write failed")
@@ -52,7 +53,7 @@ def register_automatic_backup(app):
     def after_write_backup(response):
         if enabled() and request.method=="POST" and getattr(g,"backup_started",False):
             try:
-                backup_database(app.config["DATABASE"],"latest")
+                backup_database(database_path(app.config),"latest")
                 app.config.pop("AUTO_BACKUP_ERROR",None)
             except (OSError,sqlite3.Error):
                 app.logger.exception("Automatic backup after write failed")

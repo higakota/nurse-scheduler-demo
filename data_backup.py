@@ -1,3 +1,4 @@
+from storage import database_path
 """勤務ルールに依存しない、SQLiteの整合したバックアップ。"""
 from datetime import datetime
 from io import BytesIO
@@ -16,13 +17,13 @@ def register_data_backup(app, connect_db):
     def data_backup():
         session.setdefault("csrf_token", secrets.token_hex(32))
         from automatic_backup import list_backups
-        return render_template("backup.html", month=selected_month(),automatic_backups=list_backups(app.config["DATABASE"]))
+        return render_template("backup.html", month=selected_month(),automatic_backups=list_backups(database_path(app.config)))
 
     @app.get("/backup/automatic/<name>")
     def download_automatic_backup(name):
         import re
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}_(start|latest)\.sqlite3",name):abort(404)
-        path=Path(app.config["DATABASE"]).parent/"backups"/"automatic"/name
+        path=database_path(app.config).parent/"backups"/"automatic"/name
         if not path.is_file():abort(404)
         return send_file(path.resolve(),as_attachment=True,download_name=name,mimetype="application/octet-stream")
 
@@ -111,7 +112,7 @@ def validated_backup(payload):
 
 def register_restore(app, connect_db):
     def storage():
-        folder = Path(app.config["DATABASE"]).parent / "backups"
+        folder = database_path(app.config).parent / "backups"
         folder.mkdir(parents=True, exist_ok=True)
         return folder
 

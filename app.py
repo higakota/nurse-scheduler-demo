@@ -1,3 +1,4 @@
+from storage import database_path
 import secrets
 import os
 import sqlite3
@@ -18,7 +19,7 @@ app.config.update(
 
 
 def connect_db():
-    path = Path(app.config["DATABASE"])
+    path = database_path(app.config)
     path.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(path)
     db.row_factory = sqlite3.Row

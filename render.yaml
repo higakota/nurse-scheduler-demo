@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: nurse-scheduler-demo
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements-web.txt
+    startCommand: gunicorn web_entry:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 180 --access-logfile -
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.7
+      - key: DEMO_SECRET_KEY
+        generateValue: true
+      - key: DEMO_STORAGE_DIR
+        value: /tmp/nurse-scheduler-demo
