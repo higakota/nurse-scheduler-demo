@@ -11,26 +11,83 @@ video{display:block;width:100%;height:auto;max-height:78vh;aspect-ratio:1280/888
 .play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:108px;height:108px;border-radius:50%;border:3px solid #206c5b;background:#fffffff2;cursor:pointer;box-shadow:0 4px 20px #0003}
 .play:before{content:"";display:block;width:0;height:0;border-top:24px solid transparent;border-bottom:24px solid transparent;border-left:38px solid #206c5b;margin-left:32px}
 .play:hover{background:white;box-shadow:0 5px 28px #0005}.play:focus-visible{outline:4px solid #e7b34d;outline-offset:5px}.play[hidden]{display:none}
-.speed{display:flex;align-items:center;gap:12px;margin-top:18px}.speed select{font:inherit;color:#183d34;border:1px solid #a9c4b8;border-radius:8px;padding:8px 14px;background:white}
+.video-surface{position:relative}
+.player-settings{position:relative;display:flex;justify-content:flex-end;align-items:center;min-height:44px;padding:2px 10px;background:#173d34}
+.settings-button{display:flex;align-items:center;gap:7px;font:inherit;font-size:14px;color:white;background:transparent;border:0;border-radius:6px;padding:8px 12px;cursor:pointer}
+.settings-button:hover,.settings-button[aria-expanded=true]{background:#ffffff20}
+.settings-button:focus-visible,.settings-panel button:focus-visible{outline:3px solid #e7b34d;outline-offset:-3px}
+.settings-panel{position:absolute;z-index:5;bottom:48px;right:10px;width:230px;max-height:65vh;overflow-y:auto;border-radius:10px;background:#182722f5;color:white;padding:8px;box-shadow:0 6px 24px #0004}
+.settings-panel[hidden],.settings-panel [hidden]{display:none}
+.settings-panel button{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;background:transparent;color:inherit;padding:10px 12px;text-align:left;font:inherit;font-size:14px;border-radius:5px;cursor:pointer}
+.settings-panel button:hover{background:#ffffff18}.settings-title{padding:7px 12px;color:#d6e5de;font-size:12px}
+@media(max-width:600px){.settings-panel{max-height:calc((100vw - 64px)*.69)}}
+.settings-panel [data-rate]{justify-content:flex-start;gap:10px}.settings-panel [data-rate]:before{content:"";width:16px}.settings-panel [aria-checked=true]:before{content:"✓"}
+
 .links{display:flex;gap:20px;flex-wrap:wrap;margin-top:20px}a{color:#206c5b;text-underline-offset:4px}.note{font-size:13px}
 </style>
 </head>
 <body><main>
-<header><small>看護職員の勤務表作成支援アプリ</small><h1>勤務表作成の操作デモ</h1><p>中央の▶を押すと再生します。停止・再開・全画面は、動画下部のコントロールから操作できます。</p></header>
+<header><small>看護職員の勤務表作成支援アプリ</small><h1>勤務表作成の操作デモ</h1><p>中央の▶を押すと再生します。停止・音量・全画面は動画下部、再生速度は歯車の「設定」から変更できます。</p></header>
 <div class="player">
-<video id="demo" controls playsinline preload="metadata" poster="demo/opening.png?v=d6fa9342f0a5" aria-label="勤務表作成の操作デモ">
-<source src="demo/walkthrough.mp4?v=d6fa9342f0a5" type="video/mp4">動画を再生できない場合は、下のダウンロードをご利用ください。
+<div class="video-surface">
+<video id="demo" controls playsinline preload="metadata" poster="demo/opening.png?v=b3408cff145c" aria-label="勤務表作成の操作デモ">
+<source src="demo/walkthrough.mp4?v=b3408cff145c" type="video/mp4">動画を再生できない場合は、下のダウンロードをご利用ください。
 </video>
 <button class="play" id="play" aria-label="操作デモを再生"></button>
 </div>
-<div class="speed"><label for="speed">再生速度</label><select id="speed"><option value="0.75">0.75倍</option><option value="1" selected>1倍（標準）</option><option value="1.25">1.25倍</option><option value="1.5">1.5倍</option><option value="2">2倍</option></select></div>
+<div class="player-settings">
+<button id="settings" class="settings-button" type="button" aria-label="動画の設定" aria-expanded="false" aria-controls="settings-panel"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="m20.3 13.4.1-1.4-.1-1.4 1.7-1.3-1.7-3-2 .8a8 8 0 0 0-2.4-1.4L15.6 3h-3.4l-.3 2.7a8 8 0 0 0-2.4 1.4l-2-.8-1.7 3 1.7 1.3-.1 1.4.1 1.4-1.7 1.3 1.7 3 2-.8a8 8 0 0 0 2.4 1.4l.3 2.7h3.4l.3-2.7a8 8 0 0 0 2.4-1.4l2 .8 1.7-3zM13.9 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7"/></svg><span>設定</span></button>
+<div id="settings-panel" class="settings-panel" hidden>
+<div id="settings-home"><button type="button" id="open-speeds"><span>再生速度</span><span><span id="speed-label">標準</span> ›</span></button></div>
+<div id="settings-speeds" hidden><button type="button" id="settings-back">‹ 設定</button><div class="settings-title">再生速度</div><div role="menu" aria-label="再生速度">
+<button type="button" role="menuitemradio" data-rate="0.75" aria-checked="false">0.75倍</button>
+<button type="button" role="menuitemradio" data-rate="1" aria-checked="true">標準</button>
+<button type="button" role="menuitemradio" data-rate="1.25" aria-checked="false">1.25倍</button>
+<button type="button" role="menuitemradio" data-rate="1.5" aria-checked="false">1.5倍</button>
+<button type="button" role="menuitemradio" data-rate="2" aria-checked="false">2倍</button>
+</div></div></div></div>
+</div>
 <div class="links"><a href="https://nurse-scheduler-demo.onrender.com/?month=2026-11" target="_blank" rel="noopener noreferrer" title="別タブで開きます">ブラウザでアプリを試す →</a><a href="https://raw.githubusercontent.com/higakota/nurse-scheduler-demo/main/samples/sample_requests_2026-11.xlsx" download>サンプルExcelをダウンロード</a><a href="https://github.com/higakota/nurse-scheduler-demo">GitHubへ戻る</a><a href="demo/walkthrough.mp4" download>動画をダウンロード</a></div>
-<p class="note">表示する人名・施設・勤務予定はすべて架空です。字幕で操作を説明します。</p>
+<p class="note">表示する人名・施設・勤務予定はすべて架空です。日本語の合成音声と字幕で操作を説明します。</p>
 </main><script>
 const video=document.getElementById("demo"),play=document.getElementById("play");
-document.getElementById("speed").addEventListener("change",event=>{video.playbackRate=Number(event.target.value)});
+const settings=document.getElementById("settings"),panel=document.getElementById("settings-panel");
+const home=document.getElementById("settings-home"),speeds=document.getElementById("settings-speeds");
+const speedLabel=document.getElementById("speed-label");
+function closeSettings(){panel.hidden=true;settings.setAttribute("aria-expanded","false")}
+settings.addEventListener("click",()=>{
+ const open=panel.hidden;panel.hidden=!open;settings.setAttribute("aria-expanded",String(open));
+ home.hidden=false;speeds.hidden=true;
+ if(open)document.getElementById("open-speeds").focus();
+});
+document.getElementById("open-speeds").addEventListener("click",()=>{
+ home.hidden=true;speeds.hidden=false;
+ speeds.querySelector('[aria-checked="true"]').focus();
+});
+document.getElementById("settings-back").addEventListener("click",()=>{
+ home.hidden=false;speeds.hidden=true;document.getElementById("open-speeds").focus();
+});
+document.querySelectorAll("[data-rate]").forEach(button=>button.addEventListener("click",()=>{
+ video.playbackRate=Number(button.dataset.rate);closeSettings();settings.focus();
+}));
+video.addEventListener("ratechange",()=>{
+ const rate=video.playbackRate;speedLabel.textContent=rate===1?"標準":rate+"倍";
+ document.querySelectorAll("[data-rate]").forEach(button=>button.setAttribute("aria-checked",String(Number(button.dataset.rate)===rate)));
+});
+document.addEventListener("click",event=>{if(!event.target.closest(".player-settings"))closeSettings()});
+speeds.addEventListener("keydown",event=>{
+ if(!["ArrowDown","ArrowUp","Home","End"].includes(event.key))return;
+ const options=[...speeds.querySelectorAll("[data-rate]")],current=options.indexOf(document.activeElement);
+ if(current<0)return;
+ event.preventDefault();
+ const next=event.key==="Home"?0:event.key==="End"?options.length-1:(current+(event.key==="ArrowDown"?1:-1)+options.length)%options.length;
+ options[next].focus();
+});
+document.addEventListener("keydown",event=>{
+ if(event.key==="Escape"&&!panel.hidden){closeSettings();settings.focus()}
+});
 play.addEventListener("click",()=>video.play().catch(()=>{play.hidden=false}));
-video.addEventListener("play",()=>{play.hidden=true});
+video.addEventListener("play",()=>{play.hidden=true;closeSettings()});
 video.addEventListener("pause",()=>{play.hidden=false});
 video.addEventListener("ended",()=>{play.hidden=false});
 </script></body></html>

@@ -73,95 +73,95 @@
     },
     {
       "title": "医師予定を保存しました",
-      "seconds": 159.9
+      "seconds": 97.9
     },
     {
       "title": "希望休・有給を入力",
-      "seconds": 168.5
+      "seconds": 106.5
     },
     {
       "title": "希望休・有給を保存しました",
-      "seconds": 197.5
+      "seconds": 135.5
     },
     {
       "title": "休日日数・週上限を確認して保存",
-      "seconds": 204.1
+      "seconds": 142.1
     },
     {
       "title": "休日日数・週上限を保存しました",
-      "seconds": 213.9
+      "seconds": 151.9
     },
     {
       "title": "休診日を確認して保存",
-      "seconds": 220.6
+      "seconds": 158.6
     },
     {
       "title": "休診日を保存しました",
-      "seconds": 230.4
+      "seconds": 168.4
     },
     {
       "title": "会議も変更後に保存する",
-      "seconds": 237.1
+      "seconds": 175.1
     },
     {
       "title": "会議を保存しました",
-      "seconds": 254.5
+      "seconds": 192.5
     },
     {
       "title": "事前に来られるヘルプを入力",
-      "seconds": 261.2
+      "seconds": 199.2
     },
     {
       "title": "事前ヘルプを保存しました",
-      "seconds": 279.1
+      "seconds": 217.1
     },
     {
       "title": "必要人数を確認して保存",
-      "seconds": 287.3
+      "seconds": 225.3
     },
     {
       "title": "必要人数を保存しました",
-      "seconds": 297.8
+      "seconds": 235.8
     },
     {
       "title": "前月末勤務を確認して保存",
-      "seconds": 306.0
+      "seconds": 244.0
     },
     {
       "title": "前月末勤務を保存しました",
-      "seconds": 316.4
+      "seconds": 254.4
     },
     {
       "title": "不足確認で作った勤務表を見る",
-      "seconds": 340.6
+      "seconds": 278.6
     },
     {
       "title": "表の下で不足を確認する",
-      "seconds": 349.2
+      "seconds": 287.2
     },
     {
       "title": "ヘルプ登録のカレンダーを見る",
-      "seconds": 376.3
+      "seconds": 314.3
     },
     {
       "title": "入力した来院予定はまだ未保存",
-      "seconds": 390.7
+      "seconds": 328.7
     },
     {
       "title": "勤務表へ反映する変更を確認",
-      "seconds": 408.4
+      "seconds": 346.4
     },
     {
       "title": "更新した表を保存できました",
-      "seconds": 435.8
+      "seconds": 373.8
     },
     {
       "title": "勤務は上段、希望は下段",
-      "seconds": 453.0
+      "seconds": 391.0
     },
     {
       "title": "入力から印刷まで確認できました",
-      "seconds": 482.5
+      "seconds": 420.5
     }
   ],
   "visible_cursor": true,
@@ -171,12 +171,21 @@
   "help_calendar_shown": true,
   "input_saves_verified": true,
   "requested_helper_applied": true,
-  "duration_seconds": 498.8,
+  "duration_seconds": 436.8,
   "snapshot_count": 14,
   "viewport": "1440x1000",
   "sample_month": "2026-11",
+  "raw_capture_duration_seconds": 498.8,
+  "audio": "日本語合成音声（Microsoft Haruka Desktop）。字幕あり。",
+  "narration_segments": 32,
+  "omitted_intervals": [
+    {
+      "start": 82.0,
+      "end": 144.0,
+      "reason": "医師の確認チェックの繰り返し。省略表示あり。"
+    }
+  ],
   "player_autoplay": false,
-  "audio": "なし。説明字幕あり。",
   "playback_speeds": [
     0.75,
     1,
@@ -184,5 +193,7 @@
     1.5,
     2
   ],
-  "app_link_opens_new_tab": true
+  "player_settings": "歯車の設定から再生速度を選択",
+  "app_link_opens_new_tab": true,
+  "narration_engine": "Microsoft Haruka Desktop（PC内の合成音声）"
 }
