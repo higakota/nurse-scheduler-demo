@@ -1,4 +1,4 @@
-<div role="note" style="position:relative;z-index:20;background:#fff3cd;color:#604800;padding:8px 20px;text-align:center;font-size:14px">サンプル環境｜表示する人名・施設・勤務予定はすべて架空です。個人情報は入力しないでください。{% if config.WEB_DEMO %}<span> 操作内容はこのブラウザ専用です。一定時間後や再起動で初期状態に戻ります。</span><form method="post" action="{{ url_for('reset') }}" style="display:inline"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><button type="submit" style="font:inherit;padding:2px 10px;margin-left:10px">初期状態に戻す</button></form>{% endif %}</div>
+{% include "_demo_notice.html" %}
 <link rel="stylesheet" href="{{ url_for('static',filename='ui-refresh.css') }}">
 <a class="skip-link" href="#main-content">本文へ移動</a>
 <aside class="app-sidebar" aria-label="メインメニュー">
@@ -8,7 +8,7 @@
 <a href="{{ url_for(endpoint,month=ui_month) }}" {% if ui_group==group %}aria-current="page"{% endif %}><span class="nav-number" aria-hidden="true">{{ mark }}</span>{{ label }}</a>
 {% endfor %}
 </nav>
-<div class="sidebar-bottom"><a class="backup-nav {% if ui_active=='data_backup' %}is-current{% endif %}" href="{{ url_for('data_backup',month=ui_month) }}">バックアップ・復元</a><div class="sidebar-note"><span class="local-dot"></span> このPC内に保存</div></div>
+<div class="sidebar-bottom"><a class="backup-nav {% if ui_active=='data_backup' %}is-current{% endif %}" href="{{ url_for('data_backup',month=ui_month) }}">バックアップ・復元</a><div class="sidebar-note"><span class="local-dot"></span> {% if config.WEB_DEMO %}ブラウザごとに一時保存{% else %}このPC内に保存{% endif %}</div></div>
 </aside>
 <header class="app-topbar"><strong>{{ ui_title }}</strong>
 <div class="month-navigation" aria-label="月の切り替え">{% if ui_previous_month %}<a class="month-arrow" href="{{ url_for(ui_month_endpoint,month=ui_previous_month) }}" aria-label="前月へ" title="前月へ">‹</a>{% endif %}<form method="get" action="{{ url_for(ui_month_endpoint) }}" class="topbar-month"><label for="nav-month">対象月</label><input id="nav-month" type="month" name="month" value="{{ ui_month }}" min="1900-01" max="9998-12" required><button class="button-quiet">切替</button></form>{% if ui_next_month %}<a class="month-arrow" href="{{ url_for(ui_month_endpoint,month=ui_next_month) }}" aria-label="翌月へ" title="翌月へ">›</a>{% endif %}</div></header>

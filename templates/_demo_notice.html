@@ -1,0 +1,6 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='demo.css', v='2') }}">
+<aside class="demo-notice" role="note" aria-label="サンプル環境について">
+  <div class="demo-notice-copy"><strong>サンプル環境</strong><span>表示内容はすべて架空です。個人情報は入力しないでください。</span>
+  {% if config.WEB_DEMO %}<small>操作はこのブラウザ専用です。保存内容は一定時間後や再起動でリセットされます。</small>{% endif %}</div>
+  {% if config.WEB_DEMO %}<form method="post" action="{{ url_for('reset') }}"><input type="hidden" name="csrf_token" value="{{ session.csrf_token }}"><button type="submit">初期状態に戻す</button></form>{% endif %}
+</aside>
