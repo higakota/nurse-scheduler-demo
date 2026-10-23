@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/higakota/nurse-scheduler-demo/actions/workflows/tests.yml/badge.svg)](https://github.com/higakota/nurse-scheduler-demo/actions/workflows/tests.yml)
 
-**使用者への聞き取りと操作確認をもとに、勤務表の入力・不足確認・応援登録・修正・印刷をまとめたWebアプリです。** 自動作成だけでなく、作成後の変更を同じ勤務表に反映し、確認しながら仕上げる流れを重視しています。
+**母(利用者)への聞き取りと操作確認をもとに、勤務表の入力・不足確認・応援登録・修正・印刷をまとめたWebアプリです。** 自動作成だけでなく、作成後の変更を同じ勤務表に反映し、確認しながら仕上げる流れを重視しています。
 
 **[操作動画を見る（約7分19秒・音声あり）](https://higakota.github.io/nurse-scheduler-demo/)**
 
