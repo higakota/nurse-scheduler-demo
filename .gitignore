@@ -231,3 +231,5 @@ __marimo__/
 .env.*
 
 .capture-venv/
+
+.build-venv/

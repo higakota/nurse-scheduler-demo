@@ -2,7 +2,7 @@
 
 ## 現在確認していること
 
-公開サンプルでは、Windows / Python 3.13で510件の自動テストが通っています。実在する職員・勤務表はテストに使わず、一時DBと仮名を使います。
+公開サンプルでは、Windows / Python 3.13で521件の自動テストが通っています。実在する職員・勤務表はテストに使わず、一時DBと仮名を使います。
 
 | 分類 | 例 | テスト |
 |---|---|---|
@@ -12,10 +12,11 @@
 | 表の状態 | 古い表への遷移・上書き防止、確認中は不変 | [test_roster_navigation.py](../tests/test_roster_navigation.py) |
 | 入力 | 医師予定から始める入口と順序、会議の一括保存、競合時に部分保存しない | [test_meeting_attendance.py](../tests/test_meeting_attendance.py)、[test_workflow_guidance.py](../tests/test_workflow_guidance.py) |
 | 運用 | バックアップ、版の切り替えと復帰 | [test_operations.py](../tests/test_operations.py) |
+| Windows配布 | 新規導入・更新・復帰でDBを保持、破損ファイルの拒否、一時的なファイルロックへの再試行 | [test_desktop_distribution.py](../tests/test_desktop_distribution.py) |
 | 公開体験版 | 別ブラウザのデータとバックアップを分離、本人のみ初期化 | [test_web_demo.py](../tests/test_web_demo.py) |
 | サンプル | 架空DB初期化、Excel解析、作成結果、画面表示 | [test_portfolio_demo.py](../tests/test_portfolio_demo.py) |
 
-件数は現時点の実行結果であり、過去の各コミットで510件通ったという意味ではありません。機能追加・修正に合わせてテストも追加しています。
+件数は現時点の実行結果であり、過去の各コミットで521件通ったという意味ではありません。機能追加・修正に合わせてテストも追加しています。
 
 ## 再実行
 
@@ -36,6 +37,12 @@
 - 希望休・有給を半日単位で変更し、保存前後の差分を確認できるか。
 - 印刷プレビューで日付・職員名・希望欄が切れないか。
 - 架空データを使ってバックアップを保存・復元できるか。
+
+## Windows配布の手動確認
+
+実用側の配布ファイルを、同じWindows PCの別フォルダへ導入し、仮名スタッフの登録・更新・前の版への復帰を確認しました。PythonとGitをPATHから外した起動、Excelの読取候補表示、バックアップ画面、Windowsショートカット作成も確認しています。実データと配布バイナリは公開していません。使用者の別PCでの初回導入は未確認です。
+
+この確認は、公開サンプルの自動テストや、使用者の実機での確認とは別のものです。[配布処理と手順](windows-install.md)
 
 ## 確認の限界
 

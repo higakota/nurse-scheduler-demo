@@ -84,3 +84,16 @@
 | 2026-10-22 | Polish shared UI and align home workflow with roster actions | [差分](https://github.com/higakota/nurse-scheduler-demo/commit/db228d25732cf991c8e76b13744520879b197f76) |
 | 2026-10-22 | Add saved-roster carryover and everyday operation safeguards | [差分](https://github.com/higakota/nurse-scheduler-demo/commit/900c35ef5282691f97c53cb58e5c2671b37f7770) |
 | 2026-10-22 | Add calendar app icon for desktop shortcut | [差分](https://github.com/higakota/nurse-scheduler-demo/commit/2434fc6185d0851fc7c2808a76147281cd6c7059) |
+
+
+## 初期開発後の改善
+
+2026年10月23日以降の改善は、mainの通常のコミットへ記録しています。
+
+- 公開体験版の利用者別データ分離と、Linuxでの起動確認。
+- 操作動画に対象月の選択・実際の保存・仮表・応援登録のカレンダーを追加。
+- 動画の音声、説明欄、再生操作と起動リンクを、操作の感想に合わせて改善。
+- Windows配布の実装・新規導入・更新・復帰と、展開直後の一時的なファイルロックへの対応。
+- 使用者への聞き取り、仕様の判断、操作確認、不具合の指摘を、要件と確認方法に対応させて整理。
+
+[現在の変更履歴](https://github.com/higakota/nurse-scheduler-demo/commits/main/) ／ [課題と要件・受入観点](project-overview.md)

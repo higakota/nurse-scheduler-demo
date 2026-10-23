@@ -1,12 +1,12 @@
 {
   "status": "known identifiers absent",
-  "tracked_files": 213,
+  "tracked_files": 221,
   "source_database_copied": false,
   "original_git_objects_copied": false,
   "anonymized_history_commits": 67,
-  "historical_text_blobs_checked": 652,
+  "historical_text_blobs_checked": 662,
   "original_excel_copied": false,
   "demo_media": "架空DBの実操作から生成し目視確認。動画・画像は文字列照合の対象外。",
-  "tests_passed": 510,
+  "tests_passed": 521,
   "scope": "現在のファイル・ExcelのXML・公開する全履歴のテキストを、実データの氏名・既知施設名・PC利用者名と照合。公開先GitHub URLのアカウント名は許可。未知の個人情報の完全検出を保証するものではありません。"
 }
