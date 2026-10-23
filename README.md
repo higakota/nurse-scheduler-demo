@@ -8,6 +8,10 @@
 
 [![操作デモを再生](docs/demo/poster.png)](https://higakota.github.io/nurse-scheduler-demo/)
 
+**[ブラウザでアプリを試す →](https://nurse-scheduler-demo.onrender.com/?month=2026-11)**
+
+インストール不要です。最初の表示に1分ほどかかる場合があります。架空データを使い、操作内容はブラウザごとに分かれます。
+
 ## サンプルExcelを試す
 
 **[Excelをダウンロード](https://raw.githubusercontent.com/higakota/nurse-scheduler-demo/main/samples/sample_requests_2026-11.xlsx)** ／ [ファイルの場所](samples/sample_requests_2026-11.xlsx) ／ [使い方](samples/README.md)
@@ -26,7 +30,7 @@
 | 元の開発記録 | 2026年10月16日〜22日の67コミットを匿名化して収録 |
 | 動作検証 | 仮名・一時DBを使う509件の自動テスト |
 | データ | 職員9人・医師予定・勤務希望を新規作成した架空データ |
-| 実行環境 | ローカルPCのブラウザ。現在の確認環境はWindows / Python 3.13 |
+| 実行環境 | ブラウザ体験版：Render / Linux。ローカル：Windows / Python 3.13 |
 
 **公開版はサンプル環境です。実在する職員・施設のデータは含みません。** 開発履歴は個人情報と非公開資料を除いて再構成したため、元のコミットIDとは異なります。方法は [履歴の扱い](docs/development-history.md#履歴の扱い) に記載しています。
 
