@@ -4,11 +4,13 @@
 
 勤務希望・会議・必要人数・他施設からの応援をまとめて扱い、勤務表の作成後も変更内容を確認しながら調整できるWebアプリです。勤務表を作成する利用者からの相談・操作の感想をもとに、機能と画面を繰り返し改善しています。
 
-**[約7分17秒の操作動画を見る](https://higakota.github.io/nurse-scheduler-demo/)** ／ [動画の説明](docs/demo/README.md)
+**[約7分19秒の操作動画を見る](https://higakota.github.io/nurse-scheduler-demo/)** ／ [動画の説明](docs/demo/README.md)
 
 [![操作デモを再生](docs/demo/poster.png)](https://higakota.github.io/nurse-scheduler-demo/)
 
-**[ブラウザでアプリを試す →](https://nurse-scheduler-demo.onrender.com/?month=2026-11)**
+**[ブラウザでアプリを試す →](https://higakota.github.io/nurse-scheduler-demo/#try-app)**
+
+リンク先の「アプリを別タブで開く」を押すと、動画ページを残してアプリを試せます。
 
 インストール不要です。最初の表示に1分ほどかかる場合があります。架空データを使い、操作内容はブラウザごとに分かれます。
 

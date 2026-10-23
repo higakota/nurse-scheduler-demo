@@ -16,7 +16,7 @@ def capture(root,base,output):
     frames=[]
     with tempfile.TemporaryDirectory() as temp, sync_playwright() as p:
         browser=p.chromium.launch(channel="msedge",headless=True)
-        context=browser.new_context(viewport={"width":1440,"height":1000},locale="ja-JP",record_video_dir=temp,record_video_size={"width":1440,"height":1000})
+        context=browser.new_context(viewport={"width":1440,"height":860},locale="ja-JP",record_video_dir=temp,record_video_size={"width":1440,"height":860})
         page=context.new_page();page.set_default_timeout(30000)
         page.on("pageerror",lambda error:report["javascript_errors"].append(str(error)))
         page.on("response",lambda response:report["server_errors"].append(response.status) if response.status>=500 else None)
@@ -51,7 +51,7 @@ def capture(root,base,output):
         report["chapters"]=[]
         report["visible_cursor"]=True
         report["click_highlight"]=True
-        report["capture_method"]="Playwrightのマウス入力を記録。カーソルとクリック強調、説明字幕を重ねた自動操作。"
+        report["capture_method"]="Playwrightのマウス入力を記録。カーソルとクリックを強調。説明時刻を記録し、編集時に画面下の専用欄へ配置する自動操作。"
         def wait(seconds):
             page.wait_for_timeout(120 if os.environ.get("CAPTURE_QUICK") else int(seconds*600))
         def go(path):
@@ -60,15 +60,7 @@ def capture(root,base,output):
                 raise ValueError("サンプル環境の表示を確認できません。")
             wait(2)
         def caption(title,detail):
-            page.evaluate("""([title,detail])=>{
-              let box=document.getElementById("recording-caption");
-              if(!box){box=document.createElement("div");box.id="recording-caption";document.body.append(box);}
-              box.style.cssText="position:fixed;bottom:18px;left:232px;right:24px;z-index:2147483645;background:#153e35f5;color:white;padding:16px 22px;border-radius:14px;box-shadow:0 4px 20px #0002;pointer-events:none;font-family:Yu Gothic,Meiryo,sans-serif";
-              box.replaceChildren();
-              const heading=document.createElement("strong");heading.textContent=title;heading.style.cssText="display:block;font-size:24px;line-height:1.5";
-              const text=document.createElement("span");text.textContent=detail;text.style.cssText="display:block;font-size:20px;line-height:1.75";
-              box.append(heading,text);
-            }""",[title,detail])
+            report.setdefault("captions",[]).append(dict(start=round(time.monotonic()-clock_start,2),title=title,detail=detail))
         def stage(number,title,detail,seconds=12,image=None):
             report["chapters"].append({"title":title,"seconds":round(time.monotonic()-clock_start,1)})
             caption(title,detail)
@@ -81,7 +73,7 @@ def capture(root,base,output):
         def move(locator):
             locator.wait_for(state="visible")
             box=locator.bounding_box()
-            if box and (box["y"]<130 or box["y"]+box["height"]>page.viewport_size["height"]-190):
+            if box and (box["y"]<130 or box["y"]+box["height"]>page.viewport_size["height"]-40):
                 locator.evaluate("(el)=>el.scrollIntoView({behavior:'instant',block:'center',inline:'center'})")
                 wait(1.5)
                 box=locator.bounding_box()
@@ -144,8 +136,14 @@ def capture(root,base,output):
         click(page.get_by_role("button",name="医師・休診日・会議の候補を読み取る",exact=True))
         page.get_by_role("heading",name="3. 確認・修正して保存").evaluate("(el)=>el.scrollIntoView({block:'start'})")
         stage(4,"読み取り候補を元のExcelと照合","午前・午後の担当医を確認します。「個別確認」の日は、その日の確認チェックも入れます。",10,"excel")
-        for field in page.locator('input[name^="review_"]:visible').all():
-            if not field.is_checked():click(field)
+        for index,field in enumerate(page.locator('input[name^="review_"]:visible').all()):
+            if not field.is_checked():
+                if index<2:click(field)
+                else:
+                    if index==2:caption("同じ確認操作を続けます","最初の2件を操作例として示し、残りの確認チェックは短く進めています。実際の利用時は、すべての候補を照合してください。")
+                    field.check()
+                    page.wait_for_timeout(120)
+
         for key in ("replace","confirmed"):
             field=page.locator('input[name="'+key+'"]')
             if field.count():click(field)
@@ -255,7 +253,8 @@ def capture(root,base,output):
         subprocess.run([ffmpeg,"-y","-i",str(source),"-map_metadata","-1","-vf","scale=1280:-2","-c:v","libx264","-preset","veryfast","-crf","24","-pix_fmt","yuv420p","-movflags","+faststart","-an",str(output/"walkthrough.mp4")],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
         report["duration_seconds"]=round(imageio_ffmpeg.count_frames_and_secs(str(output/"walkthrough.mp4"))[1],1)
         report["snapshot_count"]=len(frames)
-        report["viewport"]="1440x1000"
+        report["viewport"]="1440x860"
+        report["caption_layout"]="映像の外の専用説明欄。アプリのボタンには重ねない。"
         report["sample_month"]="2026-11"
         (output/"capture-report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
         browser.close()
