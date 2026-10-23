@@ -77,7 +77,7 @@ class NavigationTest(unittest.TestCase):
     def test_menu_groups_inputs_and_editing_and_keeps_month(self):
         page=self.client.get("/inputs?month=2026-11").get_data(as_text=True)
         sidebar=page.split('<nav class="side-nav">',1)[1].split("</nav>",1)[0]
-        self.assertEqual(sidebar.count("<a "),5)
+        self.assertEqual(sidebar.count("<a "),6)
         self.assertIn("今月の入力",sidebar)
         self.assertNotIn("勤務表の手動修正",sidebar)
         self.assertIn('/doctors?month=2026-11',page)
