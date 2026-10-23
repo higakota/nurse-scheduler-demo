@@ -69,7 +69,7 @@ def register_web_demo(app, root, secure=True):
     app.config.update(DEMO_MODE=True,WEB_DEMO=True,SESSION_COOKIE_SECURE=secure,
                       SESSION_COOKIE_HTTPONLY=True,SESSION_COOKIE_NAME="scheduler_demo",
                       SESSION_COOKIE_SAMESITE="Lax",PERMANENT_SESSION_LIFETIME=86400,
-                      TRUSTED_HOSTS=["*.onrender.com","localhost","127.0.0.1"])
+                      TRUSTED_HOSTS=[".onrender.com","localhost","127.0.0.1"])
     store=DemoStore(root)
     app.extensions["web_demo_store"]=store
     def prepare():

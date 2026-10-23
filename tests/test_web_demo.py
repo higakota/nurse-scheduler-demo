@@ -68,6 +68,7 @@ class WebDemoTest(unittest.TestCase):
         self.assertEqual(response.headers["X-Content-Type-Options"],"nosniff")
         self.assertTrue(response.headers["Set-Cookie"].find("HttpOnly")>=0)
         self.assertEqual(client.get("/",headers={"Host":"evil.example"}).status_code,400)
+        self.assertEqual(client.get("/health",headers={"Host":"sample.onrender.com"}).status_code,200)
     def test_invalid_identifier_does_not_select_arbitrary_path(self):
         client=self.app.test_client()
         with client.session_transaction() as state:state["web_demo_id"]="../escape"
